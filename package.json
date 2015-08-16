@@ -1,0 +1,26 @@
+{
+  "name": "linter-purescript",
+  "main": "./lib/main",
+  "version": "0.1.0",
+  "description": "Display PureScript source errors using atom-linter (building via pulp)",
+  "keywords": [
+  ],
+  "activationHooks": ["language-purescript:grammar-used"],
+  "repository": "https://github.com/nwolverson/atom-linter-purescript",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {
+    "xregexp": "~2.0.0",
+    "atom-linter": "^3.0.0"
+  },
+  "providedServices": {
+    "linter": {
+      "versions": {
+        "1.0.0": "provideLinter"
+      }
+    }
+
+  }
+}
