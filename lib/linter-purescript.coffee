@@ -17,7 +17,7 @@ class LinterPurescript
       }
 
     return new Promise (resolve, reject) =>
-      command = "/usr/local/bin/pulp"
+      command = "pulp"
       args = ["build"]
 
       filePath = textEditor.getPath()
@@ -27,7 +27,7 @@ class LinterPurescript
       options = { cwd: projDir, stream: "stderr" }
 
       console.log "linter-purescript: Running lint"
-      helpers.execNode(command, args, options)
+      helpers.exec(command, args, options)
         .then (result) ->
           regex = '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
 
