@@ -26,7 +26,7 @@ class LinterPurescript
 
       options = { cwd: projDir, stream: "stderr" }
 
-      console.log "linter-purescript: Running lint"
+      atom.notifications.addInfo "linter: compiling PureScript"
       helpers.exec(command, args, options)
         .then (result) ->
           regex = '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
@@ -39,8 +39,7 @@ class LinterPurescript
           XRegExp.forEach result, XRegExp(parseRegex, "sm"), (match) ->
             matches.push(mkResult(match))
 
-          console.log("Error count: " + matches.length)
-          console.log(JSON.stringify(matches))
+          atom.notifications.addSuccess "linter: compiled PureScript"
 
           resolve(matches)
         .then null, (err) ->
