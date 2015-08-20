@@ -19,15 +19,18 @@ class LinterPurescript
     return new Promise (resolve, reject) =>
       command = "/usr/local/bin/pulp"
       args = ["build"]
-      projDir = textEditor.getPath().replace(/src\/.*/, "")
+
+      filePath = textEditor.getPath()
+      dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
+      projDir = if dirs.length == 1 then dirs[0].path else filePath.replace(/src\/.*/, "")
+
       options = { cwd: projDir, stream: "stderr" }
 
+      console.log "linter-purescript: Running lint"
       helpers.execNode(command, args, options)
         .then (result) ->
           regex = '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
-          #regex = "(Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+)"
-          #matches = helpers.parse(result, regex)
-          #message.text = "Dummy\nmultiline\ntext" for message in matches
+
           matches = []
           XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
             matches.push(mkResult(match))
@@ -40,8 +43,6 @@ class LinterPurescript
           console.log(JSON.stringify(matches))
 
           resolve(matches)
-          # console.log(result)
-          # resolve([])
         .then null, (err) ->
           reject(err)
 
