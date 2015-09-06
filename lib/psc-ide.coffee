@@ -51,13 +51,14 @@ class PscIde
             completions.forEach (c) =>
               promise = @getType c
                 .then (type) =>
+                  unqualType: type.replace(/(?:\w+\.)+(\w+)/g, "$1")
                   text: c
                   type: type
               typeProms.push promise
             Promise.all(typeProms).then (types) =>
               resolve types.map (x) =>
                 text: x.text
-                displayText: x.text + ": " + x.type
+                displayText: x.text + ": " + x.unqualType
                 description: x.type
                 type: if /->/.test(x.type) then "function" else "value"
 
