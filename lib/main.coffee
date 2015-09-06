@@ -16,6 +16,7 @@ module.exports =
 
   provideAutocomplete: ->
     selector: '.source.purescript'
+    disableForSelector: '.source.purescript .comment, .source.purescript .string'
     inclusionPriority: 1
     excludeLowerPriority: true
     getSuggestions: @pscide.getSuggestions
