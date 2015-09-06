@@ -41,20 +41,24 @@ class PscIde
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
-      @getCompletion prefix
-        .then (completions) =>
-          typeProms = []
-          completions.forEach (c) =>
-            promise = @getType c
-              .then (type) =>
-                text: c
-                type: type
-            typeProms.push promise
-          Promise.all(typeProms).then (types) =>
-            resolve types.map (x) =>
-              text: x.text
-              displayText: x.text + ": " + x.type
-              description: x.type
-              type: if /->/.test(x.type) then "function" else "value"
+      prefix = prefix.trim()
+      if prefix.length is 0
+        null
+      else
+        @getCompletion prefix
+          .then (completions) =>
+            typeProms = []
+            completions.forEach (c) =>
+              promise = @getType c
+                .then (type) =>
+                  text: c
+                  type: type
+              typeProms.push promise
+            Promise.all(typeProms).then (types) =>
+              resolve types.map (x) =>
+                text: x.text
+                displayText: x.text + ": " + x.type
+                description: x.type
+                type: if /->/.test(x.type) then "function" else "value"
 
 module.exports = PscIde
