@@ -1,8 +1,8 @@
 # ide-purescript package for Atom
 
 This package provides editor support for PureScript projects in Atom. You should
-first install [language-purescript](https://atom.io/packages/language-purescript)
-which also provides syntax highlighting.
+first install required dependency [language-purescript](https://atom.io/packages/language-purescript)
+which also provides syntax highlighting and [psc-ide](https://github.com/kRITZCREEK/psc-ide) (see below).
 
 This package provides:
   * Build and error reporting
@@ -11,6 +11,8 @@ This package provides:
 Package should trigger on opening a `.purs` file.
 
 ## Autocomplete
+
+Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide).
 
 1. Start `psc-ide-server` in your project directory
 1. Configure `psc-ide` path for the package
