@@ -55,5 +55,6 @@ class PscIde
               text: x.text
               displayText: x.text + ": " + x.type
               description: x.type
+              type: if /->/.test(x.type) then "function" else "value"
 
 module.exports = PscIde
