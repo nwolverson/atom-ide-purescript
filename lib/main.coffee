@@ -3,14 +3,15 @@ PscIde = require './psc-ide'
 
 glob = require("glob")
 
-module.exports = AtomLinterPurescript =
+module.exports =
   config:
     pscIdeExe:
       title: "psc-ide executable location"
       type: 'string'
-      default: '/Users/nicholaw/.local/bin/psc-ide'
+      default: process.env.HOME + '/.local/bin/psc-ide'
 
   activate: (state) ->
+    console.log "Activated ide-purescript"
     @pscide = new PscIde()
 
   provideAutocomplete: ->
