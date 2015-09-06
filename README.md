@@ -1,9 +1,32 @@
-# linter-purescript package
+# ide-purescript package for Atom
 
-This linter plugin for [Linter](https://github.com/AtomLinter/Linter) provides an interface to errors and warnings from the PureScript compiler, by running `pulp build` on the project (on save). It will be used with files that have the `PureScript` syntax.
+This package provides editor support for PureScript projects in Atom. For basic
+syntax highlighting you should install [language-purescript](https://atom.io/packages/language-purescript).
 
-Probably not good for actual use due to lack of configuration and speed of compilation. Better to be on explicit command than
-save (like [Build](https://atom.io/packages/build) - see [linter support](https://github.com/noseglid/atom-build/pull/117) PR).
+This package provides:
+  * Build and error reporting
+  * Autocompletion
 
-## Installation
-Linter package must be installed in order to use this plugin. If Linter is not installed, please follow the instructions [here](https://github.com/AtomLinter/Linter).
+Package should trigger on opening a `.purs` file.
+
+## Autocomplete
+
+1. Start `psc-ide-server` in your project directory
+2. Configure `psc-ide` path for the package
+3. Load the modules you want to use as completion sources: `echo "load Prelude" | psc-ide`
+4. Edit a `.purs` file and you should see completion.
+
+## Build
+
+Build support is experimental as I don't like any of the options yet. Depending on
+which other packages you have installed, this package provides (via `pulp build`)
+
+  * [Linter](https://github.com/AtomLinter/Linter) support - a bit annoying since
+  compile on save is too slow, but some nice messages
+
+  * [Build](https://atom.io/packages/build) support - will only work properly in
+  PureScript projects if you don't have Gulpfile etc., as `pulp` is always used
+  but custom providers are at the bottom of the priority list.
+
+Might be that something like Build [linter support](https://github.com/noseglid/atom-build/pull/117) PR) could
+be useful, or build triggered from this package.
