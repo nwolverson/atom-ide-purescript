@@ -3,17 +3,19 @@
   "main": "./lib/main",
   "version": "0.1.0",
   "description": "PureScript support for completion, build and maybe more",
-  "keywords": [
+  "keywords": [],
+  "activationHooks": [
+    "language-purescript:grammar-used"
   ],
-  "activationHooks": ["language-purescript:grammar-used"],
   "repository": "https://github.com/nwolverson/atom-ide-purescript",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
   },
   "dependencies": {
-    "xregexp": "~2.0.0",
-    "atom-linter": "^3.0.0"
+    "atom-linter": "^3.0.0",
+    "glob": "^5.0.14",
+    "xregexp": "~2.0.0"
   },
   "providedServices": {
     "linter": {
