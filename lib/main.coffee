@@ -1,8 +1,27 @@
 LinterPurescript = require './linter-purescript'
+PscIde = require './psc-ide'
 
 glob = require("glob")
 
 module.exports = AtomLinterPurescript =
+  config:
+    pscIdeExe:
+      title: "psc-ide executable location"
+      type: 'string'
+      default: '/Users/nicholaw/.local/bin/psc-ide'
+
+  activate: (state) ->
+    @pscide = new PscIde()
+
+  provideAutocomplete: ->
+    selector: '.source.purescript'
+    inclusionPriority: 1
+    excludeLowerPriority: true
+    getSuggestions: @pscide.getSuggestions
+    # onDidInsertSuggestion: ({editor, triggerPosition, suggestion}) ->
+    # dispose: ->
+
+
   provideLinter: ->
     linter = new LinterPurescript()
     return {

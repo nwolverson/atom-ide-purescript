@@ -1,12 +1,12 @@
 {
-  "name": "linter-purescript",
+  "name": "ide-purescript",
   "main": "./lib/main",
   "version": "0.1.0",
-  "description": "Display PureScript source errors using atom-linter (building via pulp)",
+  "description": "PureScript support for completion, build and maybe more",
   "keywords": [
   ],
   "activationHooks": ["language-purescript:grammar-used"],
-  "repository": "https://github.com/nwolverson/atom-linter-purescript",
+  "repository": "https://github.com/nwolverson/atom-ide-purescript",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
@@ -25,6 +25,11 @@
       "description": "Build PureScript using pulp",
       "versions": {
         "1.0.0": "provideBuildConfig"
+      }
+    },
+    "autocomplete.provider": {
+      "versions": {
+        "2.0.0": "provideAutocomplete"
       }
     }
   }
