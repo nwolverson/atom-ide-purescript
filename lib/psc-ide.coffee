@@ -2,7 +2,7 @@
 
 class PscIde
   constructor: ->
-    @pscIde = atom.config.get("linter-purescript.pscIdeExe")
+    @pscIde = atom.config.get("ide-purescript.pscIdeExe")
     @getModules()
       .then (output) ->
         console.log output
@@ -35,7 +35,14 @@ class PscIde
     @runCmd "complete #{text} Project"
       .then (output) =>
         completions = (@getList output).map @trimQuote
+        if completions.length > 0
+          @getType completions[0]
         completions
+
+  getType: (text) ->
+    @runCmd "typeLookup #{text}"
+      .then (output) =>
+        console.log output
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
