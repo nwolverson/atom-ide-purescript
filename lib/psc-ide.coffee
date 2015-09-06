@@ -34,21 +34,26 @@ class PscIde
   getCompletion: (text) ->
     @runCmd "complete #{text} Project"
       .then (output) =>
-        completions = (@getList output).map @trimQuote
-        if completions.length > 0
-          @getType completions[0]
-        completions
+        (@getList output).map @trimQuote
 
   getType: (text) ->
     @runCmd "typeLookup #{text}"
-      .then (output) =>
-        console.log output
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
       @getCompletion prefix
         .then (completions) =>
-          resolve completions.map (c) =>
-            text: c
+          typeProms = []
+          completions.forEach (c) =>
+            promise = @getType c
+              .then (type) =>
+                text: c
+                type: type
+            typeProms.push promise
+          Promise.all(typeProms).then (types) =>
+            resolve types.map (x) =>
+              text: x.text
+              displayText: x.text + ": " + x.type
+              description: x.type
 
 module.exports = PscIde
