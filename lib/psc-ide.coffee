@@ -6,23 +6,25 @@ class PscIde
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     @getModules()
       .then (output) ->
-        console.log output
+        console.debug output
 
   runCmd: (str) ->
     return new Promise (resolve,reject) =>
       command = @pscIde
       args = ['-p', @pscIdePort]
       stdout = (output) =>
-        console.log "psc-ide", str, "-->", output
+        console.debug "psc-ide", str, "-->", output
         resolve (@trimQuote output)
       exit = (code) =>
-        console.log "exited with code #{code}"
+        console.debug "exited with code #{code}"
         reject code if code is not 0
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write str + '\n'
 
   getList: (text) ->
-    text.split(",").map (s) -> s.trim()
+    text.split ","
+      .map (s) -> s.trim()
+      .filter (s) -> s.length > 0
   trimQuote: (text) ->
     withQuotes = /"(.*)"/.exec(text)
     if withQuotes then withQuotes[1] else text
