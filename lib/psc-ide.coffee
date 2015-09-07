@@ -3,6 +3,7 @@
 class PscIde
   constructor: ->
     @pscIde = atom.config.get("ide-purescript.pscIdeExe")
+    @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     @getModules()
       .then (output) ->
         console.log output
@@ -10,7 +11,7 @@ class PscIde
   runCmd: (str) ->
     return new Promise (resolve,reject) =>
       command = @pscIde
-      args = []
+      args = ['-p', @pscIdePort]
       stdout = (output) =>
         console.log "psc-ide", str, "-->", output
         resolve (@trimQuote output)
