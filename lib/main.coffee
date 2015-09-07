@@ -9,6 +9,10 @@ module.exports =
       title: "psc-ide executable location"
       type: 'string'
       default: process.env.HOME + '/.local/bin/psc-ide'
+    pscIdePort:
+      title: "psc-ide port number"
+      type: 'integer'
+      default: 4242
 
   activate: (state) ->
     console.log "Activated ide-purescript"
