@@ -17,7 +17,7 @@ Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide).
 1. Start `psc-ide-server` in your project directory
 1. Configure `psc-ide` path for the package
 1. Actually build your project
-1. Load the modules you want to use as completion sources: `echo "load Prelude" | psc-ide`
+1. Load the modules you want to use as completion sources: `echo "dependencies My.Project.Module" | psc-ide`
 1. Edit a `.purs` file and you should see completion.
 
 ## Build
