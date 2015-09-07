@@ -20,6 +20,12 @@ Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide).
 1. Load the modules you want to use as completion sources: `echo "dependencies My.Project.Module" | psc-ide`
 1. Edit a `.purs` file and you should see completion.
 
+## Custom port
+
+To run `psc-ide-server` on a custom port, start the command
+with the `-p` flag, e.g. `psd-ide-server -p 4243`. Then
+set the same number in the package settings.
+
 ## Build
 
 Build support is experimental as I don't like any of the options yet. Depending on
