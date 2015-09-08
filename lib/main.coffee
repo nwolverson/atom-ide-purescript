@@ -17,6 +17,14 @@ module.exports =
       title: "build command"
       type: 'string'
       default: "pulp build"
+    enableAtomLinter:
+      title: "enable atom-linter (build on save, error tooltips)"
+      type: 'boolean'
+      default: true
+    enableBuild:
+      title: "enable build (atom build package)"
+      type: 'boolean'
+      default: true
 
   activate: (state) ->
     console.log "Activated ide-purescript"
@@ -44,6 +52,8 @@ module.exports =
     return {
       niceName: 'PureScript',
       isEligable: (path) ->
+        if !atom.config.get("ide-purescript.enableBuild")
+          return false
         files = glob.sync("src/**/*.purs", {cwd: path})
         files && files.length > 0
       settings: (path) ->
