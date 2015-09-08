@@ -13,6 +13,10 @@ module.exports =
       title: "psc-ide port number"
       type: 'integer'
       default: 4242
+    buildCommand:
+      title: "build command"
+      type: 'string'
+      default: "pulp build"
 
   activate: (state) ->
     console.log "Activated ide-purescript"
@@ -43,12 +47,15 @@ module.exports =
         files = glob.sync("src/**/*.purs", {cwd: path})
         files && files.length > 0
       settings: (path) ->
+        buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
+        cmd = buildCommand[0]
+        args = buildCommand.slice 1
         return new Promise (resolve,reject) =>
           resolve {
-            cmd: 'pulp'
-            exec: 'pulp'
+            cmd: cmd
+            exec: cmd
             sh: true
-            args: ['build']
+            args: args
             errorMatch: [
               '(?<type>Error|Warning) at (?<file>[^\n]*?) line (?<line>[0-9]+), column (?<col>[0-9]+)',
               'Unable to parse module:\n[^"]*"(?<file>[^"]+)" \\(line (?<line>[0-9]+), column (?<col>[0-9]+)\\):'
