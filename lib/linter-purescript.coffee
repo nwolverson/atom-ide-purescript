@@ -17,8 +17,9 @@ class LinterPurescript
       }
 
     return new Promise (resolve, reject) =>
-      command = "pulp"
-      args = ["build"]
+      buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
+      command = buildCommand[0]
+      args = buildCommand.slice(1)
 
       filePath = textEditor.getPath()
       dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
