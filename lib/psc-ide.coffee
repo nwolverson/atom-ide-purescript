@@ -41,6 +41,12 @@ class PscIde
 
   getType: (text) ->
     @runCmd "typeLookup #{text}"
+      .then (result) =>
+        result = result.trim()
+        if result is "Not found" then "" else result
+
+  abbrevType: (type) ->
+    type.replace(/(?:\w+\.)+(\w+)/g, "$1")
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
@@ -54,7 +60,7 @@ class PscIde
             completions.forEach (c) =>
               promise = @getType c
                 .then (type) =>
-                  unqualType: type.replace(/(?:\w+\.)+(\w+)/g, "$1")
+                  unqualType: @abbrevType type
                   text: c
                   type: type
               typeProms.push promise

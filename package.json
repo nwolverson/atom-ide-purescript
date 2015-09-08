@@ -15,6 +15,7 @@
   "dependencies": {
     "atom-linter": "^3.0.0",
     "glob": "^5.0.14",
+    "hover-tooltips": "git://github.com/nwolverson/hover-tooltips.git#non-cmd-provider",
     "xregexp": "~2.0.0"
   },
   "providedServices": {
