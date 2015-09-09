@@ -1,4 +1,5 @@
 {BufferedProcess} = require 'atom'
+{XRegExp} = require 'xregexp'
 
 class PscIde
   constructor: ->
@@ -14,7 +15,7 @@ class PscIde
       args = ['-p', @pscIdePort]
       stdout = (output) =>
         console.debug "psc-ide", str, "-->", output
-        resolve (@trimQuote output)
+        resolve (@trimQuote output).trim()
       exit = (code) =>
         console.debug "exited with code #{code}"
         reject code if code is not 0
@@ -37,7 +38,15 @@ class PscIde
   getCompletion: (text) ->
     @runCmd "complete #{text} Project"
       .then (output) =>
-        (@getList output).map @trimQuote
+        regex = /\(([^,]+), ([^,]+), ([^,]+)\)(,|$)/g
+        results = []
+        XRegExp.forEach(output, regex, (match) ->
+          results.push
+            module: match[1]
+            ident: match[2]
+            type: match[3]
+        )
+        results
 
   getType: (text) ->
     @runCmd "typeLookup #{text}"
@@ -56,19 +65,10 @@ class PscIde
       else
         @getCompletion prefix
           .then (completions) =>
-            typeProms = []
-            completions.forEach (c) =>
-              promise = @getType c
-                .then (type) =>
-                  unqualType: @abbrevType type
-                  text: c
-                  type: type
-              typeProms.push promise
-            Promise.all(typeProms).then (types) =>
-              resolve types.map (x) =>
-                text: x.text
-                displayText: x.text + ": " + x.unqualType
-                description: x.type
-                type: if /->/.test(x.type) then "function" else "value"
+            resolve completions.map (c) =>
+              text: c.ident
+              displayText: c.ident + ": " + @abbrevType c.type
+              description: c.type
+              type: if /->/.test(c.type) then "function" else "value"
 
 module.exports = PscIde
