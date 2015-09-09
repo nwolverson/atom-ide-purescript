@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Atom-ide-purescript by nwolverson</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Atom-ide-purescript</h1>
+        <p>Atom package for PureScript build, completion, etc support</p>
+
+        <p class="view"><a href="https://github.com/nwolverson/atom-ide-purescript">View the Project on GitHub <small>nwolverson/atom-ide-purescript</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/nwolverson/atom-ide-purescript/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/nwolverson/atom-ide-purescript/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/nwolverson/atom-ide-purescript">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a id="ide-purescript-package-for-atom" class="anchor" href="#ide-purescript-package-for-atom" aria-hidden="true"><span class="octicon octicon-link"></span></a>ide-purescript package for Atom</h1>
+
+<p>This package provides editor support for PureScript projects in Atom. You should
+first install required dependency <a href="https://atom.io/packages/language-purescript">language-purescript</a>
+which also provides syntax highlighting and <a href="https://github.com/kRITZCREEK/psc-ide">psc-ide</a> (see below).</p>
+
+<p>This package provides:</p>
+
+<ul>
+<li>Build and error reporting</li>
+<li>Autocompletion</li>
+</ul>
+
+<p>Package should trigger on opening a <code>.purs</code> file.</p>
+
+<h2>
+<a id="autocomplete" class="anchor" href="#autocomplete" aria-hidden="true"><span class="octicon octicon-link"></span></a>Autocomplete</h2>
+
+<p>Provided from <a href="https://github.com/kRITZCREEK/psc-ide">psc-ide</a>.</p>
+
+<ol>
+<li>Start <code>psc-ide-server</code> in your project directory</li>
+<li>Configure <code>psc-ide</code> path for the package</li>
+<li>Actually build your project</li>
+<li>Load the modules you want to use as completion sources: <code>echo "dependencies My.Project.Module" | psc-ide</code>
+</li>
+<li>Edit a <code>.purs</code> file and you should see completion.</li>
+</ol>
+
+<h2>
+<a id="custom-port" class="anchor" href="#custom-port" aria-hidden="true"><span class="octicon octicon-link"></span></a>Custom port</h2>
+
+<p>To run <code>psc-ide-server</code> on a custom port, start the command
+with the <code>-p</code> flag, e.g. <code>psd-ide-server -p 4243</code>. Then
+set the same number in the package settings.</p>
+
+<h2>
+<a id="build" class="anchor" href="#build" aria-hidden="true"><span class="octicon octicon-link"></span></a>Build</h2>
+
+<p>Build support is experimental as I don't like any of the options yet. Depending on
+which other packages you have installed, this package provides (via <code>pulp build</code>)</p>
+
+<ul>
+<li><p><a href="https://github.com/AtomLinter/Linter">Linter</a> support - a bit annoying since
+compile on save is too slow, but some nice messages</p></li>
+<li><p><a href="https://atom.io/packages/build">Build</a> support - will only work properly in
+PureScript projects if you don't have Gulpfile etc., as <code>pulp</code> is always used
+but custom providers are at the bottom of the priority list.</p></li>
+</ul>
+
+<p>Might be that something like <a href="https://github.com/noseglid/atom-build/pull/117">Build linter support</a> could
+be useful, or build triggered from this package.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/nwolverson">nwolverson</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
