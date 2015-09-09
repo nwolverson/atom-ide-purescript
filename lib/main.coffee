@@ -1,7 +1,7 @@
 LinterPurescript = require './linter-purescript'
 PscIde = require './psc-ide'
-
-glob = require("glob")
+PsTooltips = require './tooltips'
+glob = require 'glob'
 
 module.exports =
   config:
@@ -29,6 +29,16 @@ module.exports =
   activate: (state) ->
     console.log "Activated ide-purescript"
     @pscide = new PscIde()
+    @tooltips = new PsTooltips(@pscide)
+    @tooltips.activate()
+
+  deactivate: () ->
+    for editor in atom.workspace.getTextEditors()
+      editorView = atom.views.getView(editor)
+      editorView.editControl?.deactivate()
+      editorView.editControl = null
+    @controlSubscription?.dispose()
+    @tooltips.deactivate()
 
   provideAutocomplete: ->
     selector: '.source.purescript'
