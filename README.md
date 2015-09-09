@@ -7,6 +7,7 @@ which also provides syntax highlighting and [psc-ide](https://github.com/kRITZCR
 This package provides:
   * Build and error reporting
   * Autocompletion
+  * Type info tooltips
 
 Package should trigger on opening a `.purs` file.
 
@@ -19,6 +20,14 @@ Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide).
 1. Actually build your project
 1. Load the modules you want to use as completion sources: `echo "dependencies My.Project.Module" | psc-ide`
 1. Edit a `.purs` file and you should see completion.
+
+## Tooltips
+
+Hovering over an identifier will show a tooltip with its type:
+
+![Type tooltip](http://nwolverson.github.io/atom-ide-purescript/assets/type-tooltip.png)
+
+This is really stupid, and only cares that you hover over a word regardless of context, you will get some false positives.
 
 ## Custom port
 
