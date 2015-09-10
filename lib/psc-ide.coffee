@@ -2,12 +2,11 @@
 {XRegExp} = require 'xregexp'
 
 class PscIde
+  editors: null
+
   constructor: ->
     @pscIde = atom.config.get("ide-purescript.pscIdeExe")
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
-    @getModules()
-      .then (output) ->
-        console.debug output
 
   runCmd: (str) ->
     return new Promise (resolve,reject) =>
@@ -30,13 +29,13 @@ class PscIde
     withQuotes = /"(.*)"/.exec(text)
     if withQuotes then withQuotes[1] else text
 
-  getModules: ->
+  getLoadedModules: ->
     @runCmd "print"
       .then (output) =>
         @getList output
 
-  getCompletion: (text) ->
-    @runCmd "complete #{text} Project"
+  getCompletion: (text, modules) ->
+    @runCmd "complete #{text} Project using #{modules.join(', ')}"
       .then (output) =>
         regex = /\(([^,]+), ([^,]+), ([^,]+)\)(,|$)/g
         results = []
@@ -52,10 +51,17 @@ class PscIde
     @runCmd "typeLookup #{text}"
       .then (result) =>
         result = result.trim()
-        if result is "Not found" then "" else result
+        if result.indexOf("not found") != -1 then "" else result
 
   abbrevType: (type) ->
     type.replace(/(?:\w+\.)+(\w+)/g, "$1")
+
+  loadDeps: (editor) ->
+    res = XRegExp.exec(editor.getText(), /^module (\S+) where/)
+    if res
+      @runCmd "dependencies #{res[1]}"
+    else
+      Promise.resolve()
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
@@ -63,7 +69,7 @@ class PscIde
       if prefix.length is 0
         null
       else
-        @getCompletion prefix
+        @getCompletion(prefix,@editors.activeModules)
           .then (completions) =>
             resolve completions.map (c) =>
               text: c.ident

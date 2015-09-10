@@ -2,6 +2,7 @@ LinterPurescript = require './linter-purescript'
 PscIde = require './psc-ide'
 PsTooltips = require './tooltips'
 glob = require 'glob'
+Editors = require './editors'
 
 module.exports =
   config:
@@ -31,13 +32,10 @@ module.exports =
     @pscide = new PscIde()
     @tooltips = new PsTooltips(@pscide)
     @tooltips.activate()
+    @editors = new Editors(@pscide)
 
   deactivate: () ->
-    for editor in atom.workspace.getTextEditors()
-      editorView = atom.views.getView(editor)
-      editorView.editControl?.deactivate()
-      editorView.editControl = null
-    @controlSubscription?.dispose()
+    @editors.dispose()
     @tooltips.deactivate()
 
   provideAutocomplete: ->
