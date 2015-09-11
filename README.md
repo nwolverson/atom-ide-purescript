@@ -11,15 +11,32 @@ This package provides:
 
 Package should trigger on opening a `.purs` file.
 
+## Installation and General Use
+
+This package relies on having [psc-ide](https://github.com/kRITZCREEK/psc-ide) installed.
+This runs a server process, `psc-ide-server`, to provide type information, completions,
+etc. This package will automatically start `psc-ide-server` in your project
+directory (port is configurable) and kill it when closing, if for some reason
+you want a longer running server process you should be able to start that before
+starting atom. *Multiple projects currently not supported!*
+
+For all functions provided by `psc-ide` you will need to build your project first!
+Dependencies will automatically be loaded via `dependencies Current.File` as
+required.
+
+You *must* install the atom package [language-purescript](https://atom.io/packages/language-purescript)!
+You should optionally install atom packages [Linter](https://github.com/AtomLinter/Linter)
+or [Build](https://atom.io/packages/build) if you want build support, see below.
+
+The package will start on opening a `.purs` file, note there is currently an Atom bug
+relating to starting a session with already open files.
+
 ## Autocomplete
 
-Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide).
+Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide). Make sure
+your project is built first.
 
-1. Start `psc-ide-server` in your project directory
-1. Configure `psc-ide` path for the package
-1. Actually build your project
-1. Load the modules you want to use as completion sources: `echo "dependencies My.Project.Module" | psc-ide`
-1. Edit a `.purs` file and you should see completion.
+Completions will be sourced from modules imported in the current file.
 
 ## Tooltips
 
@@ -28,12 +45,6 @@ Hovering over an identifier will show a tooltip with its type:
 ![Type tooltip](http://nwolverson.github.io/atom-ide-purescript/assets/type-tooltip.png)
 
 This is really stupid, and only cares that you hover over a word regardless of context, you will get some false positives.
-
-## Custom port
-
-To run `psc-ide-server` on a custom port, start the command
-with the `-p` flag, e.g. `psd-ide-server -p 4243`. Then
-set the same number in the package settings.
 
 ## Build
 

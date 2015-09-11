@@ -5,8 +5,7 @@ class PscIde
   editors: null
 
   constructor: ->
-    @pscIde = atom.config.get("ide-purescript.pscIdeExe")
-    @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
+    @startServer()
 
   runCmd: (str) ->
     return new Promise (resolve,reject) =>
@@ -20,6 +19,25 @@ class PscIde
         reject code if code is not 0
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write str + '\n'
+
+  startServer: ->
+    # should watch these and restart
+    @pscIde = atom.config.get("ide-purescript.pscIdeExe")
+    @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
+    pscIdeServer = atom.config.get("ide-purescript.pscIdeServerExe")
+    dirs = atom.project.rootDirectories
+    if dirs.length > 1
+      atom.notifications.addWarning "Multiple project roots - using #{dir}"
+    @serverProcess = new BufferedProcess
+      command: pscIdeServer
+      args: ['-p', @pscIdePort]
+      options:
+        cwd: dirs[0].path
+      exit = (code) =>
+        atom.notifications.addWarning "psc-ide process exited with code #{code}"
+
+  deactivate: ->
+    @serverProcess.kill()
 
   getList: (text) ->
     text.split ","

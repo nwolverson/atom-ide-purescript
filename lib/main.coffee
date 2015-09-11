@@ -14,6 +14,10 @@ module.exports =
       title: "psc-ide port number"
       type: 'integer'
       default: 4242
+    pscIdeServerExe:
+      title: "psc-ide-server executable location"
+      type: 'string'
+      default: process.env.HOME + '/.local/bin/psc-ide-server'
     buildCommand:
       title: "build command"
       type: 'string'
@@ -37,6 +41,7 @@ module.exports =
   deactivate: () ->
     @editors.dispose()
     @tooltips.deactivate()
+    @pscide.deactivate()
 
   provideAutocomplete: ->
     selector: '.source.purescript'
