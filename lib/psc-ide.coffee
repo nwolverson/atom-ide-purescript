@@ -3,6 +3,7 @@
 
 class PscIde
   editors: null
+  error: false
 
   constructor: ->
     @startServer()
@@ -11,14 +12,18 @@ class PscIde
     return new Promise (resolve,reject) =>
       command = @pscIde
       args = ['-p', @pscIdePort]
+      result = undefined
       stdout = (output) =>
         try
           output = JSON.parse output
         console.debug "psc-ide", cmd, "-->", output
-        resolve output
+        result = output
       exit = (code) =>
         console.debug "exited with code #{code}"
-        reject code if code is not 0
+        if code is 0
+          resolve result
+        else
+          reject { code, result }
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write JSON.stringify(cmd) + '\n'
 
@@ -30,13 +35,29 @@ class PscIde
     dirs = atom.project.rootDirectories
     if dirs.length > 1
       atom.notifications.addWarning "Multiple project roots - using #{dir}"
-    @serverProcess = new BufferedProcess
-      command: pscIdeServer
-      args: ['-p', @pscIdePort]
-      options:
-        cwd: dirs[0].path
-      exit = (code) =>
-        atom.notifications.addWarning "psc-ide process exited with code #{code}"
+    path = dirs[0].path
+
+    exit = (code) =>
+      if code isnt 0
+        atom.notifications.addError "Could not start psc-ide-server process. Check the configured port number is valid."
+
+    # Check if there is an existing server to use first, try to provide some useful diagnostics.
+    # If the configured path is incorrect an error from exec should show this.
+    @getWorkingDir()
+      .then (output) =>
+        output = output.trim()
+        if output is path
+          atom.notifications.addInfo "Found existing psc-ide-server with correct path"
+        else
+          atom.notifications.addError "Found existing psc-ide-server with wrong path. Correct, kill or configure a different port, and restart."
+      .catch (err) =>
+        atom.notifications.addInfo "Starting psc-ide-server"
+        @serverProcess = new BufferedProcess
+          command: pscIdeServer
+          args: ['-p', @pscIdePort]
+          exit: exit
+          options:
+            cwd: path
 
   deactivate: ->
     @serverProcess.kill()
@@ -53,6 +74,9 @@ class PscIde
     @runCmd { command: "list" }
       .then (output) =>
         @getList output
+
+  getWorkingDir: ->
+    @runCmd { command: "cwd" }
 
   getCompletion: (text, modules) ->
     @runCmd
@@ -99,9 +123,7 @@ class PscIde
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
       prefix = prefix.trim()
-      if prefix.length is 0
-        null
-      else
+      if prefix.length > 0
         @getCompletion(prefix,@editors.activeModules)
           .then (completions) =>
             resolve completions.map (c) =>
@@ -109,5 +131,7 @@ class PscIde
               displayText: c.identifier + ": " + @abbrevType c.type
               description: c.type
               type: if /->/.test(c.type) then "function" else "value"
+          .catch (err) =>
+            console.warn "Suggestion error: " + err
 
 module.exports = PscIde

@@ -18,6 +18,8 @@ class Editors extends Disposable
 
   useEditor: (editor) ->
     @pscide.loadDeps editor
+      .catch (err) =>
+        console.error (err)
     @activeModules = @getModulesForEditor editor
     console.debug "Active modules: " + @activeModules
 

@@ -22,5 +22,7 @@ class PsTooltips extends HoverTooltips
         .then (result) =>
           result = @pscIde.abbrevType result
           resolve { valid: result.length > 0, info: result }
+        .catch (err) =>
+          resolve { valid: false }
 
 module.exports = PsTooltips
