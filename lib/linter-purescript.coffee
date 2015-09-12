@@ -34,9 +34,16 @@ class LinterPurescript
       atom.notifications.addInfo "linter: compiling PureScript"
       helpers.exec(command, args, options)
         .then (result) ->
+          matches = []
+
+          moduleRegex = '^[^\n]*(?<type>Error|Warning) in module [^\n]+:(?<message>.*?)^[^\n]*See'
+          XRegExp.forEach result, XRegExp(moduleRegex, "sm"), (match) ->
+            matches.push(mkResult(match))
+
+
           regex = '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
 
-          matches = []
+
           XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
             matches.push(mkResult(match))
 
