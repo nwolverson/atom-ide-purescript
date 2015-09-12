@@ -7,18 +7,20 @@ class PscIde
   constructor: ->
     @startServer()
 
-  runCmd: (str) ->
+  runCmd: (cmd) ->
     return new Promise (resolve,reject) =>
       command = @pscIde
       args = ['-p', @pscIdePort]
       stdout = (output) =>
-        console.debug "psc-ide", str, "-->", output
-        resolve (@trimQuote output).trim()
+        try
+          output = JSON.parse output
+        console.debug "psc-ide", cmd, "-->", output
+        resolve output
       exit = (code) =>
         console.debug "exited with code #{code}"
         reject code if code is not 0
       bp = new BufferedProcess({command,args,stdout,exit})
-      bp.process.stdin.write str + '\n'
+      bp.process.stdin.write JSON.stringify(cmd) + '\n'
 
   startServer: ->
     # should watch these and restart
@@ -48,28 +50,38 @@ class PscIde
     if withQuotes then withQuotes[1] else text
 
   getLoadedModules: ->
-    @runCmd "print"
+    @runCmd { command: "list" }
       .then (output) =>
         @getList output
 
   getCompletion: (text, modules) ->
-    @runCmd "complete #{text} Project using #{modules.join(', ')}"
-      .then (output) =>
-        regex = /\(([^,]+), ([^,]+), ([^,]+)\)(,|$)/g
-        results = []
-        XRegExp.forEach(output, regex, (match) ->
-          results.push
-            module: match[1]
-            ident: match[2]
-            type: match[3]
-        )
-        results
+    @runCmd
+      command: "complete"
+      params:
+        filters: [
+          {
+            filter: "prefix"
+            params:
+              search: text
+          }
+          {
+            filter: "modules"
+            params:
+              modules: modules
+          }
+        ]
 
   getType: (text) ->
-    @runCmd "typeLookup #{text}"
-      .then (result) =>
-        result = result.trim()
-        if result.indexOf("not found") != -1 then "" else result
+    @runCmd
+      command: "type"
+      params:
+        search: text
+        filters: []
+    .then (result) =>
+      if result.length > 0
+        @abbrevType result[0].type
+      else
+        ""
 
   abbrevType: (type) ->
     type.replace(/(?:\w+\.)+(\w+)/g, "$1")
@@ -77,7 +89,10 @@ class PscIde
   loadDeps: (editor) ->
     res = XRegExp.exec(editor.getText(), /^module (\S+) where/)
     if res
-      @runCmd "dependencies #{res[1]}"
+      @runCmd
+        command: "load"
+        params:
+          dependencies: [res[1]]
     else
       Promise.resolve()
 
@@ -90,8 +105,8 @@ class PscIde
         @getCompletion(prefix,@editors.activeModules)
           .then (completions) =>
             resolve completions.map (c) =>
-              text: c.ident
-              displayText: c.ident + ": " + @abbrevType c.type
+              text: c.identifier
+              displayText: c.identifier + ": " + @abbrevType c.type
               description: c.type
               type: if /->/.test(c.type) then "function" else "value"
 
