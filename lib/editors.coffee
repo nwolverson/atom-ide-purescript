@@ -3,10 +3,13 @@
 
 class Editors extends Disposable
   activeModules: []
-  constructor: (@pscide) ->
+  constructor: ->
     super =>
       @subscriptions.dispose()
     @subscriptions = new CompositeDisposable()
+
+  activate: (pscide) ->
+    @pscide = pscide
     @subscriptions.add atom.workspace.onDidChangeActivePaneItem (item) =>
       if item instanceof TextEditor
         @useEditor item
@@ -14,7 +17,10 @@ class Editors extends Disposable
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidSave (event) =>
         @useEditor editor
-    @pscide.editors = this
+
+    editor = atom.workspace.getActiveTextEditor()
+    @useEditor editor if editor
+
 
   useEditor: (editor) ->
     @pscide.loadDeps editor

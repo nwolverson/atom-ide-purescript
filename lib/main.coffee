@@ -34,9 +34,11 @@ module.exports =
   activate: (state) ->
     console.log "Activated ide-purescript"
     @pscide = new PscIde()
+    @editors = new Editors()
     @tooltips = new PsTooltips(@pscide)
-    @tooltips.activate()
-    @editors = new Editors(@pscide)
+    @pscide.activate(@editors)
+      .then () =>
+        @tooltips.activate()
 
   deactivate: () ->
     @editors.dispose()

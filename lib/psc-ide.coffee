@@ -5,8 +5,11 @@ class PscIde
   editors: null
   error: false
 
-  constructor: ->
+  activate: (editors) ->
+    @editors = editors
     @startServer()
+      .then () =>
+        @editors.activate(this)
 
   runCmd: (cmd) ->
     return new Promise (resolve,reject) =>
