@@ -78,7 +78,12 @@ class PscIde
   getWorkingDir: ->
     @runCmd { command: "cwd" }
 
-  getCompletion: (text, modules) ->
+  modulesFilter: ->
+    filter: "modules"
+    params:
+      modules: @editors.activeModules
+
+  getCompletion: (text) ->
     @runCmd
       command: "complete"
       params:
@@ -88,11 +93,7 @@ class PscIde
             params:
               search: text
           }
-          {
-            filter: "modules"
-            params:
-              modules: modules
-          }
+          @modulesFilter()
         ]
 
   getType: (text) ->
@@ -100,7 +101,7 @@ class PscIde
       command: "type"
       params:
         search: text
-        filters: []
+        filters: [ @modulesFilter() ]
     .then (result) =>
       if result.length > 0
         @abbrevType result[0].type
@@ -124,7 +125,7 @@ class PscIde
     new Promise (resolve) =>
       prefix = prefix.trim()
       if prefix.length > 0
-        @getCompletion(prefix,@editors.activeModules)
+        @getCompletion prefix
           .then (completions) =>
             resolve completions.map (c) =>
               text: c.identifier

@@ -7,7 +7,8 @@ class PsTooltips extends HoverTooltips
     @syntax = 'source.purescript'
     @provider = (pos) => new Promise (resolve) =>
       p = [pos.line-1, pos.column-1]
-      buffer = atom.workspace.getActivePaneItem().buffer
+      editor = atom.workspace.getActivePaneItem()
+      buffer = editor.buffer
 
       regex = /[a-zA-Z_']*/
       match = ""
@@ -18,7 +19,7 @@ class PsTooltips extends HoverTooltips
         match += it.matchText
       )
 
-      @pscIde.getType match
+      @pscIde.getType(match, editor)
         .then (result) =>
           result = @pscIde.abbrevType result
           resolve { valid: result.length > 0, info: result }
