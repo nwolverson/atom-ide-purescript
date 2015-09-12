@@ -111,12 +111,12 @@ class PscIde
     type.replace(/(?:\w+\.)+(\w+)/g, "$1")
 
   loadDeps: (editor) ->
-    res = XRegExp.exec(editor.getText(), /^module (\S+) where/)
-    if res
+    main = @editors.getMainModuleForEditor editor
+    if main
       @runCmd
         command: "load"
         params:
-          dependencies: [res[1]]
+          dependencies: [main]
     else
       Promise.resolve()
 

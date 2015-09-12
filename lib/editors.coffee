@@ -23,12 +23,18 @@ class Editors extends Disposable
     @activeModules = @getModulesForEditor editor
     console.debug "Active modules: " + @activeModules
 
+  getMainModuleForEditor: (editor) ->
+    res = XRegExp.exec(editor.getText(), /^module (\S+) where/)
+    res[1] if res
+
   getModulesForEditor: (editor) ->
     regex = /^import (?:qualified )?([a-zA-Z.]+)/mg
     modules = []
     XRegExp.forEach(editor.getText(), regex, (match) ->
       modules.push(match[1])
     )
+    main = @getMainModuleForEditor editor
+    modules.push(main) if main
     modules
 
 module.exports = Editors
