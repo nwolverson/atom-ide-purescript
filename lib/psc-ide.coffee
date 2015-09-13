@@ -15,17 +15,20 @@ class PscIde
     return new Promise (resolve,reject) =>
       command = @pscIde
       args = ['-p', @pscIdePort]
-      result = undefined
+      response = undefined
       stdout = (output) =>
         try
-          output = JSON.parse output
-        console.debug "psc-ide", cmd, "-->", output
-        result = output
+          response = JSON.parse output
+        console.debug "psc-ide", cmd, "-->", response
       exit = (code) =>
         console.debug "exited with code #{code}"
         if code is 0
-          resolve result
+          if response.resultType is "success"
+            resolve response.result
+          else
+            reject { code, result: response.result }
         else
+          result = if response && response.result then response.result else response
           reject { code, result }
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write JSON.stringify(cmd) + '\n'
