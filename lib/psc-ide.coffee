@@ -142,7 +142,7 @@ class PscIde
     new Promise (resolve) =>
       prefix = prefix.trim()
 
-      moduleRegex = /(?:^|[^A-Za-z_.])((?:[A-Z][A-Za-z]*\.)*(?:[A-Z][A-Za-z]*))\.$/
+      moduleRegex = /(?:^|[^A-Za-z_.])((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.$/
       textBefore = editor.getTextInRange([[bufferPosition.row, 0], [bufferPosition.row, bufferPosition.column - prefix.length]])
       modulePrefix = textBefore.match(moduleRegex)?[1]
 
