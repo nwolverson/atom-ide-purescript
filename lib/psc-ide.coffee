@@ -88,12 +88,19 @@ class PscIde
   getWorkingDir: ->
     @runCmd { command: "cwd" }
 
-  modulesFilter: ->
+  modulesFilter: (mods) ->
     filter: "modules"
     params:
-      modules: @editors.activeModules
+      modules: if mods then mods else @editors.getUnqualActiveModules()
 
-  getCompletion: (text) ->
+  getCompletion: (text, modulePrefix) ->
+    if modulePrefix
+      if modulePrefix.indexOf(".") isnt -1
+        mods = [modulePrefix]
+      else
+        mods = @editors.getQualModule(modulePrefix)
+        if mods.length is 0
+          mods = [modulePrefix]
     @runCmd
       command: "complete"
       params:
@@ -103,7 +110,7 @@ class PscIde
             params:
               search: text
           }
-          @modulesFilter()
+          @modulesFilter(mods)
         ]
 
   getType: (text) ->
@@ -134,8 +141,13 @@ class PscIde
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
       prefix = prefix.trim()
+
+      moduleRegex = /(?:^|[^A-Za-z_.])((?:[A-Z][A-Za-z]*\.)*(?:[A-Z][A-Za-z]*))\.$/
+      textBefore = editor.getTextInRange([[bufferPosition.row, 0], [bufferPosition.row, bufferPosition.column - prefix.length]])
+      modulePrefix = textBefore.match(moduleRegex)?[1]
+
       if prefix.length > 0
-        @getCompletion prefix
+        @getCompletion(prefix,modulePrefix)
           .then (completions) =>
             resolve completions.map (c) =>
               text: c.identifier

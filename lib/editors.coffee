@@ -2,7 +2,7 @@
 {XRegExp} = require 'xregexp'
 
 class Editors extends Disposable
-  activeModules: []
+  activeModules: null
   constructor: ->
     super =>
       @subscriptions.dispose()
@@ -29,18 +29,42 @@ class Editors extends Disposable
     @activeModules = @getModulesForEditor editor
     console.debug "Active modules: " + @activeModules
 
+  getUnqualActiveModules: () ->
+    if @activeModules.main
+      @activeModules.modules.concat(@activeModules.main)
+    else
+      @activeModules.modules
+
+  getQualModule: (qualifier) ->
+    @activeModules.qmodules
+      .filter (m) -> m.qualifier is qualifier
+      .map (m) -> m.module
+
   getMainModuleForEditor: (editor) ->
     res = XRegExp.exec(editor.getText(), /^module (\S+) where/)
     res[1] if res
 
   getModulesForEditor: (editor) ->
-    regex = /^import (?:qualified )?([a-zA-Z.]+)/mg
+    buffer = editor.buffer
+    lines = buffer.getLines()
+
+    regex = /^import\s+(?:qualified\s+)?([a-zA-Z.]+)\s*(?:hiding\s*)?(?:\([^)]*\))?\s*(?:as\s+([a-zA-Z.]+))/
+    qmodules = []
     modules = []
-    XRegExp.forEach(editor.getText(), regex, (match) ->
-      modules.push(match[1])
-    )
-    main = @getMainModuleForEditor editor
-    modules.push(main) if main
-    modules
+    lines.forEach (line) =>
+      match = line.match regex
+      if match
+        if match[2]
+          qmodules.push
+            module: match[1]
+            qualifier: match[2]
+        else
+          modules.push(match[1])
+      # TODO - bail early
+    {
+      main: @getMainModuleForEditor editor
+      modules: modules
+      qmodules: qmodules
+    }
 
 module.exports = Editors
