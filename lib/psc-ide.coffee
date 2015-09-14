@@ -39,9 +39,9 @@ class PscIde
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     pscIdeServer = atom.config.get("ide-purescript.pscIdeServerExe")
     dirs = atom.project.rootDirectories
-    if dirs.length > 1
-      atom.notifications.addWarning "Multiple project roots - using #{dir}"
     path = dirs[0].path
+    if dirs.length > 1
+      atom.notifications.addWarning "Multiple project roots - using #{path}"
 
     exit = (code) =>
       if code isnt 0
