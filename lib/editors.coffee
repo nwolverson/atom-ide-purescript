@@ -49,7 +49,7 @@ class Editors extends Disposable
     lines = buffer.getLines()
 
     # lax module parsing
-    regex = /^import\s+(?:qualified\s+)?([a-zA-Z0-9.]+)\s*(?:hiding\s*)?(?:\([^)]*\))?\s*(?:as\s+([a-zA-Z0-9.]+))/
+    regex = /^import\s+(?:qualified\s+)?([a-zA-Z0-9.]+)\s*(?:hiding\s*)?(?:\([^)]*\))?\s*(?:as\s+([a-zA-Z0-9.]+))?/
     qmodules = []
     modules = []
     lines.forEach (line) =>
