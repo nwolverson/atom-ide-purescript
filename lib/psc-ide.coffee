@@ -1,5 +1,7 @@
-{BufferedProcess} = require 'atom'
+{BufferedProcess,Point} = require 'atom'
 {XRegExp} = require 'xregexp'
+
+{ getModulePrefix } = require './utils';
 
 class PscIde
   editors: null
@@ -88,12 +90,7 @@ class PscIde
   getWorkingDir: ->
     @runCmd { command: "cwd" }
 
-  modulesFilter: (mods) ->
-    filter: "modules"
-    params:
-      modules: if mods then mods else @editors.getUnqualActiveModules()
-
-  getCompletion: (text, modulePrefix) ->
+  modulesFilter: (modulePrefix) ->
     if modulePrefix
       if modulePrefix.indexOf(".") isnt -1
         mods = [modulePrefix]
@@ -101,6 +98,13 @@ class PscIde
         mods = @editors.getQualModule(modulePrefix)
         if mods.length is 0
           mods = [modulePrefix]
+    else
+      mods = @editors.getUnqualActiveModules()
+    filter: "modules"
+    params:
+      modules: mods
+
+  getCompletion: (text, modulePrefix) ->
     @runCmd
       command: "complete"
       params:
@@ -110,15 +114,15 @@ class PscIde
             params:
               search: text
           }
-          @modulesFilter(mods)
+          @modulesFilter(modulePrefix)
         ]
 
-  getType: (text) ->
+  getType: (text, modulePrefix) ->
     @runCmd
       command: "type"
       params:
         search: text
-        filters: [ @modulesFilter() ]
+        filters: [ @modulesFilter(modulePrefix) ]
     .then (result) =>
       if result.length > 0
         @abbrevType result[0].type
@@ -142,9 +146,7 @@ class PscIde
     new Promise (resolve) =>
       prefix = prefix.trim()
 
-      moduleRegex = /(?:^|[^A-Za-z_.])((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.$/
-      textBefore = editor.getTextInRange([[bufferPosition.row, 0], [bufferPosition.row, bufferPosition.column - prefix.length]])
-      modulePrefix = textBefore.match(moduleRegex)?[1]
+      modulePrefix = getModulePrefix(editor, bufferPosition.translate([0, -prefix.length]))
 
       if prefix.length > 0
         @getCompletion(prefix,modulePrefix)
