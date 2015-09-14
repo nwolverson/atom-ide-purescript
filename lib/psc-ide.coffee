@@ -9,7 +9,10 @@ class PscIde
     @editors = editors
     @startServer()
       .then () =>
-        @editors.activate(this)
+        setTimeout(=>
+          @editors.activate(this)
+          100)
+
 
   runCmd: (cmd) ->
     return new Promise (resolve,reject) =>
@@ -64,6 +67,7 @@ class PscIde
           exit: exit
           options:
             cwd: path
+        @serverProcess
 
   deactivate: ->
     @serverProcess.kill()
