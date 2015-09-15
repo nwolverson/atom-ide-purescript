@@ -1,5 +1,7 @@
-{BufferedProcess} = require 'atom'
+{BufferedProcess,Point} = require 'atom'
 {XRegExp} = require 'xregexp'
+
+{ getModulePrefix } = require './utils';
 
 class PscIde
   editors: null
@@ -88,12 +90,21 @@ class PscIde
   getWorkingDir: ->
     @runCmd { command: "cwd" }
 
-  modulesFilter: ->
+  modulesFilter: (modulePrefix) ->
+    if modulePrefix
+      if modulePrefix.indexOf(".") isnt -1
+        mods = [modulePrefix]
+      else
+        mods = @editors.getQualModule(modulePrefix)
+        if mods.length is 0
+          mods = [modulePrefix]
+    else
+      mods = @editors.getUnqualActiveModules()
     filter: "modules"
     params:
-      modules: @editors.activeModules
+      modules: mods
 
-  getCompletion: (text) ->
+  getCompletion: (text, modulePrefix) ->
     @runCmd
       command: "complete"
       params:
@@ -103,15 +114,15 @@ class PscIde
             params:
               search: text
           }
-          @modulesFilter()
+          @modulesFilter(modulePrefix)
         ]
 
-  getType: (text) ->
+  getType: (text, modulePrefix) ->
     @runCmd
       command: "type"
       params:
         search: text
-        filters: [ @modulesFilter() ]
+        filters: [ @modulesFilter(modulePrefix) ]
     .then (result) =>
       if result.length > 0
         @abbrevType result[0].type
@@ -134,8 +145,11 @@ class PscIde
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
       prefix = prefix.trim()
+
+      modulePrefix = getModulePrefix(editor, bufferPosition.translate([0, -prefix.length]))
+
       if prefix.length > 0
-        @getCompletion prefix
+        @getCompletion(prefix,modulePrefix)
           .then (completions) =>
             resolve completions.map (c) =>
               text: c.identifier
