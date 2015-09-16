@@ -145,10 +145,12 @@ class PscIde
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
     new Promise (resolve) =>
       prefix = prefix.trim()
+      originalPrefix = prefix
+      prefix = "" if prefix is "." # shift right
 
       modulePrefix = getModulePrefix(editor, bufferPosition.translate([0, -prefix.length]))
 
-      if prefix.length > 0
+      if prefix.length > 0 || originalPrefix is "."
         @getCompletion(prefix,modulePrefix)
           .then (completions) =>
             resolve completions.map (c) =>
