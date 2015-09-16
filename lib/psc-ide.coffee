@@ -154,10 +154,33 @@ class PscIde
         @getCompletion(prefix,modulePrefix)
           .then (completions) =>
             resolve completions.map (c) =>
-              text: c.identifier
-              displayText: c.identifier + ": " + @abbrevType c.type
-              description: c.type
-              type: if /->/.test(c.type) then "function" else "value"
+              type =
+                if c.type is "module"
+                  "import"
+                else if /^[A-Z]/.test(c.identifier)
+                  "type"
+                else if /->/.test(c.type)
+                  "function"
+                else
+                  "value"
+              {
+                replacementPrefix: # Keep the module prefix for values but not modules
+                  if c.type is "module"
+                    (modulePrefix||"") + originalPrefix
+                  else
+                    prefix
+                text: c.identifier
+                displayText:
+                  if c.type is "module"
+                    c.identifier
+                  else if type == "type"
+                    c.identifier + " " + @abbrevType c.type
+                  else
+                    c.identifier + ": " + @abbrevType c.type
+                description: c.type
+                type: type
+              }
+
           .catch (err) =>
             console.warn "Suggestion error: " + err
 
