@@ -56,7 +56,7 @@ module.exports =
 
 
   provideLinter: ->
-    linter = new LinterPurescript()
+    linter = new LinterPurescript(@editors)
     return {
       grammarScopes: ['source.purescript']
       scope: 'package'

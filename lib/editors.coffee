@@ -21,6 +21,9 @@ class Editors extends Disposable
     editor = atom.workspace.getActiveTextEditor()
     @useEditor editor if editor
 
+  onCompiled: ->
+    editor = atom.workspace.getActiveTextEditor()
+    @useEditor editor if editor
 
   useEditor: (editor) ->
     @pscide.loadDeps editor

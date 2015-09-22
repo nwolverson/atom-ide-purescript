@@ -5,6 +5,8 @@ helpers = require 'atom-linter'
 class LinterPurescript
   lintProcess: null
 
+  constructor: (@editors) ->
+
   lint: (textEditor) ->
     mkResult = (match) ->
       lineEnd = match.lineEnd || match.lineStart
@@ -34,7 +36,7 @@ class LinterPurescript
 
       atom.notifications.addInfo "linter: compiling PureScript"
       helpers.exec(command, args, options)
-        .then (result) ->
+        .then (result) =>
           matches = []
 
           moduleRegex = '^[^\n]*(?<type>Error|Warning) in module [^\n]+:(?<message>.*?)^[^\n]*See'
@@ -51,6 +53,8 @@ class LinterPurescript
           parseRegex = 'Unable to parse module:\n[^"]*"(?<file>[^"]+)" \\(line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+)\\):(?<message>.*?)^[^\n]*See'
           XRegExp.forEach result, XRegExp(parseRegex, "sm"), (match) ->
             matches.push(mkResult(match))
+
+          @editors.onCompiled()
 
           atom.notifications.addSuccess "linter: compiled PureScript"
 
