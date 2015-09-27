@@ -31,10 +31,10 @@ class PscIde
           if response.resultType is "success"
             resolve response.result
           else
-            reject { code, result: response.result }
+            reject { code, result: response.result, command: cmd }
         else
           result = if response && response.result then response.result else response
-          reject { code, result }
+          reject { code, result, cmd }
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write JSON.stringify(cmd) + '\n'
 
@@ -103,6 +103,15 @@ class PscIde
     filter: "modules"
     params:
       modules: mods
+
+  doPursuitQuery: (text, queryType) =>
+    @runCmd
+      command: "pursuit"
+      params:
+        query: text
+        type: queryType
+  getPursuitModuleCompletion: (text) => @doPursuitQuery(text, "package")
+  getPursuitCompletion: (text) => @doPursuitQuery(text, "completion")
 
   getCompletion: (text, modulePrefix, moduleCompletion) ->
     filters = [

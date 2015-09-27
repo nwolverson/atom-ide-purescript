@@ -3,6 +3,7 @@ PscIde = require './psc-ide'
 PsTooltips = require './tooltips'
 glob = require 'glob'
 Editors = require './editors'
+Pursuit = require './pursuit'
 
 module.exports =
   config:
@@ -36,9 +37,12 @@ module.exports =
     @pscide = new PscIde()
     @editors = new Editors()
     @tooltips = new PsTooltips(@pscide)
+    @pursuit = new Pursuit(@pscide)
     @pscide.activate(@editors)
       .then () =>
         @tooltips.activate()
+    atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
+    atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
 
   deactivate: () ->
     @editors.dispose()
