@@ -6,3 +6,8 @@ module.exports.getModulePrefix = (editor, bufferPosition) ->
 module.exports.getProjectRoot = ->
   dirs = atom.project.rootDirectories
   path = dirs[0].path
+
+module.exports.getAvailableModules = () ->
+  fs = require('fs')
+  paths = fs.readdirSync(atom.project.rootDirectories[0].path + "/output")
+  paths

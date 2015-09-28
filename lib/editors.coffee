@@ -71,4 +71,16 @@ class Editors extends Disposable
       qmodules: qmodules
     }
 
+  addImport: (module) ->
+    return if @activeModules.modules.concat(@activeModules.qmodules).indexOf(module) isnt -1
+
+    buffer = atom.workspace.getActiveTextEditor().getBuffer()
+    lastImport = 0
+    buffer.getLines().forEach (l,i) =>
+      if /^module|^import/.test(l)
+        lastImport = i
+    buffer.insert([lastImport+1, 0], "import #{module}\n")
+
+
+
 module.exports = Editors

@@ -50,6 +50,13 @@ module.exports =
     @psci.activate()
     atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
     atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
+    ModuleSelectListView = require('./select-views')
+
+    atom.commands.add("atom-workspace", "purescript:add-module-import", =>
+      moduleView = new ModuleSelectListView(@editors)
+      moduleView.initialize()
+      moduleView.show()
+      )
 
   deactivate: () ->
     @editors.dispose()
