@@ -1,6 +1,7 @@
 path = require 'path'
 {XRegExp} = require 'xregexp'
 helpers = require 'atom-linter'
+{Range} = require 'atom'
 
 class LinterPurescript
   lintProcess: null
@@ -39,20 +40,17 @@ class LinterPurescript
         .then (result) =>
           matches = []
 
-          moduleRegex = '^[^\n]*(?<type>Error|Warning) in module [^\n]+:(?<message>.*?)^[^\n]*See'
-          XRegExp.forEach result, XRegExp(moduleRegex, "sm"), (match) ->
-            matches.push(mkResult(match))
+          regexes = [
+            '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
+            '^[^\n]*(?<type>Error|Warning) in module [^\n]+:(?<message>.*?)^[^\n]*See'
+            'Unable to parse module:\n[^"]*"(?<file>[^"]+)" \\(line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+)\\):(?<message>.*?)^[^\n]*See'
+          ]
 
-
-          regex = '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
-
-
-          XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
-            matches.push(mkResult(match))
-
-          parseRegex = 'Unable to parse module:\n[^"]*"(?<file>[^"]+)" \\(line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+)\\):(?<message>.*?)^[^\n]*See'
-          XRegExp.forEach result, XRegExp(parseRegex, "sm"), (match) ->
-            matches.push(mkResult(match))
+          regexes.forEach (regex) ->
+            XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
+              result = mkResult(match)
+              if !matches.some((existing) -> Range.fromObject(existing.range).intersectsWith(Range.fromObject(result.range), true))
+                matches.push(mkResult(match))
 
           @editors.onCompiled()
 
