@@ -33,16 +33,19 @@ class Psci
     editor.moveToBeginningOfLine()
 
   sendText: (text) =>
-    @editor.insertText(text + "\n")
+    @addText(text + "\n")
     @proc.process.stdin.write(text + "\n")
 
   startRepl: ->
     atom.workspace.open("PSCI", { split: "right" })
       .done (ed) =>
         @editor = ed
+        view = atom.views.getView ed
+        view.component.setInputEnabled false
 
   addText: (text) ->
     if @editor
+      @editor.moveToBottom()
       @editor.insertText text
 
   startPsci: ->
