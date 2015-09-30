@@ -3,6 +3,7 @@ PscIde = require './psc-ide'
 PsTooltips = require './tooltips'
 glob = require 'glob'
 Editors = require './editors'
+Psci = require './psci'
 
 module.exports =
   config:
@@ -30,6 +31,10 @@ module.exports =
       title: "enable build (atom build package)"
       type: 'boolean'
       default: true
+    psciCommand:
+      title: "psci command (eg 'psci' or 'pulp psci' or full path)"
+      type: 'string'
+      default: "pulp psci"
 
   activate: (state) ->
     console.log "Activated ide-purescript"
@@ -39,6 +44,8 @@ module.exports =
     @pscide.activate(@editors)
       .then () =>
         @tooltips.activate()
+    @psci = new Psci()
+    @psci.activate()
 
   deactivate: () ->
     @editors.dispose()

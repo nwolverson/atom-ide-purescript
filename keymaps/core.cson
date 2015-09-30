@@ -1,0 +1,9 @@
+
+'.platform-win32 atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+    'alt-/':'psci:send-line'
+
+'.platform-darwin atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+    'ctrl-cmd-l':'psci:send-line'
+
+'atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+    'cmd-enter':'psci:send-selection'

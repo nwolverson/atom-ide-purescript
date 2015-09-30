@@ -1,7 +1,7 @@
 {BufferedProcess,Point} = require 'atom'
 {XRegExp} = require 'xregexp'
 
-{ getModulePrefix } = require './utils';
+{ getModulePrefix, getProjectRoot } = require './utils';
 
 class PscIde
   editors: null
@@ -43,9 +43,8 @@ class PscIde
     @pscIde = atom.config.get("ide-purescript.pscIdeExe")
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     pscIdeServer = atom.config.get("ide-purescript.pscIdeServerExe")
-    dirs = atom.project.rootDirectories
-    path = dirs[0].path
-    if dirs.length > 1
+    path = getProjectRoot()
+    if atom.project.rootDirectories.length > 1
       atom.notifications.addWarning "Multiple project roots - using #{path}"
 
     exit = (code) =>
