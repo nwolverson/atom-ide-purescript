@@ -10,7 +10,7 @@ class PursuitSelectListView extends SelectListView
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
     editor = @[0].firstChild.getModel()
     buffer = editor.getBuffer()
-    buffer.stoppedChangingDelay = 200
+    buffer.stoppedChangingDelay = 1000
     buffer.onDidStopChanging (text) =>
       @getCompletions buffer.getText()
 
@@ -34,6 +34,8 @@ class PursuitIdentifierListView extends PursuitSelectListView
     super
 
   getFilterKey: -> "ident"
+
+  getFilterQuery: -> ""
 
   viewForItem: (item) ->
     "<li class='two-lines'>
@@ -75,6 +77,7 @@ class Pursuit
     if not @selectView
       @selectView = new PursuitIdentifierListView(@getCompletions)
       @selectView.initialize()
+    @selectView.setMaxItems(30)
     @selectView.show()
 
 module.exports = Pursuit
