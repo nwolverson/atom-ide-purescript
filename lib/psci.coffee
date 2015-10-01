@@ -77,7 +77,7 @@ class Psci
 
   sendSelectionCommand: =>
     editor = atom.workspace.getActiveTextEditor()
-    @sendLineCommand editor.getSelectedText()
+    @sendText editor.getSelectedText()
     editor.moveDown 1
     editor.moveToBeginningOfLine()
 
