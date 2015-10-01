@@ -47,6 +47,22 @@ Hovering over an identifier will show a tooltip with its type:
 
 This is really stupid, and only cares that you hover over a word regardless of context, you will get some false positives.
 
+## Pursuit lookup
+
+Command available from the command palette:
+  * PureScript search - search for identifiers, by identifier or type
+  * PureScript search modules - find package by module
+
+## PSCI
+
+Basic PSCI REPL integration (runs `pulp psci`). A read-only buffer which displays
+PSCI output, input can be sent from the current buffer by line or selection.
+
+Command from the command palette:
+  * PSCI: Open - open a PSCI buffer
+  * PSCI: Send Line
+  * PSCI: Send Selection
+
 ## Build
 
 Build support is experimental as I don't like any of the options yet. Depending on
