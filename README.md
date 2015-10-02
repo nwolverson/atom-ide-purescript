@@ -49,11 +49,15 @@ This is really stupid, and only cares that you hover over a word regardless of c
 
 ## Pursuit lookup
 
+![Pursuit lookup](http://nwolverson.github.io/atom-ide-purescript/assets/pursuit.png)
+
 Command available from the command palette:
   * PureScript search - search for identifiers, by identifier or type
   * PureScript search modules - find package by module
 
 ## PSCI
+
+![PSCI window](http://nwolverson.github.io/atom-ide-purescript/assets/psci.png)
 
 Basic PSCI REPL integration (runs `pulp psci`). A read-only buffer which displays
 PSCI output, input can be sent from the current buffer by line or selection.
