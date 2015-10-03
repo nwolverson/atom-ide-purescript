@@ -1,0 +1,8 @@
+'context-menu':
+  'atom-text-editor[data-grammar*="source purescript psci"]:not([mini])':
+    'PSCI: Reset': 'psci:reset'
+
+  'atom-text-editor[data-grammar*="source purescript"]:not([mini])':
+    'PSCI: Open': 'psci:open'
+    'PSCI: Send Line': 'psci:send-line'
+    'PSCI: Send Selection': 'psci:send-selection'

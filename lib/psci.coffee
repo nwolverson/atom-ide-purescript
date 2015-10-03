@@ -88,9 +88,10 @@ class Psci
       @proc.sendText text
 
   startRepl: =>
-    atom.workspace.open("PSCI", { split: "right" })
+    atom.workspace.open("PSCI", { split: "right", activatePane: "false" })
       .done (ed) =>
         @editor = ed
+        @editor.setGrammar atom.grammars.grammarForScopeName("source.purescript.psci")
         view = atom.views.getView ed
         view.component.setInputEnabled false
 
