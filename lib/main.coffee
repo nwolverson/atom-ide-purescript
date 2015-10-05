@@ -42,7 +42,7 @@ module.exports =
     @pscide = new PscIde()
     @editors = new Editors()
     @tooltips = new PsTooltips(@pscide)
-    @pursuit = new Pursuit(@pscide)
+    @pursuit = new Pursuit(@pscide, @editors)
     @pscide.activate(@editors)
       .then () =>
         @tooltips.activate()

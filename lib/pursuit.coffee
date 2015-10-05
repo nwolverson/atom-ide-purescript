@@ -6,7 +6,6 @@ class PursuitSelectListView extends SelectListView
 
   initialize: () =>
     super
-    # @addClass('overlay from-top')
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
     editor = @[0].firstChild.getModel()
     buffer = editor.getBuffer()
@@ -24,7 +23,6 @@ class PursuitSelectListView extends SelectListView
 
   confirmed: (item) =>
     @cancel()
-    console.log("#{item.identifier} was selected")
 
   cancelled: =>
     @hide()
@@ -43,7 +41,14 @@ class PursuitIdentifierListView extends PursuitSelectListView
       <div class='secondary-line'>#{item.module} (#{item.package})</div>
     </li>"
 
+  confirmed: (item) =>
+    super()
+    console.log("#{item.identifier} was selected")
+
 class PursuitModuleListView extends PursuitSelectListView
+  constructor: (@getCompletions, @editors) ->
+    super(@getCompletions)
+
   initialize: () ->
     super
 
@@ -55,9 +60,42 @@ class PursuitModuleListView extends PursuitSelectListView
       <div class='secondary-line'>#{item.package}</div>
     </li>"
 
+  confirmed: (item) =>
+    view = new PursuitModuleActionView(@editors, item.module)
+    view.initialize()
+    view.show()
+    super()
+
+class PursuitModuleActionView extends SelectListView
+  constructor: (@editors, @moduleName) ->
+    super
+
+  initialize: () =>
+    super
+    @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
+    @setItems ["Import module", "Cancel"]
+
+  viewForItem: (item) ->
+    "<li>#{item}</li>"
+
+  show: ->
+    @storeFocusedElement()
+    @panel.show()
+    @focusFilterEditor()
+
+  hide: ->
+    @panel.hide()
+
+  confirmed: (item) =>
+    @cancel()
+    if item is "Import module"
+      @editors.addImport @moduleName
+
+  cancelled: =>
+    @hide()
 
 class Pursuit
-  constructor: (@pscide) ->
+  constructor: (@pscide, @editors) ->
 
   getModuleCompletions: (text) =>
     @pscide.getPursuitModuleCompletion text
@@ -69,7 +107,7 @@ class Pursuit
 
   searchModule: () =>
     if not @selectModuleView
-      @selectModuleView = new PursuitModuleListView(@getModuleCompletions)
+      @selectModuleView = new PursuitModuleListView(@getModuleCompletions, @editors)
       @selectModuleView.initialize()
     @selectModuleView.show()
 

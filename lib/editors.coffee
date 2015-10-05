@@ -72,7 +72,7 @@ class Editors extends Disposable
     }
 
   addImport: (module) ->
-    return if @activeModules.modules.concat(@activeModules.qmodules).indexOf(module) isnt -1
+    return if @activeModules.modules.concat(@activeModules.qmodules.map((x) -> x.module)).indexOf(module) isnt -1
 
     buffer = atom.workspace.getActiveTextEditor().getBuffer()
     lastImport = 0
