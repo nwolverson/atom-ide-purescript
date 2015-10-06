@@ -30,7 +30,7 @@ class Editors extends Disposable
       .catch (err) =>
         console.error (err)
     @activeModules = @getModulesForEditor editor
-    console.debug "Active modules: " + @activeModules
+    console.debug "Active modules: " + JSON.stringify(@activeModules)
 
   getUnqualActiveModules: () ->
     if @activeModules.main

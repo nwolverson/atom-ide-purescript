@@ -24,7 +24,7 @@ class PscIde
       stdout = (output) =>
         try
           response = JSON.parse output
-        console.debug "psc-ide", cmd, "-->", response
+        console.debug "psc-ide", JSON.stringify(cmd), "-->", JSON.stringify(response)
       exit = (code) =>
         console.debug "exited with code #{code}"
         if code is 0
