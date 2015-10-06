@@ -1,7 +1,8 @@
 {BufferedProcess,Point} = require 'atom'
 {XRegExp} = require 'xregexp'
+fs = require 'fs'
 
-{ getModulePrefix, getProjectRoot } = require './utils';
+{ getModulePrefix, getProjectRoot } = require './utils'
 
 class PscIde
   editors: null
@@ -47,6 +48,13 @@ class PscIde
     if atom.project.rootDirectories.length > 1
       atom.notifications.addWarning "Multiple project roots - using #{path}"
 
+    if (! fs.existsSync("#{path}/src") )
+      atom.notifications.addWarning "Doesn't look like a purescript project - didn't find #{path}/src"
+
+    if (! fs.existsSync("#{path}/output") )
+      atom.notifications.addWarning "Doesn't look like a project has been built - didn't find #{path}/output"
+
+
     exit = (code) =>
       if code isnt 0
         atom.notifications.addError "Could not start psc-ide-server process. Check the configured port number is valid."
@@ -59,7 +67,7 @@ class PscIde
         if output is path
           atom.notifications.addInfo "Found existing psc-ide-server with correct path"
         else
-          atom.notifications.addError "Found existing psc-ide-server with wrong path. Correct, kill or configure a different port, and restart."
+          atom.notifications.addError "Found existing psc-ide-server with wrong path: #{output}. Correct, kill or configure a different port, and restart."
       .catch (err) =>
         atom.notifications.addInfo "Starting psc-ide-server"
         @serverProcess = new BufferedProcess
