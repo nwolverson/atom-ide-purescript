@@ -10,6 +10,7 @@ class PsciProcess
     @proc.stdin.write text
 
   kill: ->
+    @proc.stdin.write ":q\n"
     @killed = true
     @proc.stdin.end()
     @proc.kill()
@@ -56,7 +57,6 @@ class Psci
     @proc = null
 
   resetPsciCommand: =>
-    @killProc()
     if @editor
       @editor.buffer.reload()
     @startPsci()
@@ -66,6 +66,7 @@ class Psci
     @startPsci()
 
   startPsci: =>
+    @killProc()
     @proc = new PsciProcess()
     @proc.start @addText
 
