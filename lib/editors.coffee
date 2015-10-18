@@ -2,7 +2,7 @@
 {XRegExp} = require 'xregexp'
 
 class Editors extends Disposable
-  activeModules: null
+  activeModules: { main: null, modules: [], qmodules: [] }
   constructor: ->
     super =>
       @subscriptions.dispose()
@@ -29,8 +29,7 @@ class Editors extends Disposable
     @pscide.loadDeps editor
       .catch (err) =>
         console.error (err)
-    @activeModules = @getModulesForEditor editor
-    console.debug "Active modules: " + JSON.stringify(@activeModules)
+    @getModulesForEditor editor
 
   getUnqualActiveModules: () ->
     if @activeModules.main
@@ -47,29 +46,18 @@ class Editors extends Disposable
     res = XRegExp.exec(editor.getText(), /^module\s+(\S+)/m)
     res[1] if res
 
+  # only distinguishing qualified imports and other - explicit and hiding parts are not respected
   getModulesForEditor: (editor) ->
-    buffer = editor.buffer
-    lines = buffer.getLines()
-
-    # lax module parsing
-    regex = /^import\s+(?:qualified\s+)?([a-zA-Z0-9.]+)\s*(?:hiding\s*)?(?:\([^)]*\))?\s*(?:as\s+([a-zA-Z0-9.]+))?/
-    qmodules = []
-    modules = []
-    lines.forEach (line) =>
-      match = line.match regex
-      if match
-        if match[2]
-          qmodules.push
-            module: match[1]
-            qualifier: match[2]
-        else
-          modules.push(match[1])
-      # TODO - bail early
-    {
-      main: @getMainModuleForEditor editor
-      modules: modules
-      qmodules: qmodules
-    }
+    imports = @pscide.getImports editor.getPath()
+      .then (imports) =>
+        @activeModules =
+          main: @getMainModuleForEditor editor
+          modules: (imports
+            .filter((imp) => !imp.qualifier)
+            .map((imp) => imp.module))
+          qmodules: (imports
+            .filter((imp) => imp.qualifier))
+        console.debug "Active modules: " + JSON.stringify(@activeModules)
 
   addImport: (module) ->
     return if @activeModules.modules.concat(@activeModules.qmodules.map((x) -> x.module)).indexOf(module) isnt -1

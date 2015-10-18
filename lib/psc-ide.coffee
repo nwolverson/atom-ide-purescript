@@ -81,18 +81,11 @@ class PscIde
   deactivate: ->
     @serverProcess.kill()
 
-  getList: (text) ->
-    text.split ","
-      .map (s) -> s.trim()
-      .filter (s) -> s.length > 0
-  trimQuote: (text) ->
-    withQuotes = /"(.*)"/.exec(text)
-    if withQuotes then withQuotes[1] else text
-
   getLoadedModules: ->
-    @runCmd { command: "list" }
-      .then (output) =>
-        @getList output
+    @runCmd { command: "list", params: { type: "module" } }
+
+  getImports: (file) ->
+    @runCmd { command: "list", params: { type: "import", file: file } }
 
   getWorkingDir: ->
     @runCmd { command: "cwd" }
