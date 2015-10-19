@@ -23,7 +23,7 @@ module.exports =
     buildCommand:
       title: "build command"
       type: 'string'
-      default: "pulp build"
+      default: if process.platform == "win32" then "pulp.cmd build" else "pulp build"
     enableAtomLinter:
       title: "enable atom-linter (build on save, error tooltips)"
       type: 'boolean'
@@ -97,7 +97,7 @@ module.exports =
           resolve {
             cmd: cmd
             exec: cmd
-            sh: true
+            sh: process.platform != "win32"
             args: args
             errorMatch: [
               '(?<type>Error|Warning) at (?<file>[^\n]*?) line (?<line>[0-9]+), column (?<col>[0-9]+)',
