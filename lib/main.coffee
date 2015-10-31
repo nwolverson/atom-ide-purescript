@@ -77,7 +77,7 @@ module.exports =
     linter = new LinterPurescript(@editors)
     return {
       grammarScopes: ['source.purescript']
-      scope: 'package'
+      scope: 'project'
       lint: (f) -> linter.lint(f)
       lintOnFly: false
     }
