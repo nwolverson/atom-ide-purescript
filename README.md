@@ -14,7 +14,8 @@ Package should trigger on opening a `.purs` file.
 ## Installation and General Use
 
 This package relies on having [psc-ide](https://github.com/kRITZCREEK/psc-ide) installed.
-Version *0.3.0.0* is supported ([release](https://github.com/kRITZCREEK/psc-ide/releases/tag/0.3.0.0)).
+For use with PureScript compiler version *0.7.5* you should use [version 0.4.0](https://github.com/kRITZCREEK/psc-ide/releases/tag/0.4.0),
+for earlier compiler versions you instead need [0.3.0.0](https://github.com/kRITZCREEK/psc-ide/releases/tag/0.3.0.0).
 This runs a server process, `psc-ide-server`, to provide type information, completions,
 etc. This package will automatically start `psc-ide-server` in your project
 directory (port is configurable) and kill it when closing, if for some reason
