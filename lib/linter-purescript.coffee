@@ -41,16 +41,15 @@ class LinterPurescript
           matches = []
 
           regexes = [
-            '^[^\n]*(?<type>Error|Warning) at (?<file>[^\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+):(?<message>.*?)^[^\n]*See'
-            '^[^\n]*(?<type>Error|Warning) in module [^\n]+:(?<message>.*?)^[^\n]*See'
-            'Unable to parse module:\n[^"]*"(?<file>[^"]+)" \\(line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+)\\):(?<message>.*?)^[^\n]*See'
+            '^(?<type>Error|Warning)[^\\n]+:\\n+(\\s*in module [^\\n]+\\n)?(\\s*at (?<file>[^\\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+)\\n)?\\n*(?<message>.*?)^[^\\n]*?See'
           ]
 
           regexes.forEach (regex) ->
             XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
-              result = mkResult(match)
-              if !matches.some((existing) -> Range.fromObject(existing.range).intersectsWith(Range.fromObject(result.range), true))
-                matches.push(mkResult(match))
+              res = mkResult(match)
+              # Previously removed overlapping warnings but just go ahead, there really are distinct errors:
+              # if !matches.some((existing) -> Range.fromObject(existing.range).intersectsWith(Range.fromObject(res.range), true))
+              matches.push(mkResult(match))
 
           @editors.onCompiled()
 
