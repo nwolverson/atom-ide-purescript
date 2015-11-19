@@ -16,7 +16,6 @@ class PscIde
           @editors.activate(this)
           100)
 
-
   runCmd: (cmd) ->
     return new Promise (resolve,reject) =>
       command = @pscIde
@@ -45,15 +44,6 @@ class PscIde
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     pscIdeServer = atom.config.get("ide-purescript.pscIdeServerExe")
     path = getProjectRoot()
-    if atom.project.rootDirectories.length > 1
-      atom.notifications.addWarning "Multiple project roots - using #{path}"
-
-    if (! fs.existsSync("#{path}/src") )
-      atom.notifications.addWarning "Doesn't look like a purescript project - didn't find #{path}/src"
-
-    if (! fs.existsSync("#{path}/output") )
-      atom.notifications.addWarning "Doesn't look like a project has been built - didn't find #{path}/output"
-
 
     exit = (code) =>
       if code isnt 0
