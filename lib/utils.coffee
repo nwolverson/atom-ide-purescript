@@ -1,3 +1,5 @@
+glob = require 'glob'
+
 module.exports.getModulePrefix = (editor, bufferPosition) ->
   moduleRegex = /(?:^|[^A-Za-z_.])((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.$/
   textBefore = editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
@@ -12,25 +14,29 @@ getRoot = (path) ->
       path
 
 module.exports.getProjectRoot = ->
-  dirs = (getRoot(dir) for dir in atom.project.rootDirectories)
-  validDirs = (dir for dir in dirs when dir)
+  validDir = (d) ->
+    if d
+      files = glob.sync("src/**/*.purs", {cwd: d.path})
+      files && files.length > 0
+    else
+      false
+  dirs = atom.project.rootDirectories.map getRoot
+  validDirs = dirs.filter validDir
 
   if (validDirs.length is 0)
       atom.notifications.addWarning "Doesn't look like a purescript project - didn't find any src dir"
       return null
 
   dir = validDirs[0]
-  path = dir.path
   if validDirs.length > 1
-    atom.notifications.addWarning "Multiple project roots, using first - #{path}"
+    atom.notifications.addWarning "Multiple project roots, using first - #{dir.path}"
   else if dirs.length > 1 && validDirs.length == 1
-    atom.notifications.addWarning "Multiple project roots but only 1 looks valid - #{path}"
+    atom.notifications.addWarning "Multiple project roots but only 1 looks valid - #{dir.path}"
 
   if (! dir.getSubdirectory("output").existsSync() )
-    atom.notifications.addWarning "Doesn't look like a project has been built - didn't find #{path}/output"
+    atom.notifications.addWarning "Doesn't look like a project has been built - didn't find #{dir.path}/output"
 
-  return path
-
+  return dir.path
 
 module.exports.getAvailableModules = () ->
   fs = require('fs')
