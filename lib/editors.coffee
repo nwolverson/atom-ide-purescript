@@ -43,7 +43,7 @@ class Editors extends Disposable
       .map (m) -> m.module
 
   getMainModuleForEditor: (editor) ->
-    res = XRegExp.exec(editor.getText(), /^module\s+(\S+)/m)
+    res = XRegExp.exec(editor.getText(), /^module\s+([\w.]+)/m)
     res[1] if res
 
   # only distinguishing qualified imports and other - explicit and hiding parts are not respected
