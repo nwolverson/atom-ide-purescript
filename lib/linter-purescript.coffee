@@ -3,6 +3,8 @@ path = require 'path'
 helpers = require 'atom-linter'
 {Range} = require 'atom'
 
+{ getProjectRoot } = require './utils'
+
 parseTextErrors = (result) ->
   mkResult = (match) ->
     lineEnd = match.lineEnd || match.lineStart
@@ -54,38 +56,45 @@ parseJsonErrors = (result) ->
 class LinterPurescript
   lintProcess: null
 
-  constructor: (@editors) ->
+  constructor: (@editors, @linter) ->
 
-  lint: (textEditor) ->
+  lintOnSave: (textEditor) =>
+    if !atom.config.get("ide-purescript.buildOnSave")
+      resolve([])
+      return
 
+    filePath = textEditor.getPath()
+    dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
+    projDir = if dirs.length == 1 then dirs[0].path else filePath.replace(/src\/.*/, "")
+    @lint projDir
 
+  lintOnBuild: () =>
+    projDir = getProjectRoot()
+    @lint projDir
+
+  lint: (projDir) ->
     return new Promise (resolve, reject) =>
-      if !atom.config.get("ide-purescript.enableAtomLinter")
-        resolve([])
-        return
-
       buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
       command = buildCommand[0]
       args = buildCommand.slice(1)
-
-      filePath = textEditor.getPath()
-      dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
-      projDir = if dirs.length == 1 then dirs[0].path else filePath.replace(/src\/.*/, "")
 
       options = { cwd: projDir, stream: "stderr" }
 
       atom.notifications.addInfo "linter: compiling PureScript"
       helpers.exec(command, args, options)
         .then (result) =>
-          matches = parseTextErrors result
+          messages = parseTextErrors result
             .concat(parseJsonErrors result)
 
           @editors.onCompiled()
 
           atom.notifications.addSuccess "linter: compiled PureScript"
 
-          resolve(matches)
+          @linter.setMessages messages
+
+          resolve(messages)
         .then null, (err) ->
+          @linter.setMessages []
           reject(err)
 
 

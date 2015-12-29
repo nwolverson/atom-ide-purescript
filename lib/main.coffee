@@ -6,7 +6,9 @@ Editors = require './editors'
 Psci = require './psci'
 Pursuit = require './pursuit'
 
-module.exports =
+{ CompositeDisposable } = require 'atom'
+
+class Main
   config:
     pscIdeExe:
       title: "psc-ide executable location"
@@ -22,18 +24,24 @@ module.exports =
       default: process.env.HOME + '/.local/bin/psc-ide-server'
     buildCommand:
       title: "build command"
+      description: "Command line to build the project. Could be pulp (default), psc or a gulpfile, so long as it passes through errors from psc. Should output json errors (old format will still be supported for now). Don't use a command with spaces in its path."
       type: 'string'
       default: if process.platform == "win32" then "pulp.cmd build --json-errors" else "pulp build --json-errors"
-    enableAtomLinter:
-      title: "enable atom-linter (build on save, error tooltips)"
+    buildOnSave:
+      title: "build on save"
+      description: "Build automatically on save. Enables in-line and collected errors. Otherwise a build command is available to be invoked manually."
       type: 'boolean'
       default: true
     psciCommand:
       title: "psci command (eg 'psci' or 'pulp psci' or full path)"
+      description: "Command line to use to launch PSCI for the repl buffer. Don't use a command with spaces in its path."
       type: 'string'
       default: "pulp psci"
 
-  activate: (state) ->
+  constructor: ->
+    @subscriptions = new CompositeDisposable()
+
+  activate: (state) =>
     console.log "Activated ide-purescript"
     @pscide = new PscIde()
     @editors = new Editors()
@@ -46,6 +54,8 @@ module.exports =
     @psci.activate()
     atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
     atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
+    atom.commands.add("atom-workspace", "purescript:build", @lint)
+
     ModuleSelectListView = require('./select-views')
 
     atom.commands.add("atom-workspace", "purescript:add-module-import", =>
@@ -53,12 +63,14 @@ module.exports =
       moduleView.show()
       )
 
-  deactivate: () ->
-    @editors.dispose()
-    @tooltips.deactivate()
-    @pscide.deactivate()
+    @subscriptions.add @editors
+    @subscriptions.add @tooltips
+    @subscriptions.add @pscide
 
-  provideAutocomplete: ->
+  deactivate: () =>
+    @subscriptions.dispose()
+
+  provideAutocomplete: =>
     selector: '.source.purescript'
     disableForSelector: '.source.purescript .comment, .source.purescript .string'
     inclusionPriority: 1
@@ -67,11 +79,14 @@ module.exports =
     # onDidInsertSuggestion: ({editor, triggerPosition, suggestion}) ->
     # dispose: ->
 
-  provideLinter: ->
-    linter = new LinterPurescript(@editors)
-    return {
-      grammarScopes: ['source.purescript']
-      scope: 'project'
-      lint: (f) -> linter.lint(f)
-      lintOnFly: false
-    }
+  lint: () =>
+    @pslinter.lintOnBuild()
+
+  consumeLinter: (linterRegistry) =>
+    linter = linterRegistry.register({name: 'PureScript'})
+    @subscriptions.add linter
+    @pslinter = new LinterPurescript(@editors, linter)
+    @editors.linter = @pslinter
+
+
+module.exports = new Main()

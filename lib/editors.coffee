@@ -16,7 +16,11 @@ class Editors extends Disposable
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidSave (event) =>
-        @useEditor editor
+        if @linter
+          @linter.lintOnSave editor
+            .then => @useEditor editor
+        else
+          @useEditor editor
 
     editor = atom.workspace.getActiveTextEditor()
     @useEditor editor if editor

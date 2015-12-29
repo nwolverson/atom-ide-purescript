@@ -20,14 +20,16 @@
     "xregexp": "~2.0.0"
   },
   "providedServices": {
-    "linter": {
-      "versions": {
-        "1.0.0": "provideLinter"
-      }
-    },
     "autocomplete.provider": {
       "versions": {
         "2.0.0": "provideAutocomplete"
+      }
+    }
+  },
+  "consumedServices": {
+    "linter-indie": {
+      "versions": {
+        "1.0.0": "consumeLinter"
       }
     }
   }
