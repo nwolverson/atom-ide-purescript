@@ -25,12 +25,6 @@
         "1.0.0": "provideLinter"
       }
     },
-    "builder": {
-      "description": "Build PureScript using pulp",
-      "versions": {
-        "1.0.0": "provideBuildConfig"
-      }
-    },
     "autocomplete.provider": {
       "versions": {
         "2.0.0": "provideAutocomplete"

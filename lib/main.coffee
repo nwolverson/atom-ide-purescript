@@ -28,10 +28,6 @@ module.exports =
       title: "enable atom-linter (build on save, error tooltips)"
       type: 'boolean'
       default: true
-    enableBuild:
-      title: "enable build (atom build package)"
-      type: 'boolean'
-      default: true
     psciCommand:
       title: "psci command (eg 'psci' or 'pulp psci' or full path)"
       type: 'string'
@@ -71,7 +67,6 @@ module.exports =
     # onDidInsertSuggestion: ({editor, triggerPosition, suggestion}) ->
     # dispose: ->
 
-
   provideLinter: ->
     linter = new LinterPurescript(@editors)
     return {
@@ -79,27 +74,4 @@ module.exports =
       scope: 'project'
       lint: (f) -> linter.lint(f)
       lintOnFly: false
-    }
-  provideBuildConfig: ->
-    return {
-      niceName: 'PureScript',
-      isEligable: (path) ->
-        if !atom.config.get("ide-purescript.enableBuild")
-          return false
-        files = glob.sync("src/**/*.purs", {cwd: path})
-        files && files.length > 0
-      settings: (path) ->
-        buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
-        cmd = buildCommand[0]
-        args = buildCommand.slice 1
-        return new Promise (resolve,reject) =>
-          resolve {
-            cmd: cmd
-            exec: cmd
-            sh: process.platform != "win32"
-            args: args
-            errorMatch: [
-              '(?<type>Error|Warning)[^\\n]+:\\n+(\\s*in module [^\\n]+\\n)?(\\s*at (?<file>[^\\n]*) line (?<line>[0-9]+), column (?<col>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+)\\n)?'
-            ]
-          }
     }
