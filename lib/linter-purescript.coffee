@@ -14,10 +14,10 @@ class LinterPurescript
       colEnd = match.colEnd || match.colStart
       return {
         type: match.type || "Error",
-        text: match.message.replace(/\n/g, " "),
+        text: match.message, #.replace(/\n/g, " "),
         filePath: match.file,
         range: [[match.lineStart-1, match.colStart-1], [lineEnd-1, colEnd-1]]
-        multiline: true
+        multiline: /\n/.test(match.message)
       }
 
     return new Promise (resolve, reject) =>
