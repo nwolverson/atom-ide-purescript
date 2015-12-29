@@ -62,7 +62,6 @@ class PursuitModuleListView extends PursuitSelectListView
 
   confirmed: (item) =>
     view = new PursuitModuleActionView(@editors, item.module)
-    view.initialize()
     view.show()
     super()
 
@@ -108,13 +107,11 @@ class Pursuit
   searchModule: () =>
     if not @selectModuleView
       @selectModuleView = new PursuitModuleListView(@getModuleCompletions, @editors)
-      @selectModuleView.initialize()
     @selectModuleView.show()
 
   search: () =>
     if not @selectView
       @selectView = new PursuitIdentifierListView(@getCompletions)
-      @selectView.initialize()
     @selectView.setMaxItems(30)
     @selectView.show()
 

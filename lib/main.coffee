@@ -54,7 +54,6 @@ module.exports =
 
     atom.commands.add("atom-workspace", "purescript:add-module-import", =>
       moduleView = new ModuleSelectListView(@editors)
-      moduleView.initialize()
       moduleView.show()
       )
 
