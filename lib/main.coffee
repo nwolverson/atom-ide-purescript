@@ -23,7 +23,7 @@ module.exports =
     buildCommand:
       title: "build command"
       type: 'string'
-      default: if process.platform == "win32" then "pulp.cmd build" else "pulp build"
+      default: if process.platform == "win32" then "pulp.cmd build --json-errors" else "pulp build --json-errors"
     enableAtomLinter:
       title: "enable atom-linter (build on save, error tooltips)"
       type: 'boolean'
