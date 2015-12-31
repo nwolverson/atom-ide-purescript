@@ -39,12 +39,12 @@ parseJsonErrors = (result) ->
     filePath: err.filename,
     range: [[err.position.startLine-1, err.position.startColumn-1], [err.position.endLine-1, err.position.endColumn-1]] if err.position
     multiline: /\n/.test(err.message)
+    source: err
 
   res = []
   result.split '\n'
     .forEach (line) =>
       if line.startsWith '{"warnings":'
-        debugger
         out = JSON.parse line
         res = out.errors.map (e) => mkResult(e, "Error")
           .concat(out.warnings.map (e) => mkResult(e, "Warning"))
@@ -86,7 +86,7 @@ class LinterPurescript
           messages = parseTextErrors result
             .concat(parseJsonErrors result)
 
-          @editors.onCompiled()
+          @editors.onCompiled messages
 
           atom.notifications.addSuccess "linter: compiled PureScript"
 

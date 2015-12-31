@@ -7,6 +7,7 @@ Psci = require './psci'
 Pursuit = require './pursuit'
 
 { CompositeDisposable } = require 'atom'
+{ ModuleSelectListView } = require('./select-views')
 
 class Main
   config:
@@ -55,8 +56,7 @@ class Main
     atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
     atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
     atom.commands.add("atom-workspace", "purescript:build", @lint)
-
-    ModuleSelectListView = require('./select-views')
+    atom.commands.add("atom-workspace", "purescript:show-quick-fixes", @quickfix)
 
     atom.commands.add("atom-workspace", "purescript:add-module-import", =>
       moduleView = new ModuleSelectListView(@editors)
@@ -82,11 +82,17 @@ class Main
   lint: () =>
     @pslinter.lintOnBuild()
 
-  consumeLinter: (linterRegistry) =>
+  quickfix: () =>
+    @editors.showQuickFixes()
+
+  consumeLinterIndie: (linterRegistry) =>
     linter = linterRegistry.register({name: 'PureScript'})
     @subscriptions.add linter
     @pslinter = new LinterPurescript(@editors, linter)
     @editors.linter = @pslinter
+
+  consumeLinterInternal: (linterMain) =>
+    @editors.linterMain = linterMain
 
 
 module.exports = new Main()

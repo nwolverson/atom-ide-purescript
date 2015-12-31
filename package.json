@@ -29,7 +29,12 @@
   "consumedServices": {
     "linter-indie": {
       "versions": {
-        "1.0.0": "consumeLinter"
+        "1.0.0": "consumeLinterIndie"
+      }
+    },
+    "linter-plus-self": {
+      "versions": {
+        "0.1.0": "consumeLinterInternal"
       }
     }
   }
