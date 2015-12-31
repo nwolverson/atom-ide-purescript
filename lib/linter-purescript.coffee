@@ -40,6 +40,12 @@ parseJsonErrors = (result) ->
     range: [[err.position.startLine-1, err.position.startColumn-1], [err.position.endLine-1, err.position.endColumn-1]] if err.position
     multiline: /\n/.test(err.message)
     source: err
+    trace: [
+      {
+        type: "Link"
+        html: "<a href=\"#{err.errorLink}\">More info (wiki)</a>"
+      }
+    ] if err.errorLink?
 
   res = []
   result.split '\n'
