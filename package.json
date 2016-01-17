@@ -12,6 +12,10 @@
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
   },
+  "scripts": {
+    "prepublish": "pulp build --force -o lib/psjs -r '../'",
+    "build": "pulp build -o lib/psjs -r '../' --json-errors"
+  },
   "dependencies": {
     "atom-linter": "^3.0.0",
     "atom-space-pen-views": "^2.1.0",

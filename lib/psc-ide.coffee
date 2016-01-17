@@ -4,6 +4,8 @@ fs = require 'fs'
 
 { getModulePrefix, getProjectRoot } = require './utils'
 
+pscIde = require './psjs/IdePurescript.PscIde'
+
 class PscIde
   editors: null
   error: false
@@ -71,28 +73,29 @@ class PscIde
   dispose: ->
     @serverProcess.kill()
 
-  getLoadedModules: ->
-    @runCmd { command: "list", params: { type: "module" } }
-
   getImports: (file) ->
-    @runCmd { command: "list", params: { type: "import", file: file } }
+    pscIde.getImports(file)()
 
   getWorkingDir: ->
-    @runCmd { command: "cwd" }
+    pscIde.cwd()
 
   modulesFilter: (modulePrefix) ->
+    filter: "modules"
+    params:
+      modules: @moduleFilterModules modulePrefix
+
+  moduleFilterModules: (modulePrefix) ->
     if modulePrefix
       if modulePrefix.indexOf(".") isnt -1
-        mods = [modulePrefix]
+        [modulePrefix]
       else
         mods = @editors.getQualModule(modulePrefix)
         if mods.length is 0
-          mods = [modulePrefix]
+          [modulePrefix]
+        else
+          mods
     else
-      mods = @editors.getUnqualActiveModules()
-    filter: "modules"
-    params:
-      modules: mods
+      @editors.getUnqualActiveModules()
 
   doPursuitQuery: (text, queryType) =>
     @runCmd
@@ -103,25 +106,30 @@ class PscIde
   getPursuitModuleCompletion: (text) => @doPursuitQuery(text, "package")
   getPursuitCompletion: (text) => @doPursuitQuery(text, "completion")
 
-  getCompletion: (text, modulePrefix, moduleCompletion) ->
-    filters = [
-      {
-        filter: "prefix"
-        params:
-          search: text
-      }
-    ]
-    filters.push @modulesFilter(modulePrefix) if !moduleCompletion
-    @runCmd
-      command: "complete"
-      params: { filters }
+  getCompletion: (text, modulePrefix, moduleCompletion) =>
+    mods = if !moduleCompletion then @moduleFilterModules modulePrefix else []
+    pscIde.getCompletion(text)(mods)()
+
+    # filters = [
+    #   {
+    #     filter: "prefix"
+    #     params:
+    #       search: text
+    #   }
+    # ]
+    # filters.push @modulesFilter(modulePrefix) if !moduleCompletion
+    # @runCmd
+    #   command: "complete"
+    #   params: { filters }
 
   getType: (text, modulePrefix) ->
-    @runCmd
-      command: "type"
-      params:
-        search: text
-        filters: [ @modulesFilter(modulePrefix) ]
+    mods = @moduleFilterModules modulePrefix
+    pscIde.getType(text)(mods)()
+    # @runCmd
+    #   command: "type"
+    #   params:
+    #     search: text
+    #     filters: [ @modulesFilter(modulePrefix) ]
     .then (result) =>
       if result.length > 0
         @abbrevType result[0].type
@@ -192,6 +200,6 @@ class PscIde
                 }
             resolve result
           .catch (err) =>
-            console.warn "Suggestion error: " + err
+            console.warn("Suggestion error: ", err)
 
 module.exports = PscIde
