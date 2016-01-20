@@ -12,7 +12,7 @@
   ],
   "dependencies": {
     "purescript-console": "^0.1.0",
-    "purescript-psc-ide": "git@github.com:kRITZCREEK/purescript-psc-ide.git#~0.1.0",
+    "purescript-psc-ide": "git@github.com:kRITZCREEK/purescript-psc-ide.git#master",
     "purescript-aff": "~0.14.0",
     "purescript-nullable": "~0.2.1"
   }

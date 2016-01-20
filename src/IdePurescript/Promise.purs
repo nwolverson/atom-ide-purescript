@@ -1,7 +1,7 @@
 module IdePurescript.Promise (toPromise, Promise()) where
 import Control.Monad.Eff (Eff)
 import Prelude (Unit)
-import Control.Monad.Aff (Aff, runAff)
+import Control.Monad.Aff
 
 foreign import data Promise :: *
 

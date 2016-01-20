@@ -31,13 +31,13 @@ class PursuitIdentifierListView extends PursuitSelectListView
   initialize: () ->
     super
 
-  getFilterKey: -> "ident"
+  getFilterKey: -> "identifier"
 
   getFilterQuery: -> ""
 
   viewForItem: (item) ->
     "<li class='two-lines'>
-      <div class='primary-line'>#{item.ident}: <span class='text-info'>#{item.type}</span></div>
+      <div class='primary-line'>#{item.identifier}: <span class='text-info'>#{item.type}</span></div>
       <div class='secondary-line'>#{item.module} (#{item.package})</div>
     </li>"
 

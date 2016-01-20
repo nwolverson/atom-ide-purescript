@@ -18,28 +18,6 @@ class PscIde
           @editors.activate(this)
           100)
 
-  runCmd: (cmd) ->
-    return new Promise (resolve,reject) =>
-      command = @pscIde
-      args = ['-p', @pscIdePort]
-      response = undefined
-      stdout = (output) =>
-        try
-          response = JSON.parse output
-        console.debug "psc-ide", JSON.stringify(cmd), "-->", JSON.stringify(response)
-      exit = (code) =>
-        console.debug "exited with code #{code}"
-        if code is 0
-          if response.resultType is "success"
-            resolve response.result
-          else
-            reject { code, result: response.result, command: cmd }
-        else
-          result = if response && response.result then response.result else response
-          reject { code, result, cmd }
-      bp = new BufferedProcess({command,args,stdout,exit})
-      bp.process.stdin.write JSON.stringify(cmd) + '\n'
-
   startServer: ->
     # should watch these and restart
     @pscIde = atom.config.get("ide-purescript.pscIdeExe")
@@ -79,11 +57,6 @@ class PscIde
   getWorkingDir: ->
     pscIde.cwd()
 
-  modulesFilter: (modulePrefix) ->
-    filter: "modules"
-    params:
-      modules: @moduleFilterModules modulePrefix
-
   moduleFilterModules: (modulePrefix) ->
     if modulePrefix
       if modulePrefix.indexOf(".") isnt -1
@@ -97,39 +70,16 @@ class PscIde
     else
       @editors.getUnqualActiveModules()
 
-  doPursuitQuery: (text, queryType) =>
-    @runCmd
-      command: "pursuit"
-      params:
-        query: text
-        type: queryType
-  getPursuitModuleCompletion: (text) => @doPursuitQuery(text, "package")
-  getPursuitCompletion: (text) => @doPursuitQuery(text, "completion")
+  getPursuitModuleCompletion: (text) => pscIde.getPursuitModuleCompletion(text)()
+  getPursuitCompletion: (text) => pscIde.getPursuitCompletion(text)()
 
   getCompletion: (text, modulePrefix, moduleCompletion) =>
     mods = if !moduleCompletion then @moduleFilterModules modulePrefix else []
     pscIde.getCompletion(text)(mods)()
 
-    # filters = [
-    #   {
-    #     filter: "prefix"
-    #     params:
-    #       search: text
-    #   }
-    # ]
-    # filters.push @modulesFilter(modulePrefix) if !moduleCompletion
-    # @runCmd
-    #   command: "complete"
-    #   params: { filters }
-
   getType: (text, modulePrefix) ->
     mods = @moduleFilterModules modulePrefix
     pscIde.getType(text)(mods)()
-    # @runCmd
-    #   command: "type"
-    #   params:
-    #     search: text
-    #     filters: [ @modulesFilter(modulePrefix) ]
     .then (result) =>
       if result.length > 0
         @abbrevType result[0].type
@@ -142,10 +92,7 @@ class PscIde
   loadDeps: (editor) ->
     main = @editors.getMainModuleForEditor editor
     if main
-      @runCmd
-        command: "load"
-        params:
-          dependencies: [main]
+      pscIde.loadDeps(main)()
     else
       Promise.resolve()
 
