@@ -25,7 +25,7 @@ class LinterPurescript
         resolve([])
         return
 
-      buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
+      buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
       command = buildCommand[0]
       args = buildCommand.slice(1)
 
