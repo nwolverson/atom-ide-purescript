@@ -26,7 +26,6 @@ class PsTooltips extends HoverTooltips
 
       @pscIde.getType(match, prefix)
         .then (result) =>
-          result = @pscIde.abbrevType result
           resolve { valid: result.length > 0, info: result }
         .catch (err) =>
           resolve { valid: false }

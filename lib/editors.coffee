@@ -37,18 +37,18 @@ class Editors extends Disposable
         console.error (err)
     @getModulesForEditor editor
 
-  getUnqualActiveModules: () ->
+  getUnqualActiveModules: () =>
     if @activeModules.main
       @activeModules.modules.concat(@activeModules.main)
     else
       @activeModules.modules
 
-  getQualModule: (qualifier) ->
+  getQualModule: (qualifier) =>
     @activeModules.qmodules
       .filter (m) -> m.qualifier is qualifier
       .map (m) -> m.module
 
-  getMainModuleForEditor: (editor) ->
+  getMainModuleForEditor: (editor) =>
     res = XRegExp.exec(editor.getText(), /^module\s+([\w.]+)/m)
     res[1] if res
 

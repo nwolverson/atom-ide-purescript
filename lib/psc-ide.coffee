@@ -57,34 +57,14 @@ class PscIde
   getWorkingDir: ->
     pscIde.cwd()
 
-  moduleFilterModules: (modulePrefix) ->
-    if modulePrefix
-      if modulePrefix.indexOf(".") isnt -1
-        [modulePrefix]
-      else
-        mods = @editors.getQualModule(modulePrefix)
-        if mods.length is 0
-          [modulePrefix]
-        else
-          mods
-    else
-      @editors.getUnqualActiveModules()
-
   getPursuitModuleCompletion: (text) => pscIde.getPursuitModuleCompletion(text)()
   getPursuitCompletion: (text) => pscIde.getPursuitCompletion(text)()
 
   getCompletion: (text, modulePrefix, moduleCompletion) =>
-    mods = if !moduleCompletion then @moduleFilterModules modulePrefix else []
-    pscIde.getCompletion(text)(mods)()
+    pscIde.getCompletion(text)(modulePrefix|"")(moduleCompletion)(@editors.getUnqualActiveModules())(@editors.getQualModule)()
 
-  getType: (text, modulePrefix) ->
-    mods = @moduleFilterModules modulePrefix
-    pscIde.getType(text)(mods)()
-    .then (result) =>
-      if result.length > 0
-        @abbrevType result[0].type
-      else
-        ""
+  getType: (text, modulePrefix) =>
+    pscIde.getType(text)(modulePrefix||"")(@editors.getUnqualActiveModules())(@editors.getQualModule)()
 
   abbrevType: (type) ->
     type.replace(/(?:\w+\.)+(\w+)/g, "$1")
@@ -110,10 +90,10 @@ class PscIde
       if moduleCompletion && modulePrefix
         prefix = modulePrefix + "." + prefix
         originalPrefix = prefix
-        modulePrefix = undefined
+        modulePrefix = ""
 
       if prefix.length > 0 || originalPrefix is "."
-        @getCompletion(prefix,modulePrefix,moduleCompletion)
+        @getCompletion(prefix,modulePrefix||"",moduleCompletion)
           .then (completions) =>
             result =
               completions
