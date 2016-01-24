@@ -2,7 +2,7 @@
 {XRegExp} = require 'xregexp'
 fs = require 'fs'
 
-{ getModulePrefix, getProjectRoot } = require './utils'
+{ getProjectRoot } = require './utils'
 
 pscIde = require './psjs/IdePurescript.PscIde'
 psAtomCompletion = require './psjs/IdePurescript.Atom.Completion'
@@ -67,9 +67,6 @@ class PscIde
   getType: (text, modulePrefix) =>
     pscIde.getType(text)(modulePrefix||"")(@editors.getUnqualActiveModules())(@editors.getQualModule)()
 
-  abbrevType: (type) ->
-    type.replace(/(?:\w+\.)+(\w+)/g, "$1")
-
   loadDeps: (editor) ->
     main = @editors.getMainModuleForEditor editor
     if main
@@ -77,11 +74,9 @@ class PscIde
     else
       Promise.resolve()
 
-  getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
-    line = editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
-
+  getSuggestions: ({editor, bufferPosition}) =>
     psAtomCompletion.getSuggestions({
-      line: line
+      line: editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
       moduleInfo:
         modules: @editors.getUnqualActiveModules()
         getQualifiedModule: @editors.getQualModule
