@@ -5,6 +5,7 @@ fs = require 'fs'
 { getModulePrefix, getProjectRoot } = require './utils'
 
 pscIde = require './psjs/IdePurescript.PscIde'
+psAtomCompletion = require './psjs/IdePurescript.Atom.Completion'
 
 class PscIde
   editors: null
@@ -77,56 +78,13 @@ class PscIde
       Promise.resolve()
 
   getSuggestions: ({editor, bufferPosition, scopeDescriptor, prefix}) =>
-    new Promise (resolve) =>
-      prefix = prefix.trim()
-      originalPrefix = prefix
-      prefix = "" if prefix is "." # shift right
+    line = editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
 
-      line = editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
-      modulePrefix = getModulePrefix(editor, bufferPosition.translate([0, -prefix.length]))
-
-      moduleCompletion = /^import/.test(line)
-      # Module completion
-      if moduleCompletion && modulePrefix
-        prefix = modulePrefix + "." + prefix
-        originalPrefix = prefix
-        modulePrefix = ""
-
-      if prefix.length > 0 || originalPrefix is "."
-        @getCompletion(prefix,modulePrefix||"",moduleCompletion)
-          .then (completions) =>
-            result =
-              completions
-              .filter (c) => !moduleCompletion || c.type is "module"
-              .map (c) =>
-                type =
-                  if c.type is "module"
-                    "import"
-                  else if /^[A-Z]/.test(c.identifier)
-                    "type"
-                  else if /->/.test(c.type)
-                    "function"
-                  else
-                    "value"
-                {
-                  replacementPrefix: # Keep the module prefix for values but not modules
-                    if c.type is "module"
-                      (modulePrefix||"") + originalPrefix
-                    else
-                      prefix
-                  text: c.identifier
-                  displayText:
-                    if c.type is "module"
-                      c.identifier
-                    else if type == "type"
-                      c.identifier + " " + @abbrevType c.type
-                    else
-                      c.identifier + ": " + @abbrevType c.type
-                  description: c.type
-                  type: type
-                }
-            resolve result
-          .catch (err) =>
-            console.warn("Suggestion error: ", err)
+    psAtomCompletion.getSuggestions({
+      line: line
+      moduleInfo:
+        modules: @editors.getUnqualActiveModules()
+        getQualifiedModule: @editors.getQualModule
+    })()
 
 module.exports = PscIde

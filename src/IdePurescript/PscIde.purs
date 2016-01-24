@@ -20,14 +20,13 @@ import Control.Promise (Promise, fromAff)
 
 result :: forall a eff. Aff (net :: P.NET | eff) (Either String a) -> Eff (net :: P.NET | eff) (Promise a)
 result = fromAff <<< eitherToErr
-  where
-  -- throw error for Either
-  eitherToErr :: Aff (net :: P.NET | eff) (Either String a) -> (Aff (net :: P.NET | eff) a)
-  eitherToErr c = do
-    r <- c
-    case r of
-      Left s -> throwError (Ex.error s)
-      Right res -> return res
+
+eitherToErr :: forall a eff. Aff (net :: P.NET | eff) (Either String a) -> (Aff (net :: P.NET | eff) a)
+eitherToErr c = do
+  r <- c
+  case r of
+    Left s -> throwError (Ex.error s)
+    Right res -> return res
 
 result' :: forall eff a b. (a -> b) ->  Aff (net :: P.NET | eff) (Either String a) -> Eff (net :: P.NET | eff) (Promise b)
 result' f a = result ((f <$>) <$> a)
@@ -81,9 +80,9 @@ getType text modulePrefix unqualModules getQualifiedModule =
               Nothing -> ""
 
 getCompletion :: forall eff. String -> String -> Boolean -> Array String -> (String -> Array String)
-  -> Eff (net :: P.NET | eff) (Promise (Array _))
+  -> Aff (net :: P.NET | eff) (Array _)
 getCompletion prefix modulePrefix moduleCompletion unqualModules getQualifiedModule =
-  result' conv $ P.complete (C.PrefixFilter prefix : moduleFilters mods) Nothing
+  conv <$> (eitherToErr $ P.complete (C.PrefixFilter prefix : moduleFilters mods) Nothing)
   where
   mods = if moduleCompletion then [] else moduleFilterModules modulePrefix unqualModules getQualifiedModule
   conv = map convCompletion
@@ -118,10 +117,18 @@ instance decodeModuleCompletion :: DecodeJson ModuleCompletion where
       module': module',
       package: package
       })
+--
+-- getPursuitModuleCompletion :: forall eff. String
+--   -> Eff (net :: P.NET | eff) (Promise (Array ModuleCompletion))
+-- getPursuitModuleCompletion str = result' (map id) $ complete str
+--   where
+--   complete :: String -> P.Cmd (Array ModuleCompletion)
+--   complete q = P.sendCommand (C.Pursuit C.Package q)
+
 
 getPursuitModuleCompletion :: forall eff. String
-  -> Eff (net :: P.NET | eff) (Promise (Array ModuleCompletion))
-getPursuitModuleCompletion str = result' (map id) $ complete str
+  -> Aff (net :: P.NET | eff) (Array ModuleCompletion)
+getPursuitModuleCompletion str = eitherToErr $ complete str
   where
   complete :: String -> P.Cmd (Array ModuleCompletion)
   complete q = P.sendCommand (C.Pursuit C.Package q)
