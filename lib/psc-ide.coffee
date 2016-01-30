@@ -21,7 +21,6 @@ class PscIde
 
   startServer: ->
     # should watch these and restart
-    @pscIde = atom.config.get("ide-purescript.pscIdeExe")
     @pscIdePort = atom.config.get("ide-purescript.pscIdePort")
     pscIdeServer = atom.config.get("ide-purescript.pscIdeServerExe")
     path = getProjectRoot()

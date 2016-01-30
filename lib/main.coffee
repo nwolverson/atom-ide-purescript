@@ -11,10 +11,6 @@ Pursuit = require './pursuit'
 
 class Main
   config:
-    pscIdeExe:
-      title: "psc-ide executable location"
-      type: 'string'
-      default: process.env.HOME + '/.local/bin/psc-ide'
     pscIdePort:
       title: "psc-ide port number"
       type: 'integer'
