@@ -37,8 +37,3 @@ module.exports.getProjectRoot = ->
     atom.notifications.addWarning "Doesn't look like a project has been built - didn't find #{dir.path}/output"
 
   return dir.path
-
-module.exports.getAvailableModules = () ->
-  fs = require('fs')
-  paths = fs.readdirSync(atom.project.rootDirectories[0].path + "/output")
-  paths

@@ -1,4 +1,5 @@
 {SelectListView} = require 'atom-space-pen-views'
+{ getAvailableModules } = require '../psjs/IdePurescript.PscIde'
 
 class ModuleSelectListView extends SelectListView
   constructor: (@editors) ->
@@ -6,7 +7,7 @@ class ModuleSelectListView extends SelectListView
 
   initialize: () =>
     super
-    modules = require('./utils').getAvailableModules()
+    modules = getAvailableModules()
     @setItems modules
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
 

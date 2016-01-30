@@ -47,6 +47,11 @@ getImports s = result' conv $ P.listImports s
     qualifier: toNullable qualifier
   }
 
+getAvailableModules :: forall eff. Eff (net :: P.NET | eff) (Promise (Array String))
+getAvailableModules = result' conv P.listAvailableModules
+  where
+  conv (C.ModuleList modules) = modules
+
 moduleFilterModules :: String -> Array String -> (String -> Array String) -> Array String
 moduleFilterModules modulePrefix unqualModules getQualifiedModule =
   if S.null modulePrefix then

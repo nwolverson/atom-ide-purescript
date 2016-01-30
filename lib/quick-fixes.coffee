@@ -1,4 +1,4 @@
-{ QuickFixView } = require('./select-views')
+{ QuickFixView } = require('./views/select-views')
 
 fix = (name, action) =>
   title: name

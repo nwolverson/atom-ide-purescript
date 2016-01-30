@@ -4,10 +4,10 @@ PsTooltips = require './tooltips'
 glob = require 'glob'
 Editors = require './editors'
 Psci = require './psci'
-Pursuit = require './pursuit'
+Pursuit = require './views/pursuit'
 
 { CompositeDisposable } = require 'atom'
-{ ModuleSelectListView } = require('./select-views')
+{ ModuleSelectListView } = require('./views/select-views')
 
 class Main
   config:
