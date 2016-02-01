@@ -9,6 +9,8 @@ Pursuit = require './pursuit'
 { CompositeDisposable } = require 'atom'
 { ModuleSelectListView } = require('./select-views')
 
+pulpCmd = if process.platform == 'win32' then 'pulp.cmd' else 'pulp'
+
 class Main
   config:
     pscIdeExe:
@@ -27,7 +29,7 @@ class Main
       title: "build command"
       description: "Command line to build the project. Could be pulp (default), psc or a gulpfile, so long as it passes through errors from psc. Should output json errors (old format will still be supported for now). Don't use a command with spaces in its path."
       type: 'string'
-      default: if process.platform == "win32" then "pulp.cmd build --json-errors" else "pulp build --json-errors"
+      default: "#{pulpCmd} build --no-psa --json-errors"
     buildOnSave:
       title: "build on save"
       description: "Build automatically on save. Enables in-line and collected errors. Otherwise a build command is available to be invoked manually."
@@ -37,7 +39,7 @@ class Main
       title: "psci command (eg 'psci' or 'pulp psci' or full path)"
       description: "Command line to use to launch PSCI for the repl buffer. Don't use a command with spaces in its path."
       type: 'string'
-      default: "pulp psci"
+      default: "#{pulpCmd} psci"
 
   constructor: ->
     @subscriptions = new CompositeDisposable()
