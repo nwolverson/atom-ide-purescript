@@ -88,6 +88,8 @@ is a 'PureScript Build' command.
 
 ## Error Suggestions
 
+![Error suggestions](https://cloud.githubusercontent.com/assets/2770891/12066635/d6b14964-afe2-11e5-8584-44d291044614.gif)
+
 Error suggestions may be triggered from some underlined compiler warnings. There
 is no visual indication, currently this will basically be for 'import' warnings,
 and can be triggered by 'alt-enter' (PureScript: Show Quick Fixes).
