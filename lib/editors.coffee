@@ -1,5 +1,6 @@
-{CompositeDisposable, Disposable, TextEditor } = require 'atom'
+{CompositeDisposable, Disposable, TextEditor, Range } = require 'atom'
 {XRegExp} = require 'xregexp'
+{ showQuickFixes } = require './quick-fixes'
 
 class Editors extends Disposable
   activeModules: { main: null, modules: [], qmodules: [] }
@@ -16,13 +17,18 @@ class Editors extends Disposable
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidSave (event) =>
-        @useEditor editor
+        if @linter
+          @linter.lintOnSave editor
+            .then => @useEditor editor
+        else
+          @useEditor editor
 
     editor = atom.workspace.getActiveTextEditor()
     @useEditor editor if editor
 
-  onCompiled: ->
+  onCompiled: (messages) ->
     editor = atom.workspace.getActiveTextEditor()
+    @messages = messages
     @useEditor editor if editor
 
   useEditor: (editor) ->
@@ -69,6 +75,11 @@ class Editors extends Disposable
         lastImport = i
     buffer.insert([lastImport+1, 0], "import #{module}\n")
 
+  showQuickFixes: () =>
+    editor = atom.workspace.getActiveTextEditor()
+    return if !editor or !@messages
+
+    showQuickFixes(editor, @linterMain, @messages)
 
 
 module.exports = Editors

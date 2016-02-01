@@ -13,25 +13,37 @@ Package should trigger on opening a `.purs` file.
 
 ## Installation and General Use
 
-This package relies on having [psc-ide](https://github.com/kRITZCREEK/psc-ide) installed.
-For use with PureScript compiler version *0.7.5* you should use [version 0.4.0](https://github.com/kRITZCREEK/psc-ide/releases/tag/0.4.0),
-for earlier compiler versions you instead need [0.3.0.0](https://github.com/kRITZCREEK/psc-ide/releases/tag/0.3.0.0).
-This runs a server process, `psc-ide-server`, to provide type information, completions,
+Atom packages:
+
+  * You *must* install the atom package [language-purescript](https://atom.io/packages/language-purescript)! Otherwise nothing will happen.
+  * It is strongly suggested to install atom packages [Linter](https://github.com/AtomLinter/Linter) for build support
+
+For best results (and default settings) install dependencies:
+
+  * `psc` >= 0.8.0
+  * [psc-ide](https://github.com/kRITZCREEK/psc-ide) >= 0.6.0
+  * `pulp` >= 8.0.0
+
+For use with older versions of the PureScript compiler, check
+[psc-ide](https://github.com/kRITZCREEK/psc-ide) documentation for the required
+version, and change default build command.
+
+For use with older versions of pulp, or for alternative build tools, change the
+default build command in package settings. For best results ensure JSON compiler
+errors are output on stderr.
+
+## psc-ide
+
+This package runs a server process, `psc-ide-server`, to provide type information, completions,
 etc. This package will automatically start `psc-ide-server` in your project
 directory (port is configurable) and kill it when closing, if for some reason
 you want a longer running server process you should be able to start that before
-starting atom. *Multiple projects currently not supported!*
+starting atom. Multiple projects currently not supported, but you should be able
+to use the [project-manager](https://atom.io/packages/project-manager) package.
 
 For all functions provided by `psc-ide` you will need to build your project first!
 Dependencies will automatically be loaded via `dependencies Current.File` as
 required.
-
-You *must* install the atom package [language-purescript](https://atom.io/packages/language-purescript)!
-You should optionally install atom packages [Linter](https://github.com/AtomLinter/Linter)
-or [Build](https://atom.io/packages/build) if you want build support, see below.
-
-The package will start on opening a `.purs` file, note there is currently an Atom bug
-relating to starting a session with already open files.
 
 ## Autocomplete
 
@@ -70,15 +82,12 @@ Command from the command palette:
 
 ## Build
 
-Build support is experimental as I don't like any of the options yet. Depending on
-which other packages you have installed, this package provides (via `pulp build`)
+Build support is provided via `pulp build` by default, configurable to any command which
+will output psc errors. This can be configured to run on save, alternatively there
+is a 'PureScript Build' command.
 
-  * [Linter](https://github.com/AtomLinter/Linter) support - a bit annoying since
-  compile on save is too slow, but some nice messages
+## Error Suggestions
 
-  * [Build](https://atom.io/packages/build) support - will only work properly in
-  PureScript projects if you don't have Gulpfile etc., as `pulp` is always used
-  but custom providers are at the bottom of the priority list.
-
-Might be that something like [Build linter support](https://github.com/noseglid/atom-build/pull/117) could
-be useful, or build triggered from this package.
+Error suggestions may be triggered from some underlined compiler warnings. There
+is no visual indication, currently this will basically be for 'import' warnings,
+and can be triggered by 'alt-enter' (PureScript: Show Quick Fixes).

@@ -7,3 +7,4 @@
 
 'atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
     'cmd-enter':'psci:send-selection'
+    'alt-enter':'purescript:show-quick-fixes'

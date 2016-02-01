@@ -6,7 +6,12 @@ Editors = require './editors'
 Psci = require './psci'
 Pursuit = require './pursuit'
 
-module.exports =
+{ CompositeDisposable } = require 'atom'
+{ ModuleSelectListView } = require('./select-views')
+
+pulpCmd = if process.platform == 'win32' then 'pulp.cmd' else 'pulp'
+
+class Main
   config:
     pscIdeExe:
       title: "psc-ide executable location"
@@ -22,22 +27,24 @@ module.exports =
       default: process.env.HOME + '/.local/bin/psc-ide-server'
     buildCommand:
       title: "build command"
+      description: "Command line to build the project. Could be pulp (default), psc or a gulpfile, so long as it passes through errors from psc. Should output json errors (old format will still be supported for now). Don't use a command with spaces in its path."
       type: 'string'
-      default: if process.platform == "win32" then "pulp.cmd build" else "pulp build"
-    enableAtomLinter:
-      title: "enable atom-linter (build on save, error tooltips)"
-      type: 'boolean'
-      default: true
-    enableBuild:
-      title: "enable build (atom build package)"
+      default: "#{pulpCmd} build --no-psa --json-errors"
+    buildOnSave:
+      title: "build on save"
+      description: "Build automatically on save. Enables in-line and collected errors. Otherwise a build command is available to be invoked manually."
       type: 'boolean'
       default: true
     psciCommand:
       title: "psci command (eg 'psci' or 'pulp psci' or full path)"
+      description: "Command line to use to launch PSCI for the repl buffer. Don't use a command with spaces in its path."
       type: 'string'
-      default: "pulp psci"
+      default: "#{pulpCmd} psci"
 
-  activate: (state) ->
+  constructor: ->
+    @subscriptions = new CompositeDisposable()
+
+  activate: (state) =>
     console.log "Activated ide-purescript"
     @pscide = new PscIde()
     @editors = new Editors()
@@ -50,19 +57,22 @@ module.exports =
     @psci.activate()
     atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
     atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
-    ModuleSelectListView = require('./select-views')
+    atom.commands.add("atom-workspace", "purescript:build", @lint)
+    atom.commands.add("atom-workspace", "purescript:show-quick-fixes", @quickfix)
 
     atom.commands.add("atom-workspace", "purescript:add-module-import", =>
       moduleView = new ModuleSelectListView(@editors)
       moduleView.show()
       )
 
-  deactivate: () ->
-    @editors.dispose()
-    @tooltips.deactivate()
-    @pscide.deactivate()
+    @subscriptions.add @editors
+    @subscriptions.add @tooltips
+    @subscriptions.add @pscide
 
-  provideAutocomplete: ->
+  deactivate: () =>
+    @subscriptions.dispose()
+
+  provideAutocomplete: =>
     selector: '.source.purescript'
     disableForSelector: '.source.purescript .comment, .source.purescript .string'
     inclusionPriority: 1
@@ -71,35 +81,20 @@ module.exports =
     # onDidInsertSuggestion: ({editor, triggerPosition, suggestion}) ->
     # dispose: ->
 
+  lint: () =>
+    @pslinter.lintOnBuild()
 
-  provideLinter: ->
-    linter = new LinterPurescript(@editors)
-    return {
-      grammarScopes: ['source.purescript']
-      scope: 'project'
-      lint: (f) -> linter.lint(f)
-      lintOnFly: false
-    }
-  provideBuildConfig: ->
-    return {
-      niceName: 'PureScript',
-      isEligable: (path) ->
-        if !atom.config.get("ide-purescript.enableBuild")
-          return false
-        files = glob.sync("src/**/*.purs", {cwd: path})
-        files && files.length > 0
-      settings: (path) ->
-        buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
-        cmd = buildCommand[0]
-        args = buildCommand.slice 1
-        return new Promise (resolve,reject) =>
-          resolve {
-            cmd: cmd
-            exec: cmd
-            sh: process.platform != "win32"
-            args: args
-            errorMatch: [
-              '(?<type>Error|Warning)[^\\n]+:\\n+(\\s*in module [^\\n]+\\n)?(\\s*at (?<file>[^\\n]*) line (?<line>[0-9]+), column (?<col>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+)\\n)?'
-            ]
-          }
-    }
+  quickfix: () =>
+    @editors.showQuickFixes()
+
+  consumeLinterIndie: (linterRegistry) =>
+    linter = linterRegistry.register({name: 'PureScript'})
+    @subscriptions.add linter
+    @pslinter = new LinterPurescript(@editors, linter)
+    @editors.linter = @pslinter
+
+  consumeLinterInternal: (linterMain) =>
+    @editors.linterMain = linterMain
+
+
+module.exports = new Main()

@@ -68,7 +68,7 @@ class PscIde
             cwd: path
         @serverProcess
 
-  deactivate: ->
+  dispose: ->
     @serverProcess.kill()
 
   getLoadedModules: ->

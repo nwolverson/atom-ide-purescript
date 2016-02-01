@@ -31,4 +31,7 @@ class PsTooltips extends HoverTooltips
         .catch (err) =>
           resolve { valid: false }
 
+  dispose: =>
+    @deactivate()
+
 module.exports = PsTooltips
