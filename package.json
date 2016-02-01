@@ -14,7 +14,7 @@
   },
   "scripts": {
     "prepublish": "pulp build --force -o lib/psjs -r '../'",
-    "build": "pulp build --force -o lib/psjs -r '../' --json-errors"
+    "build": "pulp build --force -o lib/psjs -r '../' --json-errors --source-maps" 
   },
   "dependencies": {
     "atom-linter": "^3.0.0",

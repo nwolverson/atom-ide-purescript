@@ -31,11 +31,25 @@ eitherToErr c = do
 result' :: forall eff a b. (a -> b) ->  Aff (net :: P.NET | eff) (Either String a) -> Eff (net :: P.NET | eff) (Promise b)
 result' f a = result ((f <$>) <$> a)
 
+resultA :: forall eff a b. (a -> b) ->  Aff (net :: P.NET | eff) (Either String a) -> Aff (net :: P.NET | eff) b
+resultA f a = eitherToErr ((f <$>) <$> a)
+
+
 cwd :: forall eff. Eff (net :: P.NET | eff) (Promise String)
 cwd = result' runMsg P.cwd
 
 runMsg :: C.Message -> String
 runMsg (C.Message m) = m
+
+getImports' :: forall eff. String
+  -> Aff (net :: P.NET | eff) (Array _)
+getImports' s = resultA conv $ P.listImports s
+  where
+  conv (C.ImportList imps) = conv' <$> imps
+  conv' (C.Import {moduleName, qualifier}) = {
+    "module": moduleName,
+    qualifier: toNullable qualifier
+  }
 
 getImports :: forall eff. String
   -> Eff (net :: P.NET | eff) (Promise (Array _))

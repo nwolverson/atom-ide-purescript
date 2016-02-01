@@ -66,7 +66,7 @@ class PscIde
   getType: (text, modulePrefix) =>
     pscIde.getType(text)(modulePrefix||"")(@editors.getUnqualActiveModules())(@editors.getQualModule)()
 
-  loadDeps: (editor) ->
+  loadDeps: (editor) =>
     main = @editors.getMainModuleForEditor editor
     if main
       pscIde.loadDeps(main)()

@@ -2,12 +2,14 @@
 {XRegExp} = require 'xregexp'
 { showQuickFixes } = require './quick-fixes'
 
+psModules = require './psjs/IdePurescript.Modules'
+
 class Editors extends Disposable
-  activeModules: { main: null, modules: [], qmodules: [] }
   constructor: ->
     super =>
       @subscriptions.dispose()
     @subscriptions = new CompositeDisposable()
+    @psmodules = psModules.modulesState()
 
   activate: (pscide) ->
     @pscide = pscide
@@ -37,33 +39,17 @@ class Editors extends Disposable
         console.error (err)
     @getModulesForEditor editor
 
-  getUnqualActiveModules: () =>
-    if @activeModules.main
-      @activeModules.modules.concat(@activeModules.main)
-    else
-      @activeModules.modules
+  getUnqualActiveModules: () => @psmodules.getUnqualActiveModules()
 
-  getQualModule: (qualifier) =>
-    @activeModules.qmodules
-      .filter (m) -> m.qualifier is qualifier
-      .map (m) -> m.module
+  getQualModule: (qualifier) => @psmodules.getQualModule(qualifier)()
 
   getMainModuleForEditor: (editor) =>
-    res = XRegExp.exec(editor.getText(), /^module\s+([\w.]+)/m)
-    res[1] if res
+    @psmodules.getMainModuleForFile(editor.getText())
 
-  # only distinguishing qualified imports and other - explicit and hiding parts are not respected
-  getModulesForEditor: (editor) ->
-    imports = @pscide.getImports editor.getPath()
-      .then (imports) =>
-        @activeModules =
-          main: @getMainModuleForEditor editor
-          modules: (imports
-            .filter((imp) => !imp.qualifier)
-            .map((imp) => imp.module))
-          qmodules: (imports
-            .filter((imp) => imp.qualifier))
-        console.debug "Active modules: " + JSON.stringify(@activeModules)
+  getModulesForEditor: (editor) =>
+    @psmodules.loadModules(editor.getPath())(editor.getText())()
+      .then () =>
+        console.debug "Active modules: " + JSON.stringify( @psmodules.getUnqualActiveModules() )
 
   addImport: (module) ->
     return if @activeModules.modules.concat(@activeModules.qmodules.map((x) -> x.module)).indexOf(module) isnt -1
