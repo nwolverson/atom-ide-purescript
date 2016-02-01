@@ -1,7 +1,7 @@
 path = require 'path'
 {XRegExp} = require 'xregexp'
 helpers = require 'atom-linter'
-{Range} = require 'atom'
+{Range, BufferedProcess} = require 'atom'
 
 { getProjectRoot } = require './utils'
 
@@ -56,7 +56,6 @@ parseJsonErrors = (result) ->
           .concat(out.warnings.map (e) => mkResult(e, "Warning"))
       else
         []
-  console.log(JSON.stringify(res))
   res
 
 class LinterPurescript
@@ -80,28 +79,37 @@ class LinterPurescript
 
   lint: (projDir) ->
     return new Promise (resolve, reject) =>
+      atom.notifications.addInfo "linter: compiling PureScript"
+
       buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
       command = buildCommand[0]
       args = buildCommand.slice(1)
 
-      options = { cwd: projDir, stream: "stderr" }
-
-      atom.notifications.addInfo "linter: compiling PureScript"
-      helpers.exec(command, args, options)
-        .then (result) =>
+      options = { cwd: projDir }
+      result = ""
+      stderr = (output) =>
+        result += output
+      exit = (code) =>
+        console.debug "Build command '#{command}' exited with code #{code}"
+        if code is 0
           messages = parseTextErrors result
             .concat(parseJsonErrors result)
 
           @editors.onCompiled messages
 
-          atom.notifications.addSuccess "linter: compiled PureScript"
+          atom.notifications.addSuccess "Compiled PureScript"
 
+          @linter.deleteMessages()
           @linter.setMessages messages
 
-          resolve(messages)
-        .then null, (err) ->
-          @linter.setMessages []
-          reject(err)
+          resolve messages
+        else
+          @linter.deleteMessages()
 
+          atom.notifications.addError "Error running build command '#{command}'. Check configuration.\n" + result
+
+          reject result
+
+      bp = new BufferedProcess({command,args,options,stderr,exit})
 
 module.exports = LinterPurescript
