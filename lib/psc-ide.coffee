@@ -24,16 +24,18 @@ class PscIde
       stdout = (output) =>
         try
           response = JSON.parse output
+        catch err
+          console.error err          
         console.debug "psc-ide", JSON.stringify(cmd), "-->", JSON.stringify(response)
       exit = (code) =>
         console.debug "exited with code #{code}"
         if code is 0
-          if response.resultType is "success"
+          if response?.resultType is "success"
             resolve response.result
           else
-            reject { code, result: response.result, command: cmd }
+            reject { code, result: response?.result, command: cmd }
         else
-          result = if response && response.result then response.result else response
+          result = if response?.result? then response.result else response
           reject { code, result, cmd }
       bp = new BufferedProcess({command,args,stdout,exit})
       bp.process.stdin.write JSON.stringify(cmd) + '\n'
