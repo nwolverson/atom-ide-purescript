@@ -91,24 +91,24 @@ class LinterPurescript
         result += output
       exit = (code) =>
         console.debug "Build command '#{command}' exited with code #{code}"
+
+        messages = parseTextErrors result
+          .concat(parseJsonErrors result)
+
+        @editors.onCompiled messages
+
+        @linter.deleteMessages()
+        @linter.setMessages messages
+
         if code is 0
-          messages = parseTextErrors result
-            .concat(parseJsonErrors result)
-
-          @editors.onCompiled messages
-
           atom.notifications.addSuccess "Compiled PureScript"
-
-          @linter.deleteMessages()
-          @linter.setMessages messages
-
+          resolve messages
+        else if code is 1 and messages.length > 0
+          atom.notifications.addWarning "Compiled PureScript (with errors)"
           resolve messages
         else
-          @linter.deleteMessages()
-
           atom.notifications.addError "Error running build command '#{command}'. Check configuration.\n" + result
-
-          reject result
+          # don't reject, nothing actually listening to this promise...
 
       bp = new BufferedProcess({command,args,options,stderr,exit})
 
