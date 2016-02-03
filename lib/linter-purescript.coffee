@@ -1,7 +1,7 @@
 path = require 'path'
 {XRegExp} = require 'xregexp'
 helpers = require 'atom-linter'
-{Range} = require 'atom'
+{Range, BufferedProcess} = require 'atom'
 
 { getProjectRoot } = require './utils'
 
@@ -56,7 +56,6 @@ parseJsonErrors = (result) ->
           .concat(out.warnings.map (e) => mkResult(e, "Warning"))
       else
         []
-  console.log(JSON.stringify(res))
   res
 
 class LinterPurescript
@@ -80,28 +79,37 @@ class LinterPurescript
 
   lint: (projDir) ->
     return new Promise (resolve, reject) =>
-      buildCommand = atom.config.get("ide-purescript.buildCommand").split(/\s+/)
+      atom.notifications.addInfo "linter: compiling PureScript"
+
+      buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
       command = buildCommand[0]
       args = buildCommand.slice(1)
 
-      options = { cwd: projDir, stream: "stderr" }
+      options = { cwd: projDir }
+      result = ""
+      stderr = (output) =>
+        result += output
+      exit = (code) =>
+        console.debug "Build command '#{command}' exited with code #{code}"
 
-      atom.notifications.addInfo "linter: compiling PureScript"
-      helpers.exec(command, args, options)
-        .then (result) =>
-          messages = parseTextErrors result
-            .concat(parseJsonErrors result)
+        messages = parseTextErrors result
+          .concat(parseJsonErrors result)
 
-          @editors.onCompiled messages
+        @editors.onCompiled messages
 
-          atom.notifications.addSuccess "linter: compiled PureScript"
+        @linter.deleteMessages()
+        @linter.setMessages messages
 
-          @linter.setMessages messages
+        if code is 0
+          atom.notifications.addSuccess "Compiled PureScript"
+          resolve messages
+        else if code is 1 and messages.length > 0
+          atom.notifications.addWarning "Compiled PureScript (with errors)"
+          resolve messages
+        else
+          atom.notifications.addError "Error running build command '#{command}'. Check configuration.\n" + result
+          # don't reject, nothing actually listening to this promise...
 
-          resolve(messages)
-        .then null, (err) ->
-          @linter.setMessages []
-          reject(err)
-
+      bp = new BufferedProcess({command,args,options,stderr,exit})
 
 module.exports = LinterPurescript
