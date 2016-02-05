@@ -13,8 +13,8 @@
     "atom": ">=1.0.0 <2.0.0"
   },
   "scripts": {
-    "prepublish": "pulp build --force -o lib/psjs -r '../'",
-    "build": "pulp build --force -o lib/psjs -r '../' --json-errors --source-maps" 
+    "prepublish": "npm run build",
+    "build": "pulp build --no-psa -o lib/psjs -r '../' --json-errors --source-maps"
   },
   "dependencies": {
     "atom-linter": "^3.0.0",

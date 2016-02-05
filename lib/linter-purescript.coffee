@@ -81,11 +81,11 @@ class LinterPurescript
     return new Promise (resolve, reject) =>
       atom.notifications.addInfo "linter: compiling PureScript"
 
-      buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
-      command = buildCommand[0]
-      args = buildCommand.slice(1)
+        buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
+        command = buildCommand[0]
+        args = buildCommand.slice(1)
 
-      options = { cwd: projDir }
+        options = { cwd: projDir }
       result = ""
       stderr = (output) =>
         result += output

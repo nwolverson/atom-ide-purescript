@@ -15,6 +15,8 @@
     "purescript-psc-ide": "git@github.com:kRITZCREEK/purescript-psc-ide.git#master",
     "purescript-aff": "~0.14.0",
     "purescript-nullable": "~0.2.1",
-    "purescript-refs": "~0.2.0"
+    "purescript-refs": "~0.2.0",
+    "purescript-node-process": "~0.4.1",
+    "purescript-node-child-process": "~0.5.1"
   }
 }
