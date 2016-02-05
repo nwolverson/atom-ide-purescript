@@ -65,8 +65,7 @@ class LinterPurescript
 
   lintOnSave: (textEditor) =>
     if !atom.config.get("ide-purescript.buildOnSave")
-      resolve([])
-      return
+      return Promise.resolve([])
 
     filePath = textEditor.getPath()
     dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
