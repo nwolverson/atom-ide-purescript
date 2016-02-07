@@ -22,10 +22,10 @@ getModuleName :: Module -> String
 getModuleName (Qualified _ m) = m
 getModuleName (Unqualified m) = m
 
-type State = {
-    main :: Maybe String
+type State =
+  { main :: Maybe String
   , modules :: Array Module
-}
+  }
 
 type Path = String
 

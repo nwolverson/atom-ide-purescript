@@ -1,62 +1,10 @@
 path = require 'path'
-{XRegExp} = require 'xregexp'
 helpers = require 'atom-linter'
 {Range, BufferedProcess} = require 'atom'
 
 { getProjectRoot } = require './utils'
 
-parseTextErrors = (result) ->
-  mkResult = (match) ->
-    lineEnd = match.lineEnd || match.lineStart
-    colEnd = match.colEnd || match.colStart
-    return {
-      type: match.type || "Error",
-      text: match.message.trimRight(),
-      filePath: match.file,
-      range: [[match.lineStart-1, match.colStart-1], [lineEnd-1, colEnd-1]]
-      multiline: /\n/.test(match.message)
-    }
-
-  matches = []
-
-  regexes = [
-    '^(?<type>Error|Warning)[^\\n]+:\\n+(\\s*in module [^\\n]+\\n)?(\\s*at (?<file>[^\\n]*) line (?<lineStart>[0-9]+), column (?<colStart>[0-9]+) - line (?<lineEnd>[0-9]+), column (?<colEnd>[0-9]+)\\n)?\\n*(?<message>.*?)^[^\\n]*?See'
-  ]
-
-  regexes.forEach (regex) ->
-    XRegExp.forEach result, XRegExp(regex, "sm"), (match) ->
-      res = mkResult(match)
-      # Previously removed overlapping warnings but just go ahead, there really are distinct errors:
-      # if !matches.some((existing) -> Range.fromObject(existing.range).intersectsWith(Range.fromObject(res.range), true))
-      matches.push(mkResult(match))
-
-  matches
-
-parseJsonErrors = (result) ->
-  mkResult = (err, errorType) =>
-    type: errorType,
-    text: err.message,
-    filePath: err.filename,
-    range: [[err.position.startLine-1, err.position.startColumn-1], [err.position.endLine-1, err.position.endColumn-1]] if err.position
-    multiline: /\n/.test(err.message)
-    source: err
-    trace: [
-      {
-        type: "Link"
-        html: "<a href=\"#{err.errorLink}\">More info (wiki)</a>"
-      }
-    ] if err.errorLink?
-
-  res = []
-  result.split '\n'
-    .forEach (line) =>
-      if line.startsWith '{"warnings":'
-        out = JSON.parse line
-        res = out.errors.map (e) => mkResult(e, "Error")
-          .concat(out.warnings.map (e) => mkResult(e, "Warning"))
-      else
-        []
-  res
+psBuild = require './psjs/IdePurescript.Atom.Build'
 
 class LinterPurescript
   lintProcess: null
@@ -65,8 +13,7 @@ class LinterPurescript
 
   lintOnSave: (textEditor) =>
     if !atom.config.get("ide-purescript.buildOnSave")
-      resolve([])
-      return
+      return Promise.resolve([])
 
     filePath = textEditor.getPath()
     dirs = (dir for dir in atom.project.rootDirectories when dir.contains(filePath))
@@ -79,37 +26,24 @@ class LinterPurescript
 
   lint: (projDir) ->
     return new Promise (resolve, reject) =>
-      atom.notifications.addInfo "linter: compiling PureScript"
+      atom.notifications.addInfo "Compiling PureScript"
 
-        buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
-        command = buildCommand[0]
-        args = buildCommand.slice(1)
+      buildCommand = atom.config.get("ide-purescript.buildCommand").trim().split(/\s+/)
+      command = buildCommand[0]
+      args = buildCommand.slice(1)
 
-        options = { cwd: projDir }
-      result = ""
-      stderr = (output) =>
-        result += output
-      exit = (code) =>
-        console.debug "Build command '#{command}' exited with code #{code}"
-
-        messages = parseTextErrors result
-          .concat(parseJsonErrors result)
-
-        @editors.onCompiled messages
-
-        @linter.deleteMessages()
-        @linter.setMessages messages
-
-        if code is 0
-          atom.notifications.addSuccess "Compiled PureScript"
+      psBuild.linterBuild({ command, args, directory: projDir })()
+        .then ({messages, result}) =>
+          @linter.deleteMessages()
+          @linter.setMessages messages
+          @editors.onCompiled messages
+          if result is "success"
+            atom.notifications.addSuccess("Built PureScript")
+          else
+            atom.notifications.addWarning "PureScript build completed with errors"
           resolve messages
-        else if code is 1 and messages.length > 0
-          atom.notifications.addWarning "Compiled PureScript (with errors)"
-          resolve messages
-        else
-          atom.notifications.addError "Error running build command '#{command}'. Check configuration.\n" + result
-          # don't reject, nothing actually listening to this promise...
-
-      bp = new BufferedProcess({command,args,options,stderr,exit})
+        .catch (err) =>
+          console.error(err)
+          atom.notifications.addError "Error running build command '#{command}'. Check configuration.\n" + err
 
 module.exports = LinterPurescript

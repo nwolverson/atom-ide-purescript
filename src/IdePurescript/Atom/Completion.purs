@@ -14,17 +14,16 @@ import PscIde.Command as C
 import Control.Promise (Promise, fromAff)
 import Data.String.Regex (match, regex)
 
-type ModuleInfo = {
-  modules :: Array String,
-  getQualifiedModule :: String -> Array String
-}
+type ModuleInfo =
+  { modules :: Array String
+  , getQualifiedModule :: String -> Array String
+  }
 
 moduleRegex :: Regex
 moduleRegex = regex """(?:^|[^A-Za-z_.])(?:((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.)?([a-zA-Z][a-zA-Z0-9_']*)?$""" noFlags
 
 type AtomSuggestion =
-  {
-    text :: String
+  { text :: String
   , displayText :: String
   , "type" :: String
   , description :: String
@@ -73,8 +72,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       Value -> "value"
 
     modResult prefix moduleName =
-      {
-        text: moduleName
+      { text: moduleName
       , displayText: moduleName
       , type: suggestionTypeAtomValue Module
       , description: ""
@@ -82,8 +80,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       }
 
     result prefix {type: ty, identifier} =
-      {
-        text: identifier
+      { text: identifier
       , displayText: case suggestType of
           Type -> identifier ++ " " ++ ty
           _ -> identifier ++ ": " ++ ty

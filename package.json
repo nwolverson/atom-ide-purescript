@@ -14,7 +14,8 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "pulp build --no-psa -o lib/psjs -r '../' --json-errors --source-maps"
+    "build": "pulp build --no-psa -o lib/psjs -r '../' --json-errors --source-maps",
+    "build-pretty": "pulp build -o lib/psjs -r '../' --source-maps"
   },
   "dependencies": {
     "atom-linter": "^3.0.0",
