@@ -16,7 +16,7 @@
     "atom-linter": "^3.0.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "hover-tooltips": "git://github.com/nwolverson/hover-tooltips.git#scrolltop-removed",
+    "hover-tooltips": "git+http://github.com/nwolverson/hover-tooltips.git#scrolltop-removed",
     "xregexp": "~2.0.0"
   },
   "providedServices": {
