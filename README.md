@@ -16,7 +16,7 @@ Package should trigger on opening a `.purs` file.
 Atom packages:
 
   * You *must* install the atom package [language-purescript](https://atom.io/packages/language-purescript)! Otherwise nothing will happen.
-  * It is strongly suggested to install atom packages [Linter](https://github.com/AtomLinter/Linter) for build support
+  * It is strongly suggested to install atom packages [Linter](https://github.com/atom-community/linter) for build support
 
 For best results (and default settings) install dependencies:
 
