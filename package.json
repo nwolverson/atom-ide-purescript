@@ -1,6 +1,6 @@
 {
   "name": "ide-purescript",
-  "main": "./lib/main",
+  "main": "./lib/psjs-main",
   "version": "0.8.2",
   "description": "PureScript support for completion, build and maybe more",
   "keywords": [],

@@ -38,39 +38,34 @@ type LintResult =
   , messages :: Array AtomLintMessage
   }
 
-
 linterBuild :: { command :: String, args :: Array String, directory :: String }
-  -> Eff _ (Promise LintResult)
-linterBuild opts = Promise.fromAff $ linterBuildImpl opts
+  -> Aff _ LintResult
+linterBuild {command,args,directory} = do
+  res <- build { command: Command command args, directory }
+  let warnings = result "Warning" <$> res.errors.warnings
+      errors = result "Error" <$> res.errors.errors
+  pure {
+    messages: errors ++ warnings
+  , result: resultToString $ if res.success then Success else Errors
+  }
   where
-  linterBuildImpl :: { command :: String, args :: Array String, directory :: String }
-    -> Aff _ LintResult
-  linterBuildImpl {command,args,directory} = do
-    res <- build { command: Command command args, directory }
-    let warnings = result "Warning" <$> res.errors.warnings
-        errors = result "Error" <$> res.errors.errors
-    pure {
-      messages: errors ++ warnings
-    , result: resultToString $ if res.success then Success else Errors
-    }
-    where
-    range :: Maybe Position -> Array (Array Int)
-    range Nothing = []
-    range (Just {startLine, startColumn, endLine, endColumn}) =
-      [[startLine-1, startColumn-1], [endLine-1, endColumn-1]]
+  range :: Maybe Position -> Array (Array Int)
+  range Nothing = []
+  range (Just {startLine, startColumn, endLine, endColumn}) =
+    [[startLine-1, startColumn-1], [endLine-1, endColumn-1]]
 
-    result errorType {message,filename,position,errorLink,errorCode,suggestion} =
+  result errorType {message,filename,position,errorLink,errorCode,suggestion} =
+    {
+      "type": errorType
+    , text: message
+    , suggestion: maybe { replacement: "", hasSuggestion: false } { replacement: _, hasSuggestion: true } suggestion
+    , filePath: fromMaybe "" filename
+    , range: range position
+    , multiline: true -- /\n/.test(err.message)
+    , errorCode
+    , trace: [
       {
-        "type": errorType
-      , text: message
-      , suggestion: maybe { replacement: "", hasSuggestion: false } { replacement: _, hasSuggestion: true } suggestion
-      , filePath: fromMaybe "" filename
-      , range: range position
-      , multiline: true -- /\n/.test(err.message)
-      , errorCode
-      , trace: [
-        {
-          type: "Link"
-        , html: "<a href=\"" ++ errorLink ++ "\">More info (wiki)</a>"
-        }
-      ]}
+        type: "Link"
+      , html: "<a href=\"" ++ errorLink ++ "\">More info (wiki)</a>"
+      }
+    ]}

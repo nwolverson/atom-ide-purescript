@@ -81,7 +81,6 @@ class Main
     @pslinter.lintOnBuild()
 
   quickfix: () =>
-    debugger
     @editors.showQuickFixes()
 
   consumeLinterIndie: (linterRegistry) =>
