@@ -73,27 +73,26 @@ getProjectRoot = do
 
 type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER| e)
 
-lint :: forall eff. Config -> String -> LinterIndie -> Eff (LintEff eff) Unit
+lint :: forall eff. Config -> String -> LinterIndie -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
 lint config projdir linter = do
-  fullBuildPath <- getConfig config "ide-purescript.buildCommand"
+  fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
   let buildCommand = either (const []) (split (regex "\\s+" noFlags) <<< trim) $ readString fullBuildPath
-  atom <- getAtom
-  runAff ignore ignore $ case uncons buildCommand of
+  atom <- liftEffA $ getAtom
+  case uncons buildCommand of
     Just { head: command, tail: args } -> do
       res <- linterBuild { command, args, directory: projdir }
-      liftEffA $ void $ case res of
+      liftEffA $ Just <$> case res of
         { result, messages } -> do
           deleteMessages linter
           setMessages linter messages
-          --   @editors.onCompiled messages
           if result == "success" then addInfo atom.notifications "Building PureScript"
             else addWarning atom.notifications "PureScript build completed with errors"
-
-    Nothing -> liftEffA $ addError atom.notifications "Error parsing PureScript build command"
+          pure messages
+    Nothing -> do
+      liftEffA $ addError atom.notifications "Error parsing PureScript build command"
+      pure Nothing
   where
-  ignore :: forall a e. a -> Eff e Unit
-  ignore = const $ pure unit
 
   liftEffA :: forall a. Eff (LintEff eff) a -> Aff (LintEff eff) a
   liftEffA = liftEff

@@ -39,13 +39,13 @@ getModuleSuggestions prefix = do
     (C.ModuleList lst) -> filter (\m -> indexOf prefix m == Just 0) lst
 
 getSuggestions :: forall eff. {
-  line:: String,
-  moduleInfo :: ModuleInfo
-} -> Eff (net :: P.NET | eff) (Promise (Array AtomSuggestion))
+    line :: String,
+    moduleInfo :: ModuleInfo
+  } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
 getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
   let moduleCompletion = indexOf "import" line == Just 0
 
-  in fromAff $ case parsed of
+  in case parsed of
     Just { mod, token } ->
       if moduleCompletion then do
         let prefix = getModuleName mod token

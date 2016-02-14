@@ -1,4 +1,5 @@
-module IdePurescript.Modules (modulesState) where
+module IdePurescript.Modules (Module, modulesState, initialModulesState, State, getMainModule, getModulesForFile,
+  getUnqualActiveModules, getQualModule) where
 
 import Prelude ((<$>), pure, ($), bind, map, (==), (<<<), (++), const)
 import Data.Maybe (Maybe(Nothing, Just), maybe, fromMaybe)
@@ -58,6 +59,9 @@ getQualModule qualifier {modules} =
   where
   qual q (Qualified q' _) = q == q'
   qual _ _ = false
+
+initialModulesState :: State
+initialModulesState =  { main: Nothing, modules: [] }
 
 modulesStateImpl = do
   stateRef <- newRef { main: Nothing, modules: [] }

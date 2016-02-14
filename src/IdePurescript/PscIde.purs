@@ -113,6 +113,10 @@ loadDeps :: forall eff. String
   -> Eff (net :: P.NET | eff) (Promise String)
 loadDeps main = result' runMsg $ P.load [] [main]
 
+loadDepsA :: forall eff. String
+  -> Aff (net :: P.NET | eff) String
+loadDepsA main = resultA runMsg $ P.load [] [main]
+
 getPursuitCompletion :: forall eff. String
   -> Eff (net :: P.NET | eff) (Promise (Array _))
 getPursuitCompletion str = result' (map convPursuitCompletion) $ P.pursuitCompletion str
