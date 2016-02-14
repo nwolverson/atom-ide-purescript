@@ -51,34 +51,7 @@ class PscIde
   dispose: ->
     @serverProcess.kill()
 
-  getImports: (file) ->
-    pscIde.getImports(file)()
-
   getWorkingDir: ->
     pscIde.cwd()
-
-  getPursuitModuleCompletion: (text) => pscIde.getPursuitModuleCompletion(text)()
-  getPursuitCompletion: (text) => pscIde.getPursuitCompletion(text)()
-
-  getCompletion: (text, modulePrefix, moduleCompletion) =>
-    pscIde.getCompletion(text)(modulePrefix|"")(moduleCompletion)(@editors.getUnqualActiveModules())(@editors.getQualModule)()
-
-  getType: (text, modulePrefix) =>
-    pscIde.getType(text)(modulePrefix||"")(@editors.getUnqualActiveModules())(@editors.getQualModule)()
-
-  loadDeps: (editor) =>
-    main = @editors.getMainModuleForEditor editor
-    if main
-      pscIde.loadDeps(main)()
-    else
-      Promise.resolve()
-
-  getSuggestions: ({editor, bufferPosition}) =>
-    psAtomCompletion.getSuggestions({
-      line: editor.getTextInRange([[bufferPosition.row, 0], bufferPosition])
-      moduleInfo:
-        modules: @editors.getUnqualActiveModules()
-        getQualifiedModule: @editors.getQualModule
-    })()
 
 module.exports = PscIde

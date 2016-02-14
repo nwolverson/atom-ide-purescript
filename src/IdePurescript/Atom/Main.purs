@@ -37,12 +37,7 @@ import IdePurescript.PscIde (loadDepsA)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules)
 import IdePurescript.Atom.Completion as C
-
--- atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
--- atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
---
--- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
-
+import IdePurescript.Atom.Tooltips (registerTooltips)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -98,7 +93,8 @@ main = do
         { root: Just root', linterIndie: Just linterIndie' } -> runAff ignoreError ignoreError $ do
           messages <- lint atom.config root' linterIndie'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
-          -- TODO: update modules state, quick fixes
+          editor <- liftEff $ getActiveTextEditor atom.workspace
+          liftEff $ maybe (pure unit) (useEditor modulesState) editor
           pure unit
         _ -> pure unit
 
@@ -125,6 +121,14 @@ main = do
   onDidChangeActivePaneItem atom.workspace (\item ->
     maybe (pure unit) (useEditor modulesState) (toEditor item)
   )
+
+  registerTooltips modulesState
+
+  -- TODO: activate psc-ide-server
+  -- TODO: commands:
+  -- atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
+  -- atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
+  -- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
 
   pure
     { config

@@ -1,5 +1,7 @@
 { QuickFixView } = require('./views/select-views')
 
+# used from PS 
+
 fix = (name, action) =>
   title: name
   action: () =>
@@ -13,7 +15,6 @@ removeRange = (editor, range) =>
   replaceRange(editor, range, "")
 
 getFix = (editor, msg, range) =>
-  debugger
   if msg?.suggestion?.hasSuggestion
     title = switch msg.errorCode
       when "UnusedImport", "RedundantEmptyHidingImport", "DuplicateImport", "RedundantUnqualifiedImport" then "Remove import"
@@ -24,7 +25,6 @@ getFix = (editor, msg, range) =>
     fix(title, () => replaceRange(editor, range, msg.suggestion.replacement))
 
 module.exports.showQuickFixes = (editor, linterMain, messages) =>
-  debugger
   cursor = editor.getCursorBufferPosition()
   editorLinter = linterMain.getEditorLinter(editor)
   messages = Array.from(editorLinter.getMessages())

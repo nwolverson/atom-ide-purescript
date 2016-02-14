@@ -88,6 +88,16 @@ abbrevType :: String -> String
 abbrevType = replace r "$1"
   where r = regex """(?:\w+\.)+(\w+)""" $ noFlags { global = true}
 
+getTypeA :: forall eff. String -> String -> Array String -> (String -> Array String)
+  -> Aff (net :: P.NET | eff) String
+getTypeA text modulePrefix unqualModules getQualifiedModule =
+  resultA conv $ P.type' text $ moduleFilters mods
+  where
+    mods = moduleFilterModules modulePrefix unqualModules getQualifiedModule
+    conv r = case head $ map convCompletion r of
+              Just res -> abbrevType res.type
+              Nothing -> ""
+
 getType :: forall eff. String -> String -> Array String -> (String -> Array String)
   -> Eff (net :: P.NET | eff) (Promise String)
 getType text modulePrefix unqualModules getQualifiedModule =

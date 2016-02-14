@@ -2,6 +2,8 @@
 { getProjectRoot } = require './utils'
 ChildProcess = require 'child_process'
 
+# Still in use
+
 class PsciProcess
   @killed = false
 
