@@ -2,6 +2,7 @@ module IdePurescript.Atom.Config (config) where
 
 import Prelude((++))
 
+pulpCmd :: String
 pulpCmd = "pulp"
 
 config =

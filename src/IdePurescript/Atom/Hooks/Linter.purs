@@ -1,11 +1,12 @@
 module IdePurescript.Atom.Hooks.Linter where
 
-import Prelude
+import Prelude (Unit)
 import Control.Monad.Eff(Eff)
-import IdePurescript.Atom.Build
+import IdePurescript.Atom.Build (AtomLintMessage)
 
 foreign import data LinterRegistry :: *
 foreign import data LinterIndie :: *
+foreign import data LinterInternal :: *
 foreign import data LINTER :: !
 
 foreign import register :: forall eff. LinterRegistry -> { name :: String } -> Eff (linter:: LINTER | eff) LinterIndie

@@ -2,19 +2,15 @@ module IdePurescript.Atom.Build where
 
 import Prelude (($), (++), pure, (<$>), bind, (-))
 import Control.Monad.Aff (Aff)
-import Control.Monad.Eff (Eff)
 import Data.Maybe (Maybe(Just, Nothing), fromMaybe, maybe)
 import IdePurescript.Build (Command(Command), build)
 import IdePurescript.PscErrors (Position)
-import Control.Promise as Promise
-import Control.Promise (Promise)
 
 -- This is really the same type but I'm using different fields
 type AtomLintTraceMessage =
   { "type" :: String
   , html :: String
   }
-
 
 type AtomLintMessage =
   { "type" :: String

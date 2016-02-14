@@ -15,7 +15,6 @@ import PscIde as P
 import PscIde.Command as C
 
 import Control.Promise as Promise
-import Control.Promise (Promise)
 
 data Module = Unqualified String | Qualified String String
 

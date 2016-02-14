@@ -62,7 +62,6 @@ class Editors extends Disposable
     buffer.insert([lastImport+1, 0], "import #{module}\n")
 
   showQuickFixes: () =>
-    debugger
     editor = atom.workspace.getActiveTextEditor()
     return if !editor or !@messages
 

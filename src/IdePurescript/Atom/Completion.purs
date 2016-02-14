@@ -1,18 +1,15 @@
 module IdePurescript.Atom.Completion where
 
 import Prelude (return, map, ($), bind, (==), (/=), (||), (++))
+import Control.Monad.Aff (Aff)
+import Data.Array (filter)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe)
 import Data.String (indexOf, contains)
-import Data.Array (filter)
-import IdePurescript.PscIde (getCompletion, eitherToErr)
-import Control.Monad.Aff (Aff)
-import Control.Monad.Eff (Eff)
-
+import Data.String.Regex (match, regex)
 import Data.String.Regex (Regex, noFlags, regex, test, match)
+import IdePurescript.PscIde (getCompletion, eitherToErr)
 import PscIde as P
 import PscIde.Command as C
-import Control.Promise (Promise, fromAff)
-import Data.String.Regex (match, regex)
 
 type ModuleInfo =
   { modules :: Array String

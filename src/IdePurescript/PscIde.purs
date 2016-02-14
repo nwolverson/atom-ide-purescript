@@ -1,6 +1,6 @@
 module IdePurescript.PscIde where
 
-import Prelude (id, map, ($), pure, bind, (<$>), (<<<), return)
+import Prelude (($), pure, bind, map, (<$>), return, (<<<))
 import Data.Either (Either(Right, Left))
 import Data.Maybe(Maybe(Nothing,Just))
 import Data.Array((:), null, head)

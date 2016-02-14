@@ -1,34 +1,33 @@
 module IdePurescript.Atom.LinterBuild where
 
-import Prelude
-import Control.Monad.Eff
+import Prelude (pure, ($), bind, (==), (<$>), (<<<), const, (++), not, (>), (&&), (||))
 
-import Control.Monad.Eff.Class
-import Control.Monad.Aff
-
-import Control.Monad.Aff.Class
-import Atom.Config
-import Data.Either
-import Data.Maybe
-import Data.String.Regex
-import Data.String(trim)
-import Data.Foreign(readString)
-import IdePurescript.Atom.Build
-import Data.Array(uncons,null,length,catMaybes, filterM)
-import Atom.NotificationManager
-import Atom.Atom
-import Node.ChildProcess ( CHILD_PROCESS)
-import Control.Monad.Eff.Console
+import Control.Monad (when)
+import Control.Monad.Aff (Aff)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Ref (REF)
-import Control.Monad.Eff.Exception (EXCEPTION)
-import Atom.Project
-import Control.Monad
+import Data.Array(uncons,null,length,catMaybes, filterM)
+import Data.Either (either)
+import Data.Foreign(readString)
+import Data.Maybe (Maybe(Nothing, Just))
+import Data.String.Regex (noFlags, regex, split)
+import Data.String(trim)
 import Data.Traversable (traverse)
-import Node.Path as P
-import Node.FS as FS
-import Node.FS.Sync as FS
-import IdePurescript.Atom.Hooks.Linter
 
+import Node.ChildProcess ( CHILD_PROCESS)
+import Node.FS (FS) as FS
+import Node.FS.Sync (exists) as FS
+import Node.Path as P
+
+import Atom.Atom (getAtom)
+import Atom.Config (Config, CONFIG, getConfig)
+import Atom.NotificationManager (NOTIFY, addError, addWarning, addInfo)
+import Atom.Project (PROJECT, getPaths)
+
+import IdePurescript.Atom.Build (AtomLintMessage, linterBuild)
+import IdePurescript.Atom.Hooks.Linter (LinterIndie, LINTER, setMessages, deleteMessages)
 
 getProjectRoot :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
 getProjectRoot = do
@@ -49,7 +48,7 @@ getProjectRoot = do
       pure $ Just dir
   where
 
-  validDir :: forall eff. P.FilePath -> Eff eff Boolean
+  validDir :: forall eff'. P.FilePath -> Eff eff' Boolean
   validDir = const $ pure true
   --   validDir = (d) ->
   --     if d
@@ -58,7 +57,7 @@ getProjectRoot = do
   --     else
   --       false
 
-  getRoot :: forall eff. P.FilePath -> Eff (fs :: FS.FS | eff) (Maybe P.FilePath)
+  getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
   getRoot path = Debug.Trace.trace path \_ ->
     let parent = getParent path
         src = P.concat [path, "src"] in
