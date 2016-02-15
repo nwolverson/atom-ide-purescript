@@ -8,17 +8,20 @@ import Data.Array(length)
 import Data.Function.Eff (mkEffFn1)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Aff (runAff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, log
+  )
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Aff (runAff)
+import Control.Monad.Aff.AVar (AVAR)
 import Control.Promise (Promise, fromAff)
 import Control.Monad (when)
+import Control.Bind (join)
 
 import Node.FS (FS)
 import Node.ChildProcess (CHILD_PROCESS)
 
 import Atom.Atom (getAtom)
-import Atom.NotificationManager (NOTIFY, addInfo)
+import Atom.NotificationManager (NOTIFY)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange)
 import Atom.Range (mkRange)
@@ -38,6 +41,8 @@ import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules)
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
+import IdePurescript.Atom.PscIdeServer (startServer)
+import IdePurescript.Atom.Psci as Psci
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -74,6 +79,7 @@ type MainEff =
   , editor :: EDITOR
   , net :: NET
   , workspace :: WORKSPACE
+  , avar :: AVAR
   )
 
 main = do
@@ -83,10 +89,11 @@ main = do
   messagesRef <- newRef ([] :: Array AtomLintMessage)
   linterInternalRef <- newRef (Nothing :: Maybe LinterInternal)
 
+  deactivateRef <- newRef (pure unit :: Eff MainEff Unit)
+
   let
     doLint :: Eff MainEff Unit
     doLint = do
-      addInfo atom.notifications "Building PureScript"
       root <- getProjectRoot
       linterIndie <- readRef linterIndieRef
       case { root, linterIndie } of
@@ -107,24 +114,30 @@ main = do
         { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes e l messages
         _ -> pure unit
 
-  addCommand atom.commands "atom-workspace" "purescript:build" $ const doLint
-  addCommand atom.commands "atom-workspace" "purescript:show-quick-fixes" $ const quickFix
+    activate :: Eff MainEff Unit
+    activate = do
+      addCommand atom.commands "atom-workspace" "purescript:build" $ const doLint
+      addCommand atom.commands "atom-workspace" "purescript:show-quick-fixes" $ const quickFix
 
-  observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
-    useEditor modulesState editor
-    onDidSave editor (\_ -> do
-      buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-      when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
-    )
-  )
+      observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
+        useEditor modulesState editor
+        onDidSave editor (\_ -> do
+          buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
+          when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
+        )
+      )
 
-  onDidChangeActivePaneItem atom.workspace (\item ->
-    maybe (pure unit) (useEditor modulesState) (toEditor item)
-  )
+      onDidChangeActivePaneItem atom.workspace (\item ->
+        maybe (pure unit) (useEditor modulesState) (toEditor item)
+      )
 
-  registerTooltips modulesState
+      registerTooltips modulesState
+      runAff (\_ -> log "Error starting server") (\deact -> writeRef deactivateRef deact) startServer
+      Psci.init
 
-  -- TODO: activate psc-ide-server
+    deactivate :: Eff MainEff Unit
+    deactivate = join (readRef deactivateRef)
+
   -- TODO: commands:
   -- atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
   -- atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
@@ -132,6 +145,8 @@ main = do
 
   pure
     { config
+    , activate: mkEffFn1 \_ -> activate
+    , deactivate: mkEffFn1 \_ -> deactivate
     , consumeLinterIndie: mkEffFn1 \registry -> do
         linterIndie <- register registry {name: "PureScript"}
         writeRef linterIndieRef $ Just linterIndie

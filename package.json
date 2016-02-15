@@ -1,6 +1,6 @@
 {
   "name": "ide-purescript",
-  "main": "./lib/psjs-main",
+  "main": "./lib/main",
   "version": "0.8.2",
   "description": "PureScript support for completion, build and maybe more",
   "keywords": [],
@@ -15,7 +15,8 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "pulp build --no-psa -o lib/psjs -r '../' --json-errors --source-maps",
-    "build-pretty": "pulp build -o lib/psjs -r '../' --source-maps"
+    "build-pretty": "pulp build -o lib/psjs -r '../' --source-maps",
+    "bundle": "pulp build  --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
     "atom-linter": "^3.0.0",

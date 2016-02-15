@@ -3,7 +3,7 @@ module IdePurescript.Atom.Config (config) where
 import Prelude((++))
 
 pulpCmd :: String
-pulpCmd = "pulp"
+pulpCmd = "pulp" -- pulpCmd = if process.platform == 'win32' then 'pulp.cmd' else 'pulp'
 
 config =
   { pscIdePort:

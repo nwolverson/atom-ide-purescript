@@ -23,7 +23,7 @@ import Node.Path as P
 
 import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
-import Atom.NotificationManager (NOTIFY, addError, addWarning, addInfo)
+import Atom.NotificationManager (NOTIFY, addError, addWarning, addSuccess, addInfo)
 import Atom.Project (PROJECT, getPaths)
 
 import IdePurescript.Atom.Build (AtomLintMessage, linterBuild)
@@ -74,18 +74,19 @@ type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config ::
 
 lint :: forall eff. Config -> String -> LinterIndie -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
 lint config projdir linter = do
+  atom <- liftEffA $ getAtom
   fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
   let buildCommand = either (const []) (split (regex "\\s+" noFlags) <<< trim) $ readString fullBuildPath
-  atom <- liftEffA $ getAtom
   case uncons buildCommand of
     Just { head: command, tail: args } -> do
+      liftEff $ addInfo atom.notifications "Building PureScript"
       res <- linterBuild { command, args, directory: projdir }
       liftEffA $ Just <$> case res of
         { result, messages } -> do
           deleteMessages linter
           setMessages linter messages
-          if result == "success" then addInfo atom.notifications "Building PureScript"
+          if result == "success" then addSuccess atom.notifications "PureScript build succeeded"
             else addWarning atom.notifications "PureScript build completed with errors"
           pure messages
     Nothing -> do

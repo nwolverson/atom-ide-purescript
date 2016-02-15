@@ -35,6 +35,9 @@ resultA :: forall eff a b. (a -> b) ->  Aff (net :: P.NET | eff) (Either String 
 resultA f a = eitherToErr ((f <$>) <$> a)
 
 
+cwdA :: forall eff. Aff (net :: P.NET | eff) String
+cwdA = resultA runMsg P.cwd
+
 cwd :: forall eff. Eff (net :: P.NET | eff) (Promise String)
 cwd = result' runMsg P.cwd
 
