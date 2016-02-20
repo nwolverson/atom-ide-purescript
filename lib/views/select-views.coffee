@@ -1,5 +1,4 @@
 {SelectListView} = require 'atom-space-pen-views'
-{ getAvailableModules } = require '../psjs/IdePurescript.PscIde'
 
 class ModuleSelectListView extends SelectListView
   constructor: (@editors) ->

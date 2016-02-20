@@ -1,6 +1,6 @@
 module IdePurescript.PscIde where
 
-import Prelude (($), pure, bind, map, (<$>), return, (<<<))
+import Prelude (($), pure, bind, map, (<$>), return, (<<<), id)
 import Data.Either (Either(Right, Left))
 import Data.Maybe(Maybe(Nothing,Just))
 import Data.Array((:), null, head)
@@ -130,6 +130,10 @@ loadDepsA :: forall eff. String
   -> Aff (net :: P.NET | eff) String
 loadDepsA main = resultA runMsg $ P.load [] [main]
 
+getPursuitCompletionA :: forall eff. String
+  -> Aff (net :: P.NET | eff) (Array _)
+getPursuitCompletionA str = resultA (map convPursuitCompletion) $ P.pursuitCompletion str
+
 getPursuitCompletion :: forall eff. String
   -> Eff (net :: P.NET | eff) (Promise (Array _))
 getPursuitCompletion str = result' (map convPursuitCompletion) $ P.pursuitCompletion str
@@ -153,18 +157,25 @@ instance decodeModuleCompletion :: DecodeJson ModuleCompletion where
       module': module',
       package: package
       })
---
--- getPursuitModuleCompletion :: forall eff. String
---   -> Eff (net :: P.NET | eff) (Promise (Array ModuleCompletion))
--- getPursuitModuleCompletion str = result' (map id) $ complete str
---   where
---   complete :: String -> P.Cmd (Array ModuleCompletion)
---   complete q = P.sendCommand (C.Pursuit C.Package q)
+
+
+convPursuitModuleCompletion :: ModuleCompletion -> { module :: String, package :: String }
+convPursuitModuleCompletion (ModuleCompletion { module', package })
+  = { package, module: module' }
 
 
 getPursuitModuleCompletion :: forall eff. String
-  -> Aff (net :: P.NET | eff) (Array ModuleCompletion)
-getPursuitModuleCompletion str = eitherToErr $ complete str
+  -> Eff (net :: P.NET | eff) (Promise (Array { package :: String, module :: String }))
+getPursuitModuleCompletion str = result' (map convPursuitModuleCompletion) $ complete str
   where
+
   complete :: String -> P.Cmd (Array ModuleCompletion)
   complete q = P.sendCommand (C.Pursuit C.Package q)
+
+
+-- getPursuitModuleCompletion :: forall eff. String
+--   -> Aff (net :: P.NET | eff) (Array ModuleCompletion)
+-- getPursuitModuleCompletion str = eitherToErr $ complete str
+--   where
+--   complete :: String -> P.Cmd (Array ModuleCompletion)
+--   complete q = P.sendCommand (C.Pursuit C.Package q)

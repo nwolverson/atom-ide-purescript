@@ -12,6 +12,7 @@ class PursuitSelectListView extends SelectListView
     buffer.stoppedChangingDelay = 1000
     buffer.onDidStopChanging (text) =>
       @getCompletions buffer.getText()
+      .then (items) => @setItems items
 
   show: ->
     @storeFocusedElement()
@@ -46,7 +47,7 @@ class PursuitIdentifierListView extends PursuitSelectListView
     console.log("#{item.identifier} was selected")
 
 class PursuitModuleListView extends PursuitSelectListView
-  constructor: (@getCompletions, @editors) ->
+  constructor: (@getCompletions, @addImport) ->
     super(@getCompletions)
 
   initialize: () ->
@@ -61,12 +62,12 @@ class PursuitModuleListView extends PursuitSelectListView
     </li>"
 
   confirmed: (item) =>
-    view = new PursuitModuleActionView(@editors, item.module)
+    view = new PursuitModuleActionView(@addImport, item.module)
     view.show()
     super()
 
 class PursuitModuleActionView extends SelectListView
-  constructor: (@editors, @moduleName) ->
+  constructor: (@addImport, @moduleName) ->
     super
 
   initialize: () =>
@@ -88,30 +89,20 @@ class PursuitModuleActionView extends SelectListView
   confirmed: (item) =>
     @cancel()
     if item is "Import module"
-      @editors.addImport @moduleName
+      @addImport @moduleName
 
   cancelled: =>
     @hide()
 
 class Pursuit
-  constructor: (@pscide, @editors) ->
-
-  getModuleCompletions: (text) =>
-    @pscide.getPursuitModuleCompletion text
-      .then (items) => @selectModuleView.setItems items
-
-  getCompletions: (text) =>
-    @pscide.getPursuitCompletion text
-      .then (items) => @selectView.setItems items
-
-  searchModule: () =>
+  searchModule: (getModuleCompletions, addImport) =>
     if not @selectModuleView
-      @selectModuleView = new PursuitModuleListView(@getModuleCompletions, @editors)
+      @selectModuleView = new PursuitModuleListView(getModuleCompletions, addImport)
     @selectModuleView.show()
 
-  search: () =>
+  search: (getCompletions) =>
     if not @selectView
-      @selectView = new PursuitIdentifierListView(@getCompletions)
+      @selectView = new PursuitIdentifierListView(getCompletions)
     @selectView.setMaxItems(30)
     @selectView.show()
 

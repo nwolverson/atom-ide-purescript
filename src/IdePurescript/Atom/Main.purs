@@ -36,13 +36,14 @@ import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Build (AtomLintMessage)
-import IdePurescript.PscIde (loadDepsA)
+import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDepsA)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules)
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
+import IdePurescript.Atom.Pursuit as Pursuit
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -114,10 +115,19 @@ main = do
         { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes e l messages
         _ -> pure unit
 
+    pursuitSearch :: Eff MainEff Unit
+    pursuitSearch = Pursuit.pursuitSearch getPursuitCompletion
+
+    pursuitSearchModule :: Eff MainEff Unit
+    pursuitSearchModule = Pursuit.pursuitSearchModules getPursuitModuleCompletion (const $ log "Selected module")
+
     activate :: Eff MainEff Unit
     activate = do
       addCommand atom.commands "atom-workspace" "purescript:build" $ const doLint
       addCommand atom.commands "atom-workspace" "purescript:show-quick-fixes" $ const quickFix
+
+      addCommand atom.commands "atom-workspace" "purescript:pursuit-search" $ const pursuitSearch
+      addCommand atom.commands "atom-workspace" "purescript:pursuit-search-modules" $ const pursuitSearchModule
 
       observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
         useEditor modulesState editor
@@ -139,8 +149,6 @@ main = do
     deactivate = join (readRef deactivateRef)
 
   -- TODO: commands:
-  -- atom.commands.add("atom-workspace", "purescript:pursuit-search", @pursuit.search)
-  -- atom.commands.add("atom-workspace", "purescript:pursuit-search-modules", @pursuit.searchModule)
   -- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
 
   pure
