@@ -58,7 +58,7 @@ getProjectRoot = do
   --       false
 
   getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
-  getRoot path = Debug.Trace.trace path \_ ->
+  getRoot path =
     let parent = getParent path
         src = P.concat [path, "src"] in
     if path == "" || path == parent then

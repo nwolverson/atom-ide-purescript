@@ -1,7 +1,7 @@
 {
   "name": "ide-purescript",
   "main": "./lib/main",
-  "version": "0.8.5",
+  "version": "0.8.2",
   "description": "PureScript support for completion, build and maybe more",
   "keywords": [],
   "activationHooks": [
@@ -13,7 +13,7 @@
     "atom": ">=1.0.0 <2.0.0"
   },
   "scripts": {
-    "prepublish": "npm run build",
+    "prepublish": "npm run bundle",
     "build": "pulp build --no-psa -o lib/psjs -r '../' --json-errors --source-maps",
     "build-pretty": "pulp build -o lib/psjs -r '../' --source-maps",
     "bundle": "pulp build  --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
@@ -22,7 +22,7 @@
     "atom-linter": "^3.0.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "hover-tooltips": "^0.5.0",
+    "hover-tooltips": "git://github.com/nwolverson/hover-tooltips.git#scrolltop-removed",
     "xregexp": "~2.0.0"
   },
   "providedServices": {
