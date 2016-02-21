@@ -143,7 +143,13 @@ main = do
       )
 
       registerTooltips modulesState
-      runAff (\_ -> log "Error starting server") (\deact -> writeRef deactivateRef deact) startServer
+      runAff
+        (\_ -> log "Error starting server")
+        (\deact -> do
+            writeRef deactivateRef deact
+            editor <- getActiveTextEditor atom.workspace
+            maybe (pure unit) (useEditor modulesState) editor)
+        startServer
       Psci.init
 
     deactivate :: Eff MainEff Unit
