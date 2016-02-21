@@ -1,6 +1,6 @@
 module IdePurescript.PscIde where
 
-import Prelude (($), pure, bind, map, (<$>), return, (<<<), id)
+import Prelude (map, ($), pure, bind, (<$>), return, (<<<))
 import Data.Either (Either(Right, Left))
 import Data.Maybe(Maybe(Nothing,Just))
 import Data.Array((:), null, head)
@@ -10,7 +10,7 @@ import PscIde.Command as C
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception as Ex
 import Control.Monad.Error.Class (throwError)
-import Data.Nullable (toNullable)
+import Data.Nullable (toNullable, Nullable)
 import Data.Argonaut.Decode (class DecodeJson, decodeJson)
 import Data.Argonaut.Combinators ((.?))
 import Data.String as S
@@ -45,7 +45,7 @@ runMsg :: C.Message -> String
 runMsg (C.Message m) = m
 
 getImports' :: forall eff. String
-  -> Aff (net :: P.NET | eff) (Array _)
+  -> Aff (net :: P.NET | eff) (Array { module :: String, qualifier :: Nullable String })
 getImports' s = resultA conv $ P.listImports s
   where
   conv (C.ImportList imps) = conv' <$> imps
@@ -55,7 +55,7 @@ getImports' s = resultA conv $ P.listImports s
   }
 
 getImports :: forall eff. String
-  -> Eff (net :: P.NET | eff) (Promise (Array _))
+  -> Eff (net :: P.NET | eff) (Promise (Array { module :: String, qualifier :: Nullable String }))
 getImports s = result' conv $ P.listImports s
   where
   conv (C.ImportList imps) = conv' <$> imps
@@ -112,7 +112,7 @@ getType text modulePrefix unqualModules getQualifiedModule =
               Nothing -> ""
 
 getCompletion :: forall eff. String -> String -> Boolean -> Array String -> (String -> Array String)
-  -> Aff (net :: P.NET | eff) (Array _)
+  -> Aff (net :: P.NET | eff) (Array {type :: String, identifier :: String})
 getCompletion prefix modulePrefix moduleCompletion unqualModules getQualifiedModule =
   conv <$> (eitherToErr $ P.complete (C.PrefixFilter prefix : moduleFilters mods) Nothing)
   where
@@ -131,11 +131,11 @@ loadDepsA :: forall eff. String
 loadDepsA main = resultA runMsg $ P.load [] [main]
 
 getPursuitCompletionA :: forall eff. String
-  -> Aff (net :: P.NET | eff) (Array _)
+  -> Aff (net :: P.NET | eff) (Array  {type :: String, identifier :: String, module :: String, package :: String })
 getPursuitCompletionA str = resultA (map convPursuitCompletion) $ P.pursuitCompletion str
 
 getPursuitCompletion :: forall eff. String
-  -> Eff (net :: P.NET | eff) (Promise (Array _))
+  -> Eff (net :: P.NET | eff) (Promise (Array {type :: String, identifier :: String, module :: String, package :: String }))
 getPursuitCompletion str = result' (map convPursuitCompletion) $ P.pursuitCompletion str
 
 convPursuitCompletion :: C.PursuitCompletion -> { type :: String, identifier :: String, module :: String, package :: String }

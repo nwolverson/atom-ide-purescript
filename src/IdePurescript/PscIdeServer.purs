@@ -1,17 +1,15 @@
 module IdePurescript.PscIdeServer where
 
-import Prelude (const, bind, pure, ($), (++), (==), show, unit)
+import Prelude (const, bind, pure, ($), (++), (==), show)
 import Data.Maybe(Maybe(..))
 import Data.Either (either)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Aff (Aff, attempt, makeAff, Canceler(..), later')
+import Control.Monad.Aff (Aff, attempt, later', makeAff)
 import Control.Monad.Aff.AVar (AVAR)
-import Control.Monad.Aff.Par
-import Control.Alternative
-import Control.Alt
-import Node.ChildProcess (CHILD_PROCESS, ChildProcess, Exit(Normally), onClose, onError, defaultSpawnOptions, spawn, kill)
-import Data.Posix.Signal (Signal(SIGKILL))
+import Control.Monad.Aff.Par (Par(Par), runPar)
+import Control.Alt ((<|>))
+import Node.ChildProcess (CHILD_PROCESS, ChildProcess, Exit(Normally), onClose, onError, defaultSpawnOptions, spawn)
 import IdePurescript.PscIde (cwdA)
 import PscIde (NET)
 

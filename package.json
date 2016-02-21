@@ -7,7 +7,10 @@
   "activationHooks": [
     "language-purescript:grammar-used"
   ],
-  "repository": "https://github.com/nwolverson/atom-ide-purescript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nwolverson/atom-ide-purescript"
+  },
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
@@ -22,7 +25,7 @@
     "atom-linter": "^3.0.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "hover-tooltips": "git://github.com/nwolverson/hover-tooltips.git#scrolltop-removed",
+    "hover-tooltips": "^0.5.0",
     "xregexp": "~2.0.0"
   },
   "providedServices": {

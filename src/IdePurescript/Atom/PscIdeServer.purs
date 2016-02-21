@@ -4,8 +4,8 @@ import Prelude (Unit, unit, pure, (<$>), ($), bind, (++), void)
 import Data.Functor ((<$))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Aff (runAff, Aff)
+import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Data.Maybe(Maybe(..))
 import Data.Either(Either(..))
@@ -30,7 +30,7 @@ type ServerEff e = ( project :: PROJECT
                                , console :: CONSOLE
                                , avar ::AVAR | e )
 
-startServer :: forall eff. Aff (ServerEff eff) (Eff _ Unit)
+startServer :: forall eff eff'. Aff (ServerEff eff) (Eff (cp :: CHILD_PROCESS | eff') Unit)
 startServer = do
   atom <- liftEffS getAtom
   path <- liftEffS getProjectRoot
