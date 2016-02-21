@@ -10,7 +10,7 @@ import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Par (Par(Par), runPar)
 import Control.Alt ((<|>))
 import Node.ChildProcess (CHILD_PROCESS, ChildProcess, Exit(Normally), onClose, onError, defaultSpawnOptions, spawn)
-import IdePurescript.PscIde (cwdA)
+import IdePurescript.PscIde (cwd) as PscIde
 import PscIde (NET)
 
 data ServerStartResult =
@@ -20,11 +20,9 @@ data ServerStartResult =
   | Closed
   | StartError String
 
--- TODO: dispose
-
 startServer :: forall eff. String -> Int -> String -> Aff (cp :: CHILD_PROCESS, console :: CONSOLE, net :: NET, avar :: AVAR | eff) ServerStartResult
 startServer exe port rootPath = do
-  workingDir <- attempt cwdA
+  workingDir <- attempt PscIde.cwd
   either (const launchServer) gotPath workingDir
   where
 

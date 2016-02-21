@@ -1,6 +1,6 @@
 module IdePurescript.Atom.Main where
 
-import Prelude (Unit, unit, pure, bind, ($), id, const, (>), flip)
+import Prelude (Unit, unit, pure, bind, ($), id, const, (>), flip, (<<<))
 import Data.Maybe(maybe,Maybe(..))
 import Data.Either (either)
 import Data.Foreign(readBoolean)
@@ -13,7 +13,8 @@ import Control.Monad.Eff.Console (CONSOLE, log
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Aff.AVar (AVAR)
-import Control.Promise (Promise, fromAff)
+import Control.Promise (Promise)
+import Control.Promise as Promise
 import Control.Monad (when)
 import Control.Bind (join)
 
@@ -36,7 +37,7 @@ import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Build (AtomLintMessage)
-import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDepsA)
+import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules)
 import IdePurescript.Atom.Completion as C
@@ -52,7 +53,7 @@ getSuggestions state ({editor, bufferPosition}) = do
   line <- getTextInRange editor range
   let modules = getUnqualActiveModules state
       getQualifiedModule = (flip getQualModule) state
-  fromAff $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
+  Promise.fromAff $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
 
 useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF | eff) Unit
 useEditor modulesStateRef editor = do
@@ -61,7 +62,7 @@ useEditor modulesStateRef editor = do
   let mainModule = getMainModule text
   case mainModule of
     Just m -> runAff ignoreError ignoreError $ do
-      loadDepsA m
+      loadDeps m
       state <- getModulesForFile path text
       liftEff $ writeRef modulesStateRef state
       pure unit
@@ -116,10 +117,10 @@ main = do
         _ -> pure unit
 
     pursuitSearch :: Eff MainEff Unit
-    pursuitSearch = Pursuit.pursuitSearch getPursuitCompletion
+    pursuitSearch = Pursuit.pursuitSearch (Promise.fromAff <<< getPursuitCompletion)
 
     pursuitSearchModule :: Eff MainEff Unit
-    pursuitSearchModule = Pursuit.pursuitSearchModules getPursuitModuleCompletion (const $ log "Selected module")
+    pursuitSearchModule = Pursuit.pursuitSearchModules (Promise.fromAff <<< getPursuitModuleCompletion) (const $ log "Selected module")
 
     activate :: Eff MainEff Unit
     activate = do

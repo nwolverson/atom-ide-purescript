@@ -14,7 +14,7 @@ import Atom.Point (Point, getColumn, getRow, mkPoint)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, getActiveTextEditor)
 import Atom.Editor (EDITOR, getTextInRange)
-import IdePurescript.PscIde (getTypeA)
+import IdePurescript.PscIde (getType)
 import IdePurescript.Modules as Modules
 import PscIde (NET)
 
@@ -50,7 +50,7 @@ getTooltips state pos = do
         --text modulePrefix unqualModules getQualifiedModule
         --String -> String -> Array String -> (String -> Array String)
       fromAff do
-        ty <- getTypeA word prefix (Modules.getUnqualActiveModules state) (flip Modules.getQualModule $ state)
+        ty <- getType word prefix (Modules.getUnqualActiveModules state) (flip Modules.getQualModule $ state)
         pure { valid: length ty > 0, info: ty }
     _ -> fromAff $ pure { valid: false, info: "" }
   where
