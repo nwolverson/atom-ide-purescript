@@ -6,7 +6,7 @@ class ModuleSelectListView extends SelectListView
 
   initialize: () =>
     super
-    modules = require('./utils').getAvailableModules()
+    modules = getAvailableModules()
     @setItems modules
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
 

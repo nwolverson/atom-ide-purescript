@@ -2,6 +2,8 @@
 { getProjectRoot } = require './utils'
 ChildProcess = require 'child_process'
 
+# Still in use
+
 class PsciProcess
   @killed = false
 
@@ -32,7 +34,6 @@ class PsciProcess
       atom.notifications.addError data.toString()
       )
     proc.on('close', (code) =>
-      debugger
       return if @killed
       if code is 0
         console.info("psci exited happily")
