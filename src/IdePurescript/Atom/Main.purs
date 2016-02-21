@@ -1,15 +1,14 @@
 module IdePurescript.Atom.Main where
 
-import Prelude (Unit, unit, pure, bind, ($), id, const, (>), flip, (<<<))
-import Data.Maybe(maybe,Maybe(..))
+import Prelude (Unit, unit, pure, bind, ($), id, const, void, (<<<), (>), flip, (++))
+import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Either (either)
 import Data.Foreign(readBoolean)
-import Data.Array(length)
+import Data.Array (length)
 import Data.Function.Eff (mkEffFn1)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Eff.Console (CONSOLE, log
-  )
+import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Aff.AVar (AVAR)
@@ -24,7 +23,7 @@ import Node.ChildProcess (CHILD_PROCESS)
 import Atom.Atom (getAtom)
 import Atom.NotificationManager (NOTIFY)
 import Atom.CommandRegistry (COMMAND, addCommand)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange)
+import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange)
 import Atom.Range (mkRange)
 import Atom.Point (Point, getRow, mkPoint)
 import Atom.Config (CONFIG, getConfig)
@@ -37,14 +36,15 @@ import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Build (AtomLintMessage)
-import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps)
+import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
-import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules)
+import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos)
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Pursuit as Pursuit
+import IdePurescript.Atom.Imports (showAddImportsView)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -119,16 +119,37 @@ main = do
     pursuitSearch :: Eff MainEff Unit
     pursuitSearch = Pursuit.pursuitSearch (Promise.fromAff <<< getPursuitCompletion)
 
+    addImport :: String -> Eff MainEff Unit
+    addImport moduleName = do
+      maybeEditor <- getActiveTextEditor atom.workspace
+      case maybeEditor of
+        Nothing -> pure unit
+        Just editor -> do
+          text <- getText editor
+          let index = findImportInsertPos text
+          let pt = (mkRange (mkPoint index 0) (mkPoint index 0))
+          void $ setTextInBufferRange editor pt $ "import " ++ moduleName ++ "\n"
+
     pursuitSearchModule :: Eff MainEff Unit
-    pursuitSearchModule = Pursuit.pursuitSearchModules (Promise.fromAff <<< getPursuitModuleCompletion) (const $ log "Selected module")
+    pursuitSearchModule = Pursuit.pursuitSearchModules
+      (Promise.fromAff <<< getPursuitModuleCompletion)
+      addImport
+
+    addModuleImport :: Eff MainEff Unit
+    addModuleImport = do
+      showAddImportsView (Promise.fromAff getAvailableModules) addImport
 
     activate :: Eff MainEff Unit
     activate = do
-      addCommand atom.commands "atom-workspace" "purescript:build" $ const doLint
-      addCommand atom.commands "atom-workspace" "purescript:show-quick-fixes" $ const quickFix
+      let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
+      cmd "build" doLint
+      cmd "show-quick-fixes" quickFix
+      cmd "pursuit-search" pursuitSearch
+      cmd "pursuit-search-modules" pursuitSearchModule
+      cmd "add-module-import" addModuleImport
+  -- TODO: commands:
+  -- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
 
-      addCommand atom.commands "atom-workspace" "purescript:pursuit-search" $ const pursuitSearch
-      addCommand atom.commands "atom-workspace" "purescript:pursuit-search-modules" $ const pursuitSearchModule
 
       observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
         useEditor modulesState editor
@@ -154,9 +175,6 @@ main = do
 
     deactivate :: Eff MainEff Unit
     deactivate = join (readRef deactivateRef)
-
-  -- TODO: commands:
-  -- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
 
   pure
     { config

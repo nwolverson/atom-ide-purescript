@@ -1,5 +1,5 @@
 module IdePurescript.PscIde (getCompletion, cwd, loadDeps, getType, eitherToErr
-  , getPursuitModuleCompletion, getPursuitCompletion, SearchResult, ModuleSearchResult) where
+  , getPursuitModuleCompletion, getPursuitCompletion, getAvailableModules, SearchResult, ModuleSearchResult) where
 
 import Prelude (map, ($), pure, bind, (<$>), return)
 import Data.Either (Either(Right, Left))

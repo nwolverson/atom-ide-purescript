@@ -1,20 +1,22 @@
 module IdePurescript.Modules (Module, modulesState, initialModulesState, State, getMainModule, getModulesForFile,
-  getUnqualActiveModules, getQualModule) where
+  getUnqualActiveModules, getQualModule, findImportInsertPos) where
 
-import Prelude ((<$>), pure, ($), bind, map, (==), (<<<), (++), const)
+import Prelude ((<$>), pure, ($), bind, map, (==), (<<<), (++), const, (+))
 import Data.Maybe (Maybe(Nothing, Just), maybe, fromMaybe)
-import Data.Array (filter, singleton)
+import Data.Array (filter, singleton, findLastIndex)
 import Control.Monad.Aff (Aff)
 import Data.Either (either)
 import Control.Monad.Eff.Ref (writeRef, readRef, newRef, REF)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff (Eff)
+import Data.String (split)
 import Data.String.Regex as R
 
 import PscIde as P
 import PscIde.Command as C
 
 import Control.Promise as Promise
+import Data.Array (length, head)
 
 data Module = Unqualified String | Qualified String String
 
@@ -85,3 +87,10 @@ modulesState = do
     , getMainModule: m.getMainModule
     , getMainModuleForFile: fromMaybe "" <<< getMainModule
     }
+
+findImportInsertPos :: String -> Int
+findImportInsertPos text =
+  let regex = R.regex """^(module|import) [A-Z][^(]*($|\([^()]*\))""" R.noFlags
+      lines = split "\n" text
+      res = fromMaybe 0 $ findLastIndex (R.test regex) lines
+  in res+1

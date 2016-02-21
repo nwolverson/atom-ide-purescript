@@ -1,13 +1,14 @@
 {SelectListView} = require 'atom-space-pen-views'
 
 class ModuleSelectListView extends SelectListView
-  constructor: (@editors) ->
+  constructor: (@getAvailableModules, @addImport) ->
     super
 
   initialize: () =>
     super
-    modules = getAvailableModules()
-    @setItems modules
+    @getAvailableModules()
+      .then (modules) =>
+        @setItems modules
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
 
   show: ->
@@ -20,7 +21,7 @@ class ModuleSelectListView extends SelectListView
 
   confirmed: (item) =>
     @cancel()
-    @editors.addImport item
+    @addImport item
 
   cancelled: =>
     @hide()
