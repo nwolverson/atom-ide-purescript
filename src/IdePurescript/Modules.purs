@@ -1,22 +1,24 @@
-module IdePurescript.Modules (Module, modulesState, initialModulesState, State, getMainModule, getModulesForFile,
-  getUnqualActiveModules, getQualModule, findImportInsertPos) where
+module IdePurescript.Modules (
+    Module
+  , initialModulesState
+  , State
+  , getMainModule
+  , getModulesForFile
+  , getUnqualActiveModules
+  , getQualModule
+  , findImportInsertPos
+  ) where
 
-import Prelude ((<$>), pure, ($), bind, map, (==), (<<<), (++), const, (+))
+import Prelude ((+), ($), map, (==), (<<<), (++), pure, const, bind)
 import Data.Maybe (Maybe(Nothing, Just), maybe, fromMaybe)
 import Data.Array (filter, singleton, findLastIndex)
 import Control.Monad.Aff (Aff)
 import Data.Either (either)
-import Control.Monad.Eff.Ref (writeRef, readRef, newRef, REF)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff (Eff)
 import Data.String (split)
 import Data.String.Regex as R
 
 import PscIde as P
 import PscIde.Command as C
-
-import Control.Promise as Promise
-import Data.Array (length, head)
 
 data Module = Unqualified String | Qualified String String
 
@@ -53,7 +55,6 @@ getUnqualActiveModules :: State -> Array String
 getUnqualActiveModules {modules, main} =
   map getModuleName $ maybe [] (singleton <<< Unqualified) main ++ modules
 
-
 getQualModule :: String -> State -> Array String
 getQualModule qualifier {modules} =
   map getModuleName $ filter (qual qualifier) modules
@@ -63,30 +64,6 @@ getQualModule qualifier {modules} =
 
 initialModulesState :: State
 initialModulesState =  { main: Nothing, modules: [] }
-
-modulesStateImpl = do
-  stateRef <- newRef { main: Nothing, modules: [] }
-  pure $
-    {
-      getQualModule: \s -> getQualModule s <$> readRef stateRef
-    , getUnqualActiveModules: getUnqualActiveModules <$> readRef stateRef
-    , loadModulesForFile: \f s -> do
-        state <- getModulesForFile f s
-        liftEff $ writeRef stateRef state
-    , getMainModule: (\m -> fromMaybe "" m.main) <$> readRef stateRef
-    }
-
-modulesState :: forall eff. Eff (ref :: REF | eff) _
-modulesState = do
-  m <- modulesStateImpl
-  pure
-    {
-      loadModules: \f s -> Promise.fromAff $ m.loadModulesForFile f s
-    , getUnqualActiveModules: m.getUnqualActiveModules
-    , getQualModule: m.getQualModule
-    , getMainModule: m.getMainModule
-    , getMainModuleForFile: fromMaybe "" <<< getMainModule
-    }
 
 findImportInsertPos :: String -> Int
 findImportInsertPos text =
