@@ -5,7 +5,7 @@ import Node.Process as P
 import Node.Platform (Platform(Win32))
 
 pulpCmd :: String
-pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp" -- pulpCmd = if process.platform == 'win32' then 'pulp.cmd' else 'pulp'
+pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
 
 config =
   { pscIdePort:
