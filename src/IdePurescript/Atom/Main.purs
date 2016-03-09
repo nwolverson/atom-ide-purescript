@@ -1,6 +1,6 @@
 module IdePurescript.Atom.Main where
 
-import Prelude (Unit, unit, pure, bind, ($), id, const, void, (<<<), (>), flip, (++))
+import Prelude
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Either (either)
 import Data.Foreign(readBoolean)
@@ -8,8 +8,9 @@ import Data.Array (length)
 import Data.Function.Eff (mkEffFn1)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Eff.Console (CONSOLE, log)
+import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Promise (Promise)
@@ -21,7 +22,7 @@ import Node.FS (FS)
 import Node.ChildProcess (CHILD_PROCESS)
 
 import Atom.Atom (getAtom)
-import Atom.NotificationManager (NOTIFY)
+import Atom.NotificationManager (NOTIFY, addError)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange)
 import Atom.Range (mkRange)
@@ -55,13 +56,13 @@ getSuggestions state ({editor, bufferPosition}) = do
       getQualifiedModule = (flip getQualModule) state
   Promise.fromAff $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
 
-useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF | eff) Unit
+useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE | eff) Unit
 useEditor modulesStateRef editor = do
   path <- getPath editor
   text <- getText editor
   let mainModule = getMainModule text
   case mainModule of
-    Just m -> runAff ignoreError ignoreError $ do
+    Just m -> runAff logError ignoreError $ do
       loadDeps m
       state <- getModulesForFile path text
       liftEff $ writeRef modulesStateRef state
@@ -99,7 +100,7 @@ main = do
       root <- getProjectRoot
       linterIndie <- readRef linterIndieRef
       case { root, linterIndie } of
-        { root: Just root', linterIndie: Just linterIndie' } -> runAff ignoreError ignoreError $ do
+        { root: Just root', linterIndie: Just linterIndie' } -> runAff raiseError ignoreError $ do
           messages <- lint atom.config root' linterIndie'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
           editor <- liftEff $ getActiveTextEditor atom.workspace
@@ -196,5 +197,13 @@ main = do
         }
     }
 
+raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
+raiseError e = do
+  atom <- getAtom
+  addError atom.notifications (show e)
+
 ignoreError :: forall a eff. a -> Eff eff Unit
 ignoreError _ = pure unit
+
+logError :: forall eff. Error -> Eff (console :: CONSOLE | eff) Unit
+logError e = error $ show e
