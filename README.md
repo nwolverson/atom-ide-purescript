@@ -99,7 +99,7 @@ output JSON errors as per `psc`, on stderr. This is *not* interpreted via shell,
 pulled apart as a list of string separated arguments.
 
 Some alternatives:
-  * Direct `psc` use: `psc bower_components/*/src/**/*.{purs,js} src/**/*.{purs,js} --json-errors`
+  * Direct `psc` use: `psc bower_components/*/src/**/*.purs bower_components/*/src/**/*.js src/**/*.purs src/**/*.js --json-errors`
   * Run a `purescript-gulp` based build: `gulp` - again need to ensure this outputs JSON errors, you probably want a specific task for this.
   * Pulp passing through `psa`: `pulp build --stash --json-errors`
 
