@@ -28,7 +28,7 @@ For use with older versions of the PureScript compiler, check
 [psc-ide](https://github.com/kRITZCREEK/psc-ide) documentation for the required
 version, and change default build command.
 
-For use with older versions of pulp, or for alternative build tools and configuration tips, see below. In brief
+For use with older versions of pulp, or for alternative build tools and configuration tips, [see below](#build). In brief
 the build command is configurable, but should output JSON errors.
 
 ## psc-ide
