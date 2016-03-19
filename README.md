@@ -107,7 +107,7 @@ Some alternatives:
     e.g. if you're running `psa` on a terminal somewhere. Right now the stashed warnings are not exposed in the JSON.
   * Ensure tests are compiled in the build: `pulp build --include test --json-errors`
   * Via npm run script: `npm run -s build`. Or if the run script does not output json errors you might be able to pass
-    an extra flag: `npm run -s build -- --json-errors`
+    an extra flag: `npm run -s build -- --json-errors` - more information [on this issue](https://github.com/nwolverson/atom-ide-purescript/issues/53#issuecomment-198621810).
     
 Since atom unfortunately does not support per-project configuration, the npm run script approach may be particularly
 useful where you have different projects that build differently. Alternatively you can look into
