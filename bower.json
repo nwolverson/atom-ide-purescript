@@ -19,6 +19,6 @@
     "purescript-node-process": "~0.4.1",
     "purescript-node-child-process": "~0.5.1",
     "purescript-aff-promise": "^0.0.1",
-    "purescript-ide-purescript-core": "^0.0.1"
+    "purescript-ide-purescript-core": "^0.0.2"
   }
 }

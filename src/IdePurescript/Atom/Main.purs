@@ -10,7 +10,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Exception (Error)
+import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Promise (Promise)
@@ -83,6 +83,7 @@ type MainEff =
   , net :: NET
   , workspace :: WORKSPACE
   , avar :: AVAR
+  , err :: EXCEPTION
   )
 
 main = do
