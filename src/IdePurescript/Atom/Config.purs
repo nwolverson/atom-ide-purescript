@@ -10,7 +10,7 @@ pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
 config =
   { pscIdePort:
     { title: "psc-ide port number"
-    , description: "The port to use to communciate with `psc-ide-server`, also to launch the server with if required. "
+    , description: "The port to use to communicate with `psc-ide-server`, also to launch the server with if required. "
         ++ "The default port is 4242 and this only need be changed if you've explicitly chosen to use another port."
     , type: "integer"
     , default: 4242
