@@ -1,34 +1,5 @@
 {SelectListView} = require 'atom-space-pen-views'
 
-class ModuleSelectListView extends SelectListView
-  constructor: (@getAvailableModules, @addImport) ->
-    super
-
-  initialize: () =>
-    super
-    @getAvailableModules()
-      .then (modules) =>
-        @setItems modules
-    @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
-
-  show: ->
-    @storeFocusedElement()
-    @panel.show()
-    @focusFilterEditor()
-
-  hide: ->
-    @panel.hide()
-
-  confirmed: (item) =>
-    @cancel()
-    @addImport item
-
-  cancelled: =>
-    @hide()
-
-  viewForItem: (item) ->
-    "<li>#{item}</li>"
-
 class QuickFixView extends SelectListView
   constructor: (@editor, @items) ->
     super
@@ -65,5 +36,4 @@ class QuickFixView extends SelectListView
   viewForItem: (item) ->
     "<li>#{item.title}</li>"
 
-module.exports.ModuleSelectListView = ModuleSelectListView
 module.exports.QuickFixView = QuickFixView

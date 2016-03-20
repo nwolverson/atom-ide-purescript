@@ -47,9 +47,10 @@ import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Pursuit as Pursuit
-import IdePurescript.Atom.Imports (showAddImportsView)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
+import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
+import Data.List
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -91,6 +92,7 @@ type MainEff =
   , dom :: DOM
   )
 
+main :: _
 main = do
   atom <- getAtom
   linterIndieRef <- newRef (Nothing :: Maybe LinterIndie)
@@ -125,7 +127,34 @@ main = do
         _ -> pure unit
 
     pursuitSearch :: Eff MainEff Unit
-    pursuitSearch = Pursuit.pursuitSearch (Promise.fromAff <<< getPursuitCompletion)
+    pursuitSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") getPursuitCompletion
+      where
+      view {identifier, "type": ty, "module": mod, package} =
+         "<li class='two-lines'>"
+         ++ "<div class='primary-line'>" ++ identifier ++ ": <span class='text-info'>" ++ ty ++ "</span></div>"
+         ++ "<div class='secondary-line'>" ++ mod ++ " (" ++ package ++ ")</div>"
+         ++ "</li>"
+
+    pursuitSearchModule :: Eff MainEff Unit
+    pursuitSearchModule = selectListViewDynamic view importDialog (Just "module") id getPursuitModuleCompletion
+      where
+      view {"module": mod, package} =
+         "<li class='two-lines'>"
+         ++ "<div class='primary-line'>" ++ mod ++ "</span></div>"
+         ++ "<div class='secondary-line'>" ++ package ++ "</div>"
+         ++ "</li>"
+      importDialog :: forall a. {"module" :: String | a} -> Eff MainEff Unit
+      importDialog {"module": mod} = selectListViewStatic textView (doImport mod) Nothing ["Import module", "Cancel"]
+        where
+        textView x = "<li>" ++ x ++ "</li>"
+        doImport mod x = when (x == "Import module") $ addImport mod
+
+    addModuleImport :: Eff MainEff Unit
+    addModuleImport = runAff raiseError ignoreError do
+      modules <- getAvailableModules
+      liftEff $ selectListViewStatic view addImport Nothing modules
+      where
+        view x = "<li>" ++ x ++ "</li>"
 
     addImport :: String -> Eff MainEff Unit
     addImport moduleName = do
@@ -137,15 +166,6 @@ main = do
           let index = findImportInsertPos text
           let pt = (mkRange (mkPoint index 0) (mkPoint index 0))
           void $ setTextInBufferRange editor pt $ "import " ++ moduleName ++ "\n"
-
-    pursuitSearchModule :: Eff MainEff Unit
-    pursuitSearchModule = Pursuit.pursuitSearchModules
-      (Promise.fromAff <<< getPursuitModuleCompletion)
-      addImport
-
-    addModuleImport :: Eff MainEff Unit
-    addModuleImport = do
-      showAddImportsView (Promise.fromAff getAvailableModules) addImport
 
     activate :: Eff MainEff Unit
     activate = do
