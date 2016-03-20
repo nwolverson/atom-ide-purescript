@@ -4,7 +4,7 @@ import Prelude
 import Control.Monad.Eff (Eff)
 
 import Control.Monad.Aff (Aff)
-import Data.Function.Eff (EffFn1, EffFn4, EffFn5, mkEffFn1, runEffFn4, runEffFn5)
+import Data.Function.Eff (EffFn1, EffFn4, EffFn6, mkEffFn1, runEffFn4, runEffFn6)
 import DOM (DOM)
 import Data.Nullable (Nullable, toNullable)
 import Data.Maybe (Maybe)
@@ -27,12 +27,13 @@ selectListViewStatic :: forall eff a.
 selectListViewStatic viewForItem confirmed filterKey items =
   runEffFn4 selectListViewStaticImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) items
 
-foreign import selectListViewDynamicImpl :: forall eff a. EffFn5 (dom :: DOM | eff)
+foreign import selectListViewDynamicImpl :: forall eff a. EffFn6 (dom :: DOM | eff)
   (a -> String)
   (EffFn1 (dom :: DOM | eff) a Unit)
   (Nullable String)
   (String -> String)
   (EffFn1 (dom :: DOM | eff) String (Promise (Array a)))
+  Int
   Unit
 
 selectListViewDynamic :: forall eff a.
@@ -41,7 +42,8 @@ selectListViewDynamic :: forall eff a.
   Maybe String ->
   (String -> String) ->
   (String -> Aff (dom :: DOM | eff) (Array a)) ->
+  Int ->
   Eff (dom :: DOM | eff) Unit
-selectListViewDynamic viewForItem confirmed filterKey filterQuery getItems =
-  runEffFn5 selectListViewDynamicImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) filterQuery
-    (mkEffFn1 (\s -> Promise.fromAff (getItems s)))
+selectListViewDynamic viewForItem confirmed filterKey filterQuery getItems changeDelay =
+  runEffFn6 selectListViewDynamicImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) filterQuery
+    (mkEffFn1 (\s -> Promise.fromAff (getItems s))) changeDelay

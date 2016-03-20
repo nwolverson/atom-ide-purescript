@@ -35,6 +35,7 @@ import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors,
 
 import PscIde (NET)
 
+import IdePurescript.PscIde (getCompletion)
 import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
@@ -46,11 +47,9 @@ import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
-import IdePurescript.Atom.Pursuit as Pursuit
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
-import Data.List
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -127,7 +126,7 @@ main = do
         _ -> pure unit
 
     pursuitSearch :: Eff MainEff Unit
-    pursuitSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") getPursuitCompletion
+    pursuitSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") getPursuitCompletion 1000
       where
       view {identifier, "type": ty, "module": mod, package} =
          "<li class='two-lines'>"
@@ -136,7 +135,7 @@ main = do
          ++ "</li>"
 
     pursuitSearchModule :: Eff MainEff Unit
-    pursuitSearchModule = selectListViewDynamic view importDialog (Just "module") id getPursuitModuleCompletion
+    pursuitSearchModule = selectListViewDynamic view importDialog (Just "module") id getPursuitModuleCompletion 1000
       where
       view {"module": mod, package} =
          "<li class='two-lines'>"
@@ -167,6 +166,21 @@ main = do
           let pt = (mkRange (mkPoint index 0) (mkPoint index 0))
           void $ setTextInBufferRange editor pt $ "import " ++ moduleName ++ "\n"
 
+    localSearch :: Eff MainEff Unit
+    localSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
+      where
+      search text = do
+        state <- liftEff $ readRef modulesState
+        let modules = getUnqualActiveModules state
+            getQualifiedModule = (flip getQualModule) state
+        getCompletion text "" false modules getQualifiedModule
+
+      view {identifier, "type": ty, "module": mod} =
+         "<li class='two-lines'>"
+         ++ "<div class='primary-line'>" ++ identifier ++ ": <span class='text-info'>" ++ ty ++ "</span></div>"
+         ++ "<div class='secondary-line'>" ++ mod ++ "</div>"
+         ++ "</li>"
+
     activate :: Eff MainEff Unit
     activate = do
       let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
@@ -175,6 +189,7 @@ main = do
       cmd "pursuit-search" pursuitSearch
       cmd "pursuit-search-modules" pursuitSearchModule
       cmd "add-module-import" addModuleImport
+      cmd "search" localSearch
 
       observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
         useEditor modulesState editor

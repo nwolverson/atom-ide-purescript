@@ -32,7 +32,7 @@ exports.selectListViewStaticImpl = function(viewForItem, confirmed, filterKey, i
 }
 
 
-exports.selectListViewDynamicImpl = function(viewForItem, confirmed, filterKey, filterQuery, getCompletions) {
+exports.selectListViewDynamicImpl = function(viewForItem, confirmed, filterKey, filterQuery, getCompletions, changeDelay) {
   function PurescriptDynamicSelectListView() {
     SelectListView.call(this);
   }
@@ -62,7 +62,7 @@ exports.selectListViewDynamicImpl = function(viewForItem, confirmed, filterKey, 
     SelectListView.prototype.initialize.call(this);
     var editor = this[0].firstChild.getModel();
     var buffer = editor.getBuffer();
-    buffer.stoppedChangingDelay = 1000;
+    buffer.stoppedChangingDelay = changeDelay;
     var that = this;
     buffer.onDidStopChanging(function(text) {
       getCompletions(buffer.getText()).then(function (items) {
