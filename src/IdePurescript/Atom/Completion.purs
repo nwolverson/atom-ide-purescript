@@ -25,6 +25,8 @@ type AtomSuggestion =
   , "type" :: String
   , description :: String
   , replacementPrefix :: String
+  , rightLabel :: String
+  , className :: String
   }
 
 data SuggestionType = Module | Type | Function | Value
@@ -74,16 +76,20 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       , type: suggestionTypeAtomValue Module
       , description: ""
       , replacementPrefix: prefix
+      , rightLabel: ""
+      , className: "purescript-suggestion"
       }
 
-    result prefix {type: ty, identifier} =
+    result prefix {type: ty, identifier, module: mod} =
       { text: identifier
       , displayText: case suggestType of
-          Type -> identifier ++ " " ++ ty
-          _ -> identifier ++ ": " ++ ty
+          Type -> identifier
+          _ -> identifier
       , type: suggestionTypeAtomValue suggestType
       , description: ty
       , replacementPrefix: prefix
+      , rightLabel: mod
+      , className: "purescript-suggestion"
       }
       where
         suggestType =
