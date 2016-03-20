@@ -17,6 +17,8 @@ import Control.Promise (Promise)
 import Control.Promise as Promise
 import Control.Monad (when)
 import Control.Bind (join)
+import DOM.Node.Types(Element)
+import DOM (DOM)
 
 import Node.FS (FS)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -46,6 +48,8 @@ import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Pursuit as Pursuit
 import IdePurescript.Atom.Imports (showAddImportsView)
+import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
+import IdePurescript.Atom.BuildStatus (getBuildStatus)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -84,6 +88,7 @@ type MainEff =
   , workspace :: WORKSPACE
   , avar :: AVAR
   , err :: EXCEPTION
+  , dom :: DOM
   )
 
 main = do
@@ -92,17 +97,18 @@ main = do
   modulesState <- newRef (initialModulesState)
   messagesRef <- newRef ([] :: Array AtomLintMessage)
   linterInternalRef <- newRef (Nothing :: Maybe LinterInternal)
-
   deactivateRef <- newRef (pure unit :: Eff MainEff Unit)
+  buildStatusRef <- newRef (Nothing :: Maybe Element)
 
   let
     doLint :: Eff MainEff Unit
     doLint = do
       root <- getProjectRoot
       linterIndie <- readRef linterIndieRef
-      case { root, linterIndie } of
-        { root: Just root', linterIndie: Just linterIndie' } -> runAff raiseError ignoreError $ do
-          messages <- lint atom.config root' linterIndie'
+      statusElt <- readRef buildStatusRef
+      case { root, linterIndie, statusElt } of
+        { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> runAff raiseError ignoreError $ do
+          messages <- lint atom.config root' linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
           editor <- liftEff $ getActiveTextEditor atom.workspace
           liftEff $ maybe (pure unit) (useEditor modulesState) editor
@@ -149,9 +155,6 @@ main = do
       cmd "pursuit-search" pursuitSearch
       cmd "pursuit-search-modules" pursuitSearchModule
       cmd "add-module-import" addModuleImport
-  -- TODO: commands:
-  -- atom.commands.add("atom-workspace", "purescript:add-module-import", =>
-
 
       observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
         useEditor modulesState editor
@@ -187,6 +190,10 @@ main = do
         writeRef linterIndieRef $ Just linterIndie
     , consumeLinterInternal: mkEffFn1 \linter ->
         writeRef linterInternalRef $ Just linter
+    , consumeStatusBar: mkEffFn1 \statusBar -> do
+        item <- getBuildStatus
+        writeRef buildStatusRef $ Just item
+        addLeftTile statusBar { item, priority: -50 }
     , provideAutocomplete: \_ ->
         { selector: ".source.purescript"
         , disableForSelector: ".source.purescript .comment, .source.purescript .string"

@@ -44,6 +44,11 @@
       "versions": {
         "0.1.0": "consumeLinterInternal"
       }
+    },
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
+      }
     }
   }
 }

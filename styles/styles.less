@@ -1,0 +1,32 @@
+@import "ui-variables";
+
+.ps-inline-overlay {
+  width: 250px;
+  margin-left: 0px;
+  border: 1px solid black;
+  border-radius: 5px;
+}
+
+
+.ps-inline-overlay li {
+  padding: 5px;
+  border: 1px solid #181a1f;
+}
+status-bar {
+  .icon.purescript-build-status {
+    &:before {
+      margin-right: 2px;
+    }
+
+    margin-right: 5px;
+    &.icon-check {
+      color: @text-color-success;
+    }
+    &.icon-hourglass {
+      color: @text-color;
+    }
+    &.icon-alert, &.icon-bug {
+      color: @text-color-error;
+    }
+  }
+}

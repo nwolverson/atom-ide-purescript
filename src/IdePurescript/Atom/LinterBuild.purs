@@ -1,20 +1,22 @@
 module IdePurescript.Atom.LinterBuild where
 
-import Prelude (pure, ($), bind, (==), (<$>), (<<<), const, (++), not, (>), (&&), (||))
+import Prelude
 
 import Control.Monad (when)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Ref (REF)
 import Data.Array(uncons,null,length,catMaybes, filterM)
 import Data.Either (either)
 import Data.Foreign(readString)
-import Data.Maybe (Maybe(Nothing, Just))
+import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.String.Regex (noFlags, regex, split)
 import Data.String(trim)
 import Data.Traversable (traverse)
+import DOM(DOM)
+import DOM.Node.Types (Element)
 
 import Node.ChildProcess ( CHILD_PROCESS)
 import Node.FS (FS) as FS
@@ -23,11 +25,12 @@ import Node.Path as P
 
 import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
-import Atom.NotificationManager (NOTIFY, addError, addWarning, addSuccess, addInfo)
+import Atom.NotificationManager (NOTIFY, addError, addWarning)
 import Atom.Project (PROJECT, getPaths)
 
 import IdePurescript.Atom.Build (AtomLintMessage, linterBuild)
 import IdePurescript.Atom.Hooks.Linter (LinterIndie, LINTER, setMessages, deleteMessages)
+import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Building), updateBuildStatus)
 
 getProjectRoot :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
 getProjectRoot = do
@@ -70,29 +73,34 @@ getProjectRoot = do
   getParent :: P.FilePath -> P.FilePath
   getParent p = P.concat [p, ".."]
 
-type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER| e)
+type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM | e)
 
-lint :: forall eff. Config -> String -> LinterIndie -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
-lint config projdir linter = do
+lint :: forall eff. Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
+lint config projdir linter statusElt = do
   atom <- liftEffA $ getAtom
   fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
   let buildCommand = either (const []) (split (regex "\\s+" noFlags) <<< trim) $ readString fullBuildPath
   case uncons buildCommand of
     Just { head: command, tail: args } -> do
-      liftEff $ addInfo atom.notifications "Building PureScript"
+      liftEff $ status Building Nothing
       res <- linterBuild { command, args, directory: projdir }
       liftEffA $ Just <$> case res of
         { result, messages } -> do
           deleteMessages linter
           setMessages linter messages
-          if result == "success" then addSuccess atom.notifications "PureScript build succeeded"
-            else addWarning atom.notifications "PureScript build completed with errors"
+          status (if result == "success" then Success else Errors) Nothing
           pure messages
     Nothing -> do
+      liftEffA $ status Failure $ Just "Error parsing PureScript build command"
       liftEffA $ addError atom.notifications "Error parsing PureScript build command"
       pure Nothing
   where
+
+  status :: BuildStatus -> (Maybe String) -> Eff (LintEff eff) Unit
+  status s msg = do
+    updateBuildStatus statusElt s
+    (if s == Failure then error else log) $ "PureScript build status: " ++ show s ++ (maybe "" (": " ++ _)  msg)
 
   liftEffA :: forall a. Eff (LintEff eff) a -> Aff (LintEff eff) a
   liftEffA = liftEff
