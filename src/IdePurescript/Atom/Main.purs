@@ -50,6 +50,7 @@ import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
+import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -190,6 +191,8 @@ main = do
       cmd "pursuit-search-modules" pursuitSearchModule
       cmd "add-module-import" addModuleImport
       cmd "search" localSearch
+
+      installDependencies
 
       observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
         useEditor modulesState editor
