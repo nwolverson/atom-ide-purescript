@@ -2,7 +2,7 @@ module IdePurescript.Atom.PromptPanel where
 
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand')
-import Atom.Editor (EDITOR, TextEditor, getText)
+import Atom.Editor (setText, EDITOR, TextEditor, getText)
 import Atom.Workspace (WORKSPACE, destroyPanel, addModalPanel)
 import Control.Monad.Aff (Aff, makeAff)
 import Control.Monad.Eff (Eff)
@@ -27,8 +27,8 @@ foreign import focus :: forall eff. Element -> Eff (dom :: DOM | eff) Unit
 
 foreign import getActiveElement :: forall eff. Eff (dom :: DOM | eff) (Nullable Element)
 
-addPromptPanel :: forall eff. String -> Aff (dom :: DOM, command :: COMMAND, workspace :: WORKSPACE, editor :: EDITOR | eff) (Maybe String)
-addPromptPanel promptText = makeAff $ \err succ ->
+addPromptPanel :: forall eff. String -> String -> Aff (dom :: DOM, command :: COMMAND, workspace :: WORKSPACE, editor :: EDITOR | eff) (Maybe String)
+addPromptPanel promptText initialText = makeAff $ \err succ ->
  do
   atom <- getAtom
   let w = atom.workspace
@@ -41,6 +41,10 @@ addPromptPanel promptText = makeAff $ \err succ ->
   setAttribute "mini" "mini" editor
   appendChild (elementToNode editor) (elementToNode div)
   panel <- addModalPanel w div true 100
+
+  model <- getEditorModel editor
+  restext <- setText model initialText
+
   focussed <- toMaybe <$> getActiveElement
   focus editor
 

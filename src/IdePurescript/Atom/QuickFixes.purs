@@ -1,11 +1,12 @@
 module IdePurescript.Atom.QuickFixes (showQuickFixes) where
 
-import Prelude (Unit)
-import Data.Function.Eff (EffFn3, runEffFn3)
-import Control.Monad.Eff (Eff)
 import Atom.Editor (TextEditor)
-import IdePurescript.Atom.Hooks.Linter (LinterInternal)
+import Control.Monad.Eff (Eff)
+import Data.Function.Eff (runEffFn3, EffFn3)
+import Data.List
 import IdePurescript.Atom.Build (AtomLintMessage)
+import IdePurescript.Atom.Hooks.Linter (LinterInternal)
+import Prelude (Unit)
 
 foreign import showQuickFixesImpl :: forall eff. EffFn3 eff TextEditor LinterInternal (Array AtomLintMessage) Unit
 

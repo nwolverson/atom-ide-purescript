@@ -1,9 +1,9 @@
 module IdePurescript.Atom.Tooltips where
 
-import Prelude (Unit, pure, ($), (>), flip, bind, (++), (+), unit, void)
+import Prelude (Unit, pure, ($), (>), flip, bind, (++), (+), unit, void, (-))
 import Data.String.Regex (match, noFlags, regex)
 import Data.String (length)
-import Data.Maybe (Maybe(Just))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Function.Eff (EffFn1, mkEffFn1, runEffFn1)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF, Ref, readRef)
@@ -11,9 +11,9 @@ import Control.Promise (Promise, fromAff)
 
 import Atom.Atom (getAtom)
 import Atom.Point (Point, getColumn, getRow, mkPoint)
-import Atom.Range (mkRange)
+import Atom.Range (mkRange, Range)
 import Atom.Workspace (WORKSPACE, getActiveTextEditor)
-import Atom.Editor (EDITOR, getTextInRange)
+import Atom.Editor (EDITOR, TextEditor, getTextInRange)
 import IdePurescript.PscIde (getType)
 import IdePurescript.Modules as Modules
 import PscIde (NET)
@@ -27,6 +27,22 @@ registerTooltips ref = do
     state <- readRef ref
     getTooltips state pos)
 
+getToken :: forall eff. TextEditor -> Point -> Eff (editor :: EDITOR | eff) (Maybe { word :: String, range :: Range })
+getToken e pos = do
+  let row = getRow pos
+      col = getColumn pos
+      beforePos = mkPoint row 0
+      afterPos = mkPoint row (col + 100)
+      beforeRegex = regex "[a-zA-Z_0-9']*$" noFlags
+      afterRegex = regex "^[a-zA-Z_0-9']*" noFlags
+  textBefore <- getTextInRange e (mkRange beforePos pos)
+  textAfter <- getTextInRange e (mkRange pos afterPos)
+  let wordRange left right = mkRange (mkPoint row (col - left)) (mkPoint row (col + right))
+  pure $ case { before: match beforeRegex textBefore, after: match afterRegex textAfter } of
+              { before: Just [Just s], after: Just [Just s'] }
+                -> Just { word : s++s', range : wordRange (length s) (length s') }
+              _ -> Nothing
+
 getTooltips :: forall eff. Modules.State -> Point
   -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET | eff) (Promise { valid :: Boolean, info :: String })
 getTooltips state pos = do
@@ -34,15 +50,8 @@ getTooltips state pos = do
   editor <- getActiveTextEditor atom.workspace
   case editor of
     Just e -> do
-      let beforePos = mkPoint (getRow pos) 0
-          afterPos = mkPoint (getRow pos) (getColumn pos + 100)
-          beforeRegex = regex "[a-zA-Z_0-9']*$" noFlags
-          afterRegex = regex "^[a-zA-Z_0-9']*" noFlags
-      textBefore <- getTextInRange e (mkRange beforePos pos)
-      textAfter <- getTextInRange e (mkRange pos afterPos)
-      let word = case { before: match beforeRegex textBefore, after: match afterRegex textAfter } of
-                  { before: Just [Just s], after: Just [Just s'] } -> s++s'
-                  _ -> ""
+      word' <- getToken e pos
+      let word = maybe "" _.word word'
       -- let prefix = case match (regex "^(.*)\." noFlags) word of
       --   Just [_, Just p] -> p
       --   _ -> ""

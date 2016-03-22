@@ -1,68 +1,66 @@
 module IdePurescript.Atom.Main where
 
-import Prelude
-import Data.Maybe (Maybe(Just, Nothing), maybe)
-import Data.Either (either)
-import Data.Foreign(readBoolean)
-import Data.Array (length)
-import Data.Function.Eff (mkEffFn1)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Eff.Console (CONSOLE, log, error)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Exception (Error, EXCEPTION)
+import Atom.Atom (getAtom)
+import Atom.CommandRegistry (COMMAND, addCommand)
+import Atom.Config (CONFIG, getConfig)
+import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setText, getBuffer, getCursorBufferPosition)
+import Atom.NotificationManager (NOTIFY, addError)
+import Atom.Point (Point, getRow, getColumn, mkPoint)
+import Atom.Project (PROJECT)
+import Atom.Range (mkRange, Range, getStart, getEnd)
+import Atom.TextBuffer (setTextViaDiff)
+import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
+import Control.Bind (join)
+import Control.Monad (when)
 import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Aff.AVar (AVAR)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE, log, error)
+import Control.Monad.Eff.Exception (Error, EXCEPTION)
+import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import Control.Promise (Promise)
 import Control.Promise as Promise
-import Control.Monad (when)
-import Control.Bind (join)
-import DOM.Node.Types(Element)
 import DOM (DOM)
-
-import Node.FS (FS)
-import Node.ChildProcess (CHILD_PROCESS)
-
-import Atom.Atom (getAtom)
-import Atom.NotificationManager (NOTIFY, addError)
-import Atom.CommandRegistry (COMMAND, addCommand)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setText, getBuffer )
-import Atom.TextBuffer (setTextViaDiff)
-import Atom.Range (mkRange)
-import Atom.Point (Point, getRow, mkPoint)
-import Atom.Config (CONFIG, getConfig)
-import Atom.Project (PROJECT)
-import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-
-import PscIde (NET)
-import PscIde.Command (Completion(..))
-
-import IdePurescript.PscIde (getCompletion)
-import IdePurescript.Atom.Config (config)
-import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
-import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
+import DOM.Node.Types (Element)
+import Data.Array (length)
+import Data.Either (either, Either(..))
+import Data.Foldable (intercalate)
+import Data.Foreign (readBoolean)
+import Data.Function.Eff (mkEffFn1)
+import Data.Maybe (Maybe(Just, Nothing), maybe)
 import IdePurescript.Atom.Build (AtomLintMessage)
-import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules)
-import IdePurescript.Atom.QuickFixes (showQuickFixes)
-import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos, addModuleImport, addExplicitImport, ImportResult(..))
+import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Completion as C
-import IdePurescript.Atom.Tooltips (registerTooltips)
+import IdePurescript.Atom.Config (config)
+import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
+import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
+import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
+import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
+import IdePurescript.Atom.PromptPanel (addPromptPanel)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci as Psci
-import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
-import IdePurescript.Atom.BuildStatus (getBuildStatus)
+import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
-import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
-import IdePurescript.Atom.PromptPanel (addPromptPanel)
+import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
+import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, getUnqualActiveModules, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule)
+import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
+import Node.ChildProcess (CHILD_PROCESS)
+import Node.FS (FS)
+import Prelude
+import PscIde (NET)
+import PscIde as P
+import PscIde.Command (Completion(..))
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
-getSuggestions state ({editor, bufferPosition}) = do
+getSuggestions state ({editor, bufferPosition}) = Promise.fromAff $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
-  line <- getTextInRange editor range
-  let modules = getUnqualActiveModules state
-      getQualifiedModule = (flip getQualModule) state
-  Promise.fromAff $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
+  line <- liftEff $ getTextInRange editor range
+  modules <- getLoadedModules -- getUnqualActiveModules state
+  let getQualifiedModule = (flip getQualModule) state
+  C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
 
 useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE | eff) Unit
 useEditor modulesStateRef editor = do
@@ -161,8 +159,14 @@ main = do
 
     addExplicitImportCmd :: Eff MainEff Unit
     addExplicitImportCmd = runAff raiseError ignoreError do
-      res <- addPromptPanel "Identifier"
-      maybe (pure unit) (addIdentImport Nothing) res
+      editor <- liftEff $ getActiveTextEditor atom.workspace
+      case editor of
+        Just ed -> do
+          { line, col, pos, range } <- liftEff $ getLinePosition ed
+          promptText <- liftEff $ maybe "" _.word <$> getToken ed pos
+          res <- addPromptPanel "Identifier" promptText
+          maybe (pure unit) (addIdentImport Nothing) res
+        Nothing -> pure unit
 
     addIdentImport :: Maybe String -> String -> Aff MainEff Unit
     addIdentImport moduleName ident = do
@@ -173,7 +177,9 @@ main = do
     addIdentImport' moduleName ident editor = do
       text <- liftEff $ getText editor
       path <- liftEff $ getPath editor
-      output <- addExplicitImport path text moduleName ident
+      state <- liftEff $ readRef modulesState
+      { state: newState, result: output} <- addExplicitImport state path text moduleName ident
+      liftEff $ writeRef modulesState newState
       liftEff $ case output of
         UpdatedImports out -> do
           buf <- getBuffer editor
@@ -184,33 +190,34 @@ main = do
       where
       runCompletion (Completion obj) = obj
       -- TODO nicer if we can make select view aff-ish
-      addImp { identifier, module' } = runAff raiseError ignoreError $ addIdentImport (Just module') identifier
-      view {identifier, module'} = "<li>" ++ module' ++ "." ++ identifier ++ "</li>"
+      addImp { identifier, "module'": m } = runAff raiseError ignoreError $ addIdentImport (Just m) identifier
+      view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
 
     addSuggestionImport :: { editor :: TextEditor, suggestion :: C.AtomSuggestion } -> Aff MainEff Unit
-    addSuggestionImport { editor, suggestion: { addImport: Just { mod, identifier } } } =
+    addSuggestionImport { editor, suggestion: { addImport: Just { mod, identifier, qualifier: Nothing } } } =
       addIdentImport' (Just mod) identifier editor
     addSuggestionImport _ = pure unit
 
     addImport :: String -> Eff MainEff Unit
     addImport moduleName = do
       maybeEditor <- getActiveTextEditor atom.workspace
+      state <- liftEff $ readRef modulesState
       case maybeEditor of
         Nothing -> pure unit
         Just editor -> do
           text <- getText editor
           path <- getPath editor
           runAff raiseError ignoreError $ do
-            output <- addModuleImport path text moduleName
-            liftEff $ maybe (pure unit) (void <<< setText editor) output
+            output <- addModuleImport state path text moduleName
+            liftEff $ maybe (pure unit) (void <<< setText editor <<< _.result) output
 
     localSearch :: Eff MainEff Unit
     localSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
       where
       search text = do
         state <- liftEff $ readRef modulesState
-        let modules = getUnqualActiveModules state
-            getQualifiedModule = (flip getQualModule) state
+        modules <- getLoadedModules
+        let getQualifiedModule = (flip getQualModule) state
         getCompletion text "" false modules getQualifiedModule
 
       view {identifier, "type": ty, "module": mod} =
@@ -218,6 +225,38 @@ main = do
          ++ "<div class='primary-line'>" ++ identifier ++ ": <span class='text-info'>" ++ ty ++ "</span></div>"
          ++ "<div class='secondary-line'>" ++ mod ++ "</div>"
          ++ "</li>"
+
+    getLinePosition :: TextEditor -> Eff MainEff { line :: String, col :: Int, pos :: Point, range :: Range }
+    getLinePosition ed = do
+      pos <- getCursorBufferPosition ed
+      let range = mkRange (mkPoint (getRow pos) 0) (mkPoint (getRow pos) 1000)
+          col = getColumn pos
+      line <- getTextInRange ed range
+      pure { line, pos, col, range }
+
+    caseSplit :: Eff MainEff Unit
+    caseSplit = do
+      runAff raiseError ignoreError $ runMaybeT body
+      where
+      body :: MaybeT (Aff MainEff) Unit
+      body = do
+        ed :: TextEditor <- MaybeT $ liftEff $ getActiveTextEditor atom.workspace
+        { line, col, pos, range } <- lift $ liftEff $ getLinePosition ed
+        { range: wordRange } <- MaybeT $ liftEff $ getToken ed pos
+        ty <- MaybeT $ addPromptPanel "Parameter type" ""
+        lines <- lift $ eitherToErr $ P.caseSplit line (getColumn $ getStart wordRange) (getColumn $ getEnd wordRange) true ty
+        lift $ void $ liftEff $ setTextInBufferRange ed range $ intercalate "\n" lines
+
+    addClause :: Eff MainEff Unit
+    addClause = do
+      editor <- getActiveTextEditor atom.workspace
+      case editor of
+        Just ed ->
+          runAff raiseError ignoreError $ do
+            { line, col, range } <- liftEff $ getLinePosition ed
+            lines <- eitherToErr $ P.addClause line true
+            liftEff $ setTextInBufferRange ed range $ intercalate "\n" lines
+        Nothing -> pure unit
 
     activate :: Eff MainEff Unit
     activate = do
@@ -229,6 +268,8 @@ main = do
       cmd "add-module-import" addModuleImportCmd
       cmd "add-explicit-import" addExplicitImportCmd
       cmd "search" localSearch
+      cmd "case-split" caseSplit
+      cmd "add-clause" addClause
 
       installDependencies
 
@@ -279,7 +320,9 @@ main = do
             state <- readRef modulesState
             getSuggestions state x
         , onDidInsertSuggestion: mkEffFn1 \x -> do
-            runAff raiseError ignoreError $ addSuggestionImport x
+            shouldAddImport <- getConfig atom.config "ide-purescript.importOnAutocomplete"
+            when (readBoolean shouldAddImport == Right true)
+              (runAff raiseError ignoreError $ addSuggestionImport x)
         }
     }
 

@@ -35,8 +35,7 @@ type LintResult =
   , messages :: Array AtomLintMessage
   }
 
-linterBuild :: { command :: String, args :: Array String, directory :: String }
-  -> Aff _ LintResult
+linterBuild :: { command :: String, args :: Array String, directory :: String } -> Aff _ LintResult
 linterBuild {command,args,directory} = do
   res <- build { command: Command command args, directory }
   let warnings = result "Warning" <$> res.errors.warnings
