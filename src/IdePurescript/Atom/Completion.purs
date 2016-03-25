@@ -27,6 +27,13 @@ type AtomSuggestion =
   , replacementPrefix :: String
   , rightLabel :: String
   , className :: String
+
+  , addImport :: Maybe AddImport -- Not Atom suggestion property
+  }
+
+type AddImport =
+  { mod :: String
+  , identifier :: String
   }
 
 data SuggestionType = Module | Type | Function | Value
@@ -78,9 +85,10 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       , replacementPrefix: prefix
       , rightLabel: ""
       , className: "purescript-suggestion"
+      , addImport: Nothing
       }
 
-    result prefix {type: ty, identifier, module: mod} =
+    result prefix {"type": ty, identifier, "module": mod} =
       { text: identifier
       , displayText: case suggestType of
           Type -> identifier
@@ -90,6 +98,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       , replacementPrefix: prefix
       , rightLabel: mod
       , className: "purescript-suggestion"
+      , addImport: Just { mod, identifier }
       }
       where
         suggestType =

@@ -11,7 +11,7 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
-import Control.Monad.Aff (runAff)
+import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Promise (Promise)
 import Control.Promise as Promise
@@ -26,7 +26,8 @@ import Node.ChildProcess (CHILD_PROCESS)
 import Atom.Atom (getAtom)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.CommandRegistry (COMMAND, addCommand)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange)
+import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setText, getBuffer )
+import Atom.TextBuffer (setTextViaDiff)
 import Atom.Range (mkRange)
 import Atom.Point (Point, getRow, mkPoint)
 import Atom.Config (CONFIG, getConfig)
@@ -42,7 +43,7 @@ import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, reg
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
-import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos)
+import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos, addModuleImport, addExplicitImport)
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
@@ -51,6 +52,7 @@ import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
+import IdePurescript.Atom.PromptPanel (addPromptPanel)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
   -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
@@ -149,12 +151,36 @@ main = do
         textView x = "<li>" ++ x ++ "</li>"
         doImport mod x = when (x == "Import module") $ addImport mod
 
-    addModuleImport :: Eff MainEff Unit
-    addModuleImport = runAff raiseError ignoreError do
+    addModuleImportCmd :: Eff MainEff Unit
+    addModuleImportCmd = runAff raiseError ignoreError do
       modules <- getAvailableModules
       liftEff $ selectListViewStatic view addImport Nothing modules
       where
         view x = "<li>" ++ x ++ "</li>"
+
+    addExplicitImportCmd :: Eff MainEff Unit
+    addExplicitImportCmd = runAff raiseError ignoreError do
+      res <- addPromptPanel
+      maybe (pure unit) (addIdentImport Nothing) res
+
+    addIdentImport :: Maybe String -> String -> Aff MainEff Unit
+    addIdentImport moduleName ident = do
+      editor <- liftEff $ getActiveTextEditor atom.workspace
+      maybe (pure unit) (addIdentImport' moduleName ident) editor
+
+    addIdentImport' :: Maybe String -> String -> TextEditor -> Aff MainEff Unit
+    addIdentImport' moduleName ident editor = do
+      text <- liftEff $ getText editor
+      path <- liftEff $ getPath editor
+      output <- addExplicitImport path text moduleName ident
+      liftEff $ maybe (pure unit) (\out -> do
+        buf <- getBuffer editor
+        void $ setTextViaDiff buf out) output
+
+    addSuggestionImport :: { editor :: TextEditor, suggestion :: C.AtomSuggestion } -> Aff MainEff Unit
+    addSuggestionImport { editor, suggestion: { addImport: Just { mod, identifier } } } =
+      addIdentImport' (Just mod) identifier editor
+    addSuggestionImport _ = pure unit
 
     addImport :: String -> Eff MainEff Unit
     addImport moduleName = do
@@ -163,9 +189,10 @@ main = do
         Nothing -> pure unit
         Just editor -> do
           text <- getText editor
-          let index = findImportInsertPos text
-          let pt = (mkRange (mkPoint index 0) (mkPoint index 0))
-          void $ setTextInBufferRange editor pt $ "import " ++ moduleName ++ "\n"
+          path <- getPath editor
+          runAff raiseError ignoreError $ do
+            output <- addModuleImport path text moduleName
+            liftEff $ maybe (pure unit) (void <<< setText editor) output
 
     localSearch :: Eff MainEff Unit
     localSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
@@ -189,7 +216,8 @@ main = do
       cmd "show-quick-fixes" quickFix
       cmd "pursuit-search" pursuitSearch
       cmd "pursuit-search-modules" pursuitSearchModule
-      cmd "add-module-import" addModuleImport
+      cmd "add-module-import" addModuleImportCmd
+      cmd "add-explicit-import" addExplicitImportCmd
       cmd "search" localSearch
 
       installDependencies
@@ -240,6 +268,8 @@ main = do
         , getSuggestions: mkEffFn1 $ \x -> do
             state <- readRef modulesState
             getSuggestions state x
+        , onDidInsertSuggestion: mkEffFn1 \x -> do
+            runAff raiseError ignoreError $ addSuggestionImport x
         }
     }
 
