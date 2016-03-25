@@ -35,6 +35,7 @@ import Atom.Project (PROJECT)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
 
 import PscIde (NET)
+import PscIde.Command (Completion(..))
 
 import IdePurescript.PscIde (getCompletion)
 import IdePurescript.Atom.Config (config)
@@ -43,7 +44,7 @@ import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, reg
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
-import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos, addModuleImport, addExplicitImport)
+import IdePurescript.Modules (State, initialModulesState, getModulesForFile, getMainModule, getQualModule, getUnqualActiveModules, findImportInsertPos, addModuleImport, addExplicitImport, ImportResult(..))
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Atom.PscIdeServer (startServer)
@@ -160,7 +161,7 @@ main = do
 
     addExplicitImportCmd :: Eff MainEff Unit
     addExplicitImportCmd = runAff raiseError ignoreError do
-      res <- addPromptPanel
+      res <- addPromptPanel "Identifier"
       maybe (pure unit) (addIdentImport Nothing) res
 
     addIdentImport :: Maybe String -> String -> Aff MainEff Unit
@@ -173,9 +174,18 @@ main = do
       text <- liftEff $ getText editor
       path <- liftEff $ getPath editor
       output <- addExplicitImport path text moduleName ident
-      liftEff $ maybe (pure unit) (\out -> do
-        buf <- getBuffer editor
-        void $ setTextViaDiff buf out) output
+      liftEff $ case output of
+        UpdatedImports out -> do
+          buf <- getBuffer editor
+          void $ setTextViaDiff buf out
+        AmbiguousImport opts -> do
+          selectListViewStatic view addImp Nothing (runCompletion <$> opts)
+        _ -> pure unit
+      where
+      runCompletion (Completion obj) = obj
+      -- TODO nicer if we can make select view aff-ish
+      addImp { identifier, module' } = runAff raiseError ignoreError $ addIdentImport (Just module') identifier
+      view {identifier, module'} = "<li>" ++ module' ++ "." ++ identifier ++ "</li>"
 
     addSuggestionImport :: { editor :: TextEditor, suggestion :: C.AtomSuggestion } -> Aff MainEff Unit
     addSuggestionImport { editor, suggestion: { addImport: Just { mod, identifier } } } =

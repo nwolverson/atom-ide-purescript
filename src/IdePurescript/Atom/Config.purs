@@ -44,4 +44,10 @@ config =
     , type: "string"
     , default: pulpCmd ++ " psci"
     }
+  , importOnAutocomplete:
+    { title: "import on autocomplete"
+    , description: "Whether to automatically add imported identifiers when accepting autocomplete result."
+    , type: "boolean"
+    , default: true
+    }
   }

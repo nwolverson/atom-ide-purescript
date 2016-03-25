@@ -9,3 +9,7 @@ exports.focus = function (e) {
     e.focus();
   }
 }
+
+exports.getActiveElement = function () {
+  return document.activeElement;
+};
