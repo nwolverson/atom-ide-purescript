@@ -44,7 +44,7 @@ import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
-import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, getUnqualActiveModules, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule)
+import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule)
 import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
