@@ -62,7 +62,7 @@ getTooltips state pos = do
       case r of
         Just { word, qualifier } -> do
           let prefix = maybe "" id qualifier
-          ty <- getType word prefix (Modules.getUnqualActiveModules state) (flip Modules.getQualModule $ state)
+          ty <- getType word prefix (Modules.getUnqualActiveModules state $ Just word) (flip Modules.getQualModule $ state)
           pure { valid: length ty > 0, info: ty }
         _ -> pure { valid: false, info: "" }
     _ -> pure { valid: false, info: "" }
