@@ -1,0 +1,18 @@
+@font-face {
+  font-family: 'purescript';
+  src: url("atom://ide-purescript/font/purescript.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+.psicon { font-family: "purescript"; font-size: 10px; text-align: left; }
+
+.purescript-icon { .psicon; content: "\e801";  margin-left: -2px; margin-right:7px }
+
+@import "packages/file-icons/styles/colors"; // to use the colours
+@import "packages/file-icons/styles/icons";  // to use the defined icons
+
+@import "packages/file-icons/styles/items";
+@{pane-tab-selector}, .icon-file-text {
+  //&[data-name$=".rb"]          { .medium-red;             } // Colours icon and filename
+  &[data-name$=".purs"]:before { .purescript-icon;  }
+}
