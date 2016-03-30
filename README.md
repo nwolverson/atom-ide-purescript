@@ -2,7 +2,7 @@
 
 This package provides editor support for PureScript projects in Atom. You should
 first install required dependency [language-purescript](https://atom.io/packages/language-purescript)
-which also provides syntax highlighting and [psc-ide](https://github.com/kRITZCREEK/psc-ide) (see below).
+which also provides syntax highlighting.
 
 This package provides:
   * Build and error reporting
@@ -21,12 +21,7 @@ Atom packages:
 For best results (and default settings) install dependencies:
 
   * `psc` >= 0.8.0
-  * [psc-ide](https://github.com/kRITZCREEK/psc-ide) >= 0.6.0
   * `pulp` >= 8.0.0
-
-For use with older versions of the PureScript compiler, check
-[psc-ide](https://github.com/kRITZCREEK/psc-ide) documentation for the required
-version, and change default build command.
 
 For use with older versions of pulp, or for alternative build tools and configuration tips, [see below](#build). In brief
 the build command is configurable, but should output JSON errors.
@@ -43,13 +38,10 @@ to use the [project-manager](https://atom.io/packages/project-manager) package.
 Note `psc-ide-client` is not used.
 
 For all functions provided by `psc-ide` you will need to build your project first!
-Dependencies will automatically be loaded via `dependencies Current.File` as
-required.
 
 ## Autocomplete
 
-Provided from [psc-ide](https://github.com/kRITZCREEK/psc-ide). Make sure
-your project is built first.
+Provided from `psc-ide`. Make sure your project is built first.
 
 Completions will be sourced from modules imported in the current file.
 
