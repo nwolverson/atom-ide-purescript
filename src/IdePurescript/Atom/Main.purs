@@ -11,8 +11,9 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
-import Control.Monad.Aff (runAff)
+import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Aff.AVar (AVAR)
+import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise)
 import Control.Promise as Promise
 import Control.Monad (when)
@@ -53,13 +54,19 @@ import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynami
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
-  -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
+  -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Promise (Array C.AtomSuggestion))
 getSuggestions state ({editor, bufferPosition}) = do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
   line <- getTextInRange editor range
   let modules = getUnqualActiveModules state
       getQualifiedModule = (flip getQualModule) state
-  Promise.fromAff $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
+  Promise.fromAff $ flip catchError (raiseError' []) $ C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
+  where
+  raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Array C.AtomSuggestion)
+  raiseError' x e = do
+    liftEff $ raiseError e
+    pure x
+
 
 useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE | eff) Unit
 useEditor modulesStateRef editor = do
