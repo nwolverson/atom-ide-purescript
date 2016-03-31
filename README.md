@@ -100,12 +100,12 @@ Some alternatives:
   * Ensure tests are compiled in the build: `pulp build --include test --json-errors`
   * Via npm run script: `npm run -s build`. Or if the run script does not output json errors you might be able to pass
     an extra flag: `npm run -s build -- --json-errors` - more information [on this issue](https://github.com/nwolverson/atom-ide-purescript/issues/53#issuecomment-198621810).
-    
+
 Since atom unfortunately does not support per-project configuration, the npm run script approach may be particularly
 useful where you have different projects that build differently. Alternatively you can look into
 the [project-manager](https://atom.io/packages/project-manager) package.
 
-You may be able to get away without thinking about all this if your project specific setup is only required for a "full" build 
+You may be able to get away without thinking about all this if your project specific setup is only required for a "full" build
 (e.g. browserify step) and not just for the basic compilation stage.
 
 
@@ -116,3 +116,16 @@ You may be able to get away without thinking about all this if your project spec
 Error suggestions may be triggered from some underlined compiler warnings. There
 is no visual indication, currently this will basically be for 'import' warnings,
 and can be triggered by 'alt-enter' (PureScript: Show Quick Fixes).
+
+## Hacking on atom-ide-purescript
+
+After cloning, install dependencies
+  • `bower install`
+  • `npm install`
+
+Bundle for Atom: `npm run bundle`
+_Alternatively `npm run -s bundle` if you want cleaner output_
+
+You can use the regular `plup build` as part of your tooling or to see compile errors, but bundling is required for the plugin to be usable by Atom and will build the project as part of the task.
+
+To use your local development version, you will first need to uninstall any current version you have installed. Then from within the atom-ide-purescript directory run `apm link`. This will create a symlink from the Atom plugins directory to your development directory.
