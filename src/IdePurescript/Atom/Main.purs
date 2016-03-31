@@ -20,6 +20,7 @@ import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
+import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise)
 import Control.Promise as Promise
 import DOM (DOM)
@@ -54,13 +55,19 @@ import PscIde as P
 import PscIde.Command (Completion(..))
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
-  -> Eff (editor :: EDITOR, net :: NET | eff) (Promise (Array C.AtomSuggestion))
-getSuggestions state ({editor, bufferPosition}) = Promise.fromAff $ do
+  -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Promise (Array C.AtomSuggestion))
+getSuggestions state ({editor, bufferPosition}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
   line <- liftEff $ getTextInRange editor range
   modules <- getLoadedModules -- getUnqualActiveModules state
   let getQualifiedModule = (flip getQualModule) state
   C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
+  where
+  raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Array C.AtomSuggestion)
+  raiseError' x e = do
+    liftEff $ raiseError e
+    pure x
+
 
 useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE | eff) Unit
 useEditor modulesStateRef editor = do
