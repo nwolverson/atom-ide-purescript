@@ -24,7 +24,6 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Eff.Unsafe (unsafeInterleaveEff)
 import Control.Monad.Error.Class (catchError)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import Control.Promise (Promise)
@@ -279,7 +278,10 @@ main = do
         liftEff $ selectListViewStatic view (replaceTypo ed wordRange) Nothing (runCompletion <$> corrections)
         where
           runCompletion (Completion obj) = obj
-          replaceTypo ed wordRange { identifier } = void $ unsafeInterleaveEff (setTextInBufferRange ed wordRange identifier)
+          replaceTypo ed wordRange { identifier, "module'": module' } =
+            runAff raiseError ignoreError do
+             liftEff $ setTextInBufferRange ed wordRange identifier
+             addIdentImport (Just module') identifier
           view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
           getIdentFromCompletion (Completion c) = c.identifier
 
