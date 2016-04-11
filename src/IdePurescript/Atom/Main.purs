@@ -278,10 +278,10 @@ main = do
         liftEff $ selectListViewStatic view (replaceTypo ed wordRange) Nothing (runCompletion <$> corrections)
         where
           runCompletion (Completion obj) = obj
-          replaceTypo ed wordRange { identifier, "module'": module' } =
+          replaceTypo ed wordRange { identifier, "module'": mod } =
             runAff raiseError ignoreError do
              liftEff $ setTextInBufferRange ed wordRange identifier
-             addIdentImport (Just module') identifier
+             addIdentImport (Just mod) identifier
           view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
           getIdentFromCompletion (Completion c) = c.identifier
 
