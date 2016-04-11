@@ -1,16 +1,17 @@
 module IdePurescript.Atom.Build where
 
-import Prelude (($), (++), pure, (<$>), bind, (-))
 import Control.Monad.Aff (Aff)
-import Data.Maybe (Maybe(Just, Nothing), fromMaybe, maybe)
-import IdePurescript.Build (Command(Command), build)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import IdePurescript.Build (Command(..), build)
 import IdePurescript.PscErrors (Position)
+import Prelude (($), (++), pure, (<$>), (-), bind)
 
 -- This is really the same type but I'm using different fields
 type AtomLintTraceMessage =
   { "type" :: String
   , html :: String
   }
+
 
 type AtomLintMessage =
   { "type" :: String
@@ -34,8 +35,7 @@ type LintResult =
   , messages :: Array AtomLintMessage
   }
 
-linterBuild :: { command :: String, args :: Array String, directory :: String }
-  -> Aff _ LintResult
+linterBuild :: { command :: String, args :: Array String, directory :: String } -> Aff _ LintResult
 linterBuild {command,args,directory} = do
   res <- build { command: Command command args, directory }
   let warnings = result "Warning" <$> res.errors.warnings

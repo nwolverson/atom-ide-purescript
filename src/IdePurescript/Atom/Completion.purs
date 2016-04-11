@@ -1,13 +1,13 @@
 module IdePurescript.Atom.Completion where
 
-import Prelude (return, map, ($), bind, (==), (/=), (||), (++))
 import Control.Monad.Aff (Aff)
 import Data.Array (filter)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe)
 import Data.String (indexOf, contains)
-import Data.String.Regex (match, regex)
 import Data.String.Regex (Regex, noFlags, regex, test, match)
+import Data.String.Regex (match, regex)
 import IdePurescript.PscIde (getCompletion, eitherToErr)
+import Prelude (return, map, ($), bind, (==), (/=), (||), (++))
 import PscIde as P
 import PscIde.Command as C
 
@@ -27,6 +27,14 @@ type AtomSuggestion =
   , replacementPrefix :: String
   , rightLabel :: String
   , className :: String
+
+  , addImport :: Maybe AddImport -- Not Atom suggestion property
+  }
+
+type AddImport =
+  { mod :: String
+  , identifier :: String
+  , qualifier :: Maybe String
   }
 
 data SuggestionType = Module | Type | Function | Value
@@ -52,7 +60,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
         return $ map (modResult prefix) completions
       else do
         completions <- getCompletion token mod moduleCompletion modules getQualifiedModule
-        return $ map (result token) completions
+        return $ map (result mod token) completions
     Nothing -> return []
   where
     getModuleName "" token  = token
@@ -78,9 +86,10 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       , replacementPrefix: prefix
       , rightLabel: ""
       , className: "purescript-suggestion"
+      , addImport: Nothing
       }
 
-    result prefix {type: ty, identifier, module: mod} =
+    result qualifier prefix {"type": ty, identifier, "module": mod} =
       { text: identifier
       , displayText: case suggestType of
           Type -> identifier
@@ -90,6 +99,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       , replacementPrefix: prefix
       , rightLabel: mod
       , className: "purescript-suggestion"
+      , addImport: Just { mod, identifier, qualifier: if qualifier == "" then Nothing else Just qualifier }
       }
       where
         suggestType =
