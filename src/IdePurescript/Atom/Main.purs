@@ -15,6 +15,7 @@ import Atom.Project (PROJECT)
 import Atom.Range (mkRange, Range, getStart, getEnd)
 import Atom.TextBuffer (setTextViaDiff)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
+import Data.String (contains)
 import Control.Bind (join)
 import Control.Monad (when)
 import Control.Monad.Aff (runAff, Aff)
@@ -301,12 +302,14 @@ main = do
 
       installDependencies
 
-      observeTextEditors atom.workspace (\editor -> do -- TODO: Check if file is .purs
-        useEditor modulesState editor
-        onDidSave editor (\_ -> do
-          buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-          when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
-        )
+      observeTextEditors atom.workspace (\editor -> do
+        path <- getPath editor
+        when (contains ".purs" path) do
+          useEditor modulesState editor
+          onDidSave editor (\_ -> do
+            buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
+            when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
+          )
       )
 
       onDidChangeActivePaneItem atom.workspace (\item ->
