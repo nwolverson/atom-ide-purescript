@@ -1,5 +1,10 @@
 module IdePurescript.Atom.Main where
 
+import Prelude
+import Control.Promise as Promise
+import IdePurescript.Atom.Completion as C
+import IdePurescript.Atom.Psci as Psci
+import PscIde as P
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
@@ -19,10 +24,9 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
-import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import Control.Monad.Error.Class (catchError)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import Control.Promise (Promise)
-import Control.Promise as Promise
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Array (length)
@@ -33,7 +37,6 @@ import Data.Function.Eff (mkEffFn1)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
-import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
@@ -41,7 +44,6 @@ import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
 import IdePurescript.Atom.PscIdeServer (startServer)
-import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
@@ -49,9 +51,7 @@ import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImport
 import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
-import Prelude
 import PscIde (NET)
-import PscIde as P
 import PscIde.Command (Completion(..))
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
@@ -265,6 +265,26 @@ main = do
             liftEff $ setTextInBufferRange ed range $ intercalate "\n" lines
         Nothing -> pure unit
 
+    fixTypo :: Eff MainEff Unit
+    fixTypo = do
+      runAff raiseError ignoreError $ runMaybeT body
+      where
+      body :: MaybeT (Aff MainEff) Unit
+      body = do
+        ed :: TextEditor <- MaybeT $ liftEff $ getActiveTextEditor atom.workspace
+        { line, col, pos, range } <- lift $ liftEff $ getLinePosition ed
+        { word, range: wordRange } <- MaybeT $ liftEff $ getToken ed pos
+        corrections <- lift $ eitherToErr (P.suggestTypos word 2)
+        liftEff $ selectListViewStatic view (replaceTypo ed wordRange) Nothing (runCompletion <$> corrections)
+        where
+          runCompletion (Completion obj) = obj
+          replaceTypo ed wordRange { identifier, "module'": module' } =
+            runAff raiseError ignoreError do
+             liftEff $ setTextInBufferRange ed wordRange identifier
+             addIdentImport (Just module') identifier
+          view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
+          getIdentFromCompletion (Completion c) = c.identifier
+
     activate :: Eff MainEff Unit
     activate = do
       let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
@@ -277,6 +297,7 @@ main = do
       cmd "search" localSearch
       cmd "case-split" caseSplit
       cmd "add-clause" addClause
+      cmd "fix-typo" fixTypo
 
       installDependencies
 
