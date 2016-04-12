@@ -44,10 +44,21 @@ config =
     , type: "string"
     , default: pulpCmd ++ " psci"
     }
-  , importOnAutocomplete:
-    { title: "import on autocomplete"
-    , description: "Whether to automatically add imported identifiers when accepting autocomplete result."
-    , type: "boolean"
-    , default: true
+  , autocomplete:
+    { type: "object"
+    , properties:
+      { addImport:
+        { title: "Add import on autocomplete"
+        , description: "Whether to automatically add imported identifiers when accepting autocomplete result."
+        , type: "boolean"
+        , default: true
+        }
+      , allModules:
+        { title: "Suggest from all modules"
+        , description: "Whether to always autocomplete from all built modules, or just those imported in the file. Suggestions from all modules always available by explicitly triggering autocomplete."
+        , type: "boolean"
+        , default: true
+        }
+      }
     }
   }

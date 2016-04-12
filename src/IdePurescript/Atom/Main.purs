@@ -50,26 +50,31 @@ import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
-import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule)
+import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
 import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import PscIde (NET)
 import PscIde.Command (Completion(..))
 
-getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point }
-  -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Promise (Array C.AtomSuggestion))
-getSuggestions state ({editor, bufferPosition}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
+getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
+  -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Promise (Array C.AtomSuggestion))
+getSuggestions state ({editor, bufferPosition, activatedManually}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
-  line <- liftEff $ getTextInRange editor range
-  modules <- getLoadedModules -- getUnqualActiveModules state
+  line <- liftEff'' $ getTextInRange editor range
+  atom <- liftEff'' $ getAtom
+  configRaw <- liftEff'' $ getConfig atom.config "ide-purescript.autocomplete.allModules"
+  let autoCompleteAllModules = either (const false) id $ readBoolean configRaw
+  modules <- if activatedManually || autoCompleteAllModules then getLoadedModules else pure $ getUnqualActiveModules state Nothing
   let getQualifiedModule = (flip getQualModule) state
   C.getSuggestions { line, moduleInfo: { modules, getQualifiedModule }}
   where
-  raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY | eff) (Array C.AtomSuggestion)
+  raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Array C.AtomSuggestion)
   raiseError' x e = do
     liftEff $ raiseError e
     pure x
+  liftEff'' :: forall a. Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a
+  liftEff'' = liftEff
 
 
 useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE | eff) Unit
@@ -369,7 +374,7 @@ main = do
             state <- readRef modulesState
             getSuggestions state x
         , onDidInsertSuggestion: mkEffFn1 \x -> do
-            shouldAddImport <- getConfig atom.config "ide-purescript.importOnAutocomplete"
+            shouldAddImport <- getConfig atom.config "ide-purescript.autocomplete.addImport"
             fudgeInsertSuggestion x
             when (readBoolean shouldAddImport == Right true)
               (runAff raiseError ignoreError $ addSuggestionImport x)
