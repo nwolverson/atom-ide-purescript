@@ -90,7 +90,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       }
 
     result qualifier prefix {"type": ty, identifier, "module": mod} =
-      { text: identifier
+      { text: mod ++ "." ++ identifier
       , displayText: case suggestType of
           Type -> identifier
           _ -> identifier

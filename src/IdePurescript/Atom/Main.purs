@@ -8,14 +8,13 @@ import PscIde as P
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setText, getBuffer, getCursorBufferPosition)
+import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setTextInBufferRange', setText, getBuffer, getCursorBufferPosition)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Point (Point, getRow, getColumn, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange, Range, getStart, getEnd)
 import Atom.TextBuffer (setTextViaDiff)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Data.String (contains)
 import Control.Bind (join)
 import Control.Monad (when)
 import Control.Monad.Aff (runAff, Aff)
@@ -35,7 +34,10 @@ import Data.Either (either, Either(..))
 import Data.Foldable (intercalate)
 import Data.Foreign (readBoolean)
 import Data.Function.Eff (mkEffFn1)
+import Data.Lens (lengthOf)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
+import Data.String (contains)
+import Data.String as S
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
@@ -49,7 +51,7 @@ import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
 import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule)
-import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, loadDeps, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
+import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import PscIde (NET)
@@ -77,7 +79,6 @@ useEditor modulesStateRef editor = do
   let mainModule = getMainModule text
   case mainModule of
     Just m -> runAff logError ignoreError $ do
-      loadDeps m
       state <- getModulesForFile path text
       liftEff $ writeRef modulesStateRef state
       pure unit
@@ -121,6 +122,7 @@ main = do
         { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> runAff raiseError ignoreError $ do
           messages <- lint atom.config root' linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
+          P.load [] []
           editor <- liftEff $ getActiveTextEditor atom.workspace
           liftEff $ maybe (pure unit) (useEditor modulesState) editor
           pure unit
@@ -201,10 +203,22 @@ main = do
       addImp { identifier, "module'": m } = runAff raiseError ignoreError $ addIdentImport (Just m) identifier
       view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
 
-    addSuggestionImport :: { editor :: TextEditor, suggestion :: C.AtomSuggestion } -> Aff MainEff Unit
+    addSuggestionImport :: forall r. { editor :: TextEditor, suggestion :: C.AtomSuggestion | r } -> Aff MainEff Unit
     addSuggestionImport { editor, suggestion: { addImport: Just { mod, identifier, qualifier: Nothing } } } =
       addIdentImport' (Just mod) identifier editor
     addSuggestionImport _ = pure unit
+
+    -- Substitute the original unqualified identifier for the fully qualified one
+    -- which we inserted to avoid the restriction on duplicate suggestions...
+    fudgeInsertSuggestion :: forall r. { editor :: TextEditor, triggerPosition :: Point, suggestion :: C.AtomSuggestion | r } -> Eff MainEff Unit
+    fudgeInsertSuggestion { editor, triggerPosition, suggestion: { text, addImport: Just { identifier }, replacementPrefix } } = do
+      let start = getColumn triggerPosition - S.length replacementPrefix
+          end = start + (S.length text - S.length identifier)
+          row = getRow triggerPosition
+          startPt = mkPoint row start
+          endPt = mkPoint row end
+      void $ setTextInBufferRange' editor (mkRange startPt endPt) "" { normalizeLineEndings: true, skipUndo: true }
+    fudgeInsertSuggestion _ = pure unit
 
     addImport :: String -> Eff MainEff Unit
     addImport moduleName = do
@@ -319,11 +333,15 @@ main = do
       registerTooltips modulesState
       runAff
         (\_ -> log "Error starting server")
-        (\deact -> do
-            writeRef deactivateRef deact
+        ignoreError
+        do
+          deact <- startServer
+          liftEff $ writeRef deactivateRef deact
+          P.load [] []
+          liftEff $ do
             editor <- getActiveTextEditor atom.workspace
-            maybe (pure unit) (useEditor modulesState) editor)
-        startServer
+            maybe (pure unit) (useEditor modulesState) editor
+
       Psci.init
 
     deactivate :: Eff MainEff Unit
@@ -352,6 +370,7 @@ main = do
             getSuggestions state x
         , onDidInsertSuggestion: mkEffFn1 \x -> do
             shouldAddImport <- getConfig atom.config "ide-purescript.importOnAutocomplete"
+            fudgeInsertSuggestion x
             when (readBoolean shouldAddImport == Right true)
               (runAff raiseError ignoreError $ addSuggestionImport x)
         }

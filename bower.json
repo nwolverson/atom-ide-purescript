@@ -13,13 +13,24 @@
     "purescript-console": "^0.1.0",
     "purescript-psc-ide": "git@github.com:kRITZCREEK/purescript-psc-ide.git#import",
     "purescript-atom-api": "git@github.com:nwolverson/purescript-atom-api.git#ide-purescript",
-    "purescript-aff": "~0.14.0",
+    "purescript-aff": "~0.16.1",
     "purescript-nullable": "~0.2.1",
     "purescript-refs": "~0.2.0",
-    "purescript-node-process": "~0.4.1",
-    "purescript-node-child-process": "~0.5.1",
+    "purescript-node-process": "~0.5.0",
+    "purescript-node-child-process": "~0.6.1",
     "purescript-aff-promise": "^0.0.1",
     "purescript-ide-purescript-core": "git@github.com:nwolverson/purescript-ide-purescript-core.git#imports",
-    "purescript-node-fs-aff": "^0.5.0"
+    "purescript-node-fs-aff": "^0.6.0",
+    "purescript-dom": "^0.2.20"
+  },
+  "resolutions": {
+    "purescript-argonaut": "^0.12.0",
+    "purescript-argonaut-codecs": "^0.6.0",
+    "purescript-argonaut-traversals": "^0.7.0",
+    "purescript-node-fs": "^0.11.0",
+    "purescript-node-child-process": "~0.6.1",
+    "purescript-node-fs-aff": "^0.6.0",
+    "purescript-node-streams": "~0.4.0",
+    "purescript-aff": "~0.16.1"
   }
 }
