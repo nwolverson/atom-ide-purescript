@@ -21,6 +21,7 @@ moduleRegex = regex """(?:^|[^A-Za-z_.])(?:((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Z
 
 type AtomSuggestion =
   { text :: String
+  , snippet :: String
   , displayText :: String
   , "type" :: String
   , description :: String
@@ -80,6 +81,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
 
     modResult prefix moduleName =
       { text: moduleName
+      , snippet: ""
       , displayText: moduleName
       , type: suggestionTypeAtomValue Module
       , description: ""
@@ -90,7 +92,11 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
       }
 
     result qualifier prefix {"type": ty, identifier, "module": mod} =
+      -- include both text and snippet as suggestions must be unique by text+snippet
+      -- we want duplicates to disambiguate modules, but only insert the ident while
+      -- triggering an import for the module
       { text: mod ++ "." ++ identifier
+      , snippet: identifier
       , displayText: case suggestType of
           Type -> identifier
           _ -> identifier

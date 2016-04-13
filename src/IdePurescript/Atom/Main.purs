@@ -213,18 +213,6 @@ main = do
       addIdentImport' (Just mod) identifier editor
     addSuggestionImport _ = pure unit
 
-    -- Substitute the original unqualified identifier for the fully qualified one
-    -- which we inserted to avoid the restriction on duplicate suggestions...
-    fudgeInsertSuggestion :: forall r. { editor :: TextEditor, triggerPosition :: Point, suggestion :: C.AtomSuggestion | r } -> Eff MainEff Unit
-    fudgeInsertSuggestion { editor, triggerPosition, suggestion: { text, addImport: Just { identifier }, replacementPrefix } } = do
-      let start = getColumn triggerPosition - S.length replacementPrefix
-          end = start + (S.length text - S.length identifier)
-          row = getRow triggerPosition
-          startPt = mkPoint row start
-          endPt = mkPoint row end
-      void $ setTextInBufferRange' editor (mkRange startPt endPt) "" { normalizeLineEndings: true, skipUndo: true }
-    fudgeInsertSuggestion _ = pure unit
-
     addImport :: String -> Eff MainEff Unit
     addImport moduleName = do
       maybeEditor <- getActiveTextEditor atom.workspace
@@ -375,7 +363,6 @@ main = do
             getSuggestions state x
         , onDidInsertSuggestion: mkEffFn1 \x -> do
             shouldAddImport <- getConfig atom.config "ide-purescript.autocomplete.addImport"
-            fudgeInsertSuggestion x
             when (readBoolean shouldAddImport == Right true)
               (runAff raiseError ignoreError $ addSuggestionImport x)
         }
