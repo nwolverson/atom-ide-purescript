@@ -82,12 +82,12 @@ useEditor modulesStateRef editor = do
   path <- getPath editor
   text <- getText editor
   let mainModule = getMainModule text
-  case mainModule of
-    Just m -> runAff logError ignoreError $ do
-      state <- getModulesForFile path text
+  case path, mainModule of
+    Just path', Just m -> runAff logError ignoreError $ do
+      state <- getModulesForFile path' text
       liftEff $ writeRef modulesStateRef state
       pure unit
-    Nothing -> pure unit
+    _, _ -> pure unit
 
 type MainEff =
   ( command :: COMMAND
@@ -193,14 +193,17 @@ main = do
       text <- liftEff $ getText editor
       path <- liftEff $ getPath editor
       state <- liftEff $ readRef modulesState
-      { state: newState, result: output} <- addExplicitImport state path text moduleName ident
-      liftEff $ writeRef modulesState newState
-      liftEff $ case output of
-        UpdatedImports out -> do
-          buf <- getBuffer editor
-          void $ setTextViaDiff buf out
-        AmbiguousImport opts -> do
-          selectListViewStatic view addImp Nothing (runCompletion <$> opts)
+      case path of
+        Just path' -> do
+          { state: newState, result: output} <- addExplicitImport state path' text moduleName ident
+          liftEff $ writeRef modulesState newState
+          liftEff $ case output of
+            UpdatedImports out -> do
+              buf <- getBuffer editor
+              void $ setTextViaDiff buf out
+            AmbiguousImport opts -> do
+              selectListViewStatic view addImp Nothing (runCompletion <$> opts)
+            _ -> pure unit
         _ -> pure unit
       where
       runCompletion (Completion obj) = obj
@@ -222,9 +225,12 @@ main = do
         Just editor -> do
           text <- getText editor
           path <- getPath editor
-          runAff raiseError ignoreError $ do
-            output <- addModuleImport state path text moduleName
-            liftEff $ maybe (pure unit) (void <<< setText editor <<< _.result) output
+          case path of
+            Just path' ->
+              runAff raiseError ignoreError $ do
+                output <- addModuleImport state path' text moduleName
+                liftEff $ maybe (pure unit) (void <<< setText editor <<< _.result) output
+            Nothing -> pure unit
 
     localSearch :: Eff MainEff Unit
     localSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
@@ -311,12 +317,14 @@ main = do
 
       observeTextEditors atom.workspace (\editor -> do
         path <- getPath editor
-        when (contains ".purs" path) do
-          useEditor modulesState editor
-          onDidSave editor (\_ -> do
-            buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-            when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
-          )
+        case path of
+          Just path' | contains ".purs" path' -> do
+            useEditor modulesState editor
+            onDidSave editor (\_ -> do
+              buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
+              when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
+            )
+          _ -> pure unit
       )
 
       onDidChangeActivePaneItem atom.workspace (\item ->
