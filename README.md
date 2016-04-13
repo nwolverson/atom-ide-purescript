@@ -1,22 +1,17 @@
 # ide-purescript package for Atom
 
-This package provides editor support for PureScript projects in Atom. You should
-first install required dependency [language-purescript](https://atom.io/packages/language-purescript)
-which also provides syntax highlighting.
+This package provides editor support for PureScript projects in Atom. Dependency [language-purescript](https://atom.io/packages/language-purescript) provides syntax highlighting.
 
 This package provides:
   * Build and error reporting
   * Autocompletion
   * Type info tooltips
 
-Package should trigger on opening a `.purs` file.
+Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette.
 
 ## Installation and General Use
 
-Atom packages:
-
-  * You *must* install the atom package [language-purescript](https://atom.io/packages/language-purescript)! Otherwise nothing will happen.
-  * It is strongly suggested to install atom packages [Linter](https://github.com/atom-community/linter) for build support
+Atom packages [language-purescript](https://atom.io/packages/language-purescript) and [Linter](https://github.com/atom-community/linter) are required, these should be auto-installed by starting the package, eg by running any PureScript command.
 
 For best results (and default settings) install dependencies:
 
@@ -43,7 +38,9 @@ For all functions provided by `psc-ide` you will need to build your project firs
 
 Provided from `psc-ide`. Make sure your project is built first.
 
-Completions will be sourced from modules imported in the current file.
+Completions will be sourced from all available modules by default; this is configurable to just those imported in the current file, in which case explicitly (re-)triggering the completion will expand to show all modules.
+
+Imports will be inserted automatically for completions! Again this is configurable.
 
 ## Tooltips
 
@@ -60,12 +57,13 @@ This is really stupid, and only cares that you hover over a word regardless of c
 Command available from the command palette:
   * PureScript search - search for identifiers, by identifier or type
   * PureScript search modules - find package by module
+  * PureScript search - a local search of identifiers from built modules
 
 ## PSCI
 
 ![PSCI window](http://nwolverson.github.io/atom-ide-purescript/assets/psci.png)
 
-Basic PSCI REPL integration (runs `pulp psci`). A read-only buffer which displays
+Basic PSCI REPL integration (runs `pulp psci`). A *read-only* buffer which displays
 PSCI output, input can be sent from the current buffer by line or selection.
 
 Command from the command palette:
@@ -116,6 +114,14 @@ You may be able to get away without thinking about all this if your project spec
 Error suggestions may be triggered from some underlined compiler warnings. There
 is no visual indication, currently this will basically be for 'import' warnings,
 and can be triggered by 'alt-enter' (PureScript: Show Quick Fixes).
+
+## Case split / add clause
+
+*EXPERIMENTAL*
+
+Add clause - use psc-ide to add a clause to the current top-level function (from cursor on its type definition).
+Case split - with cursor on an function argument identifier, add clauses to the definition to case-split on that argument.
+
 
 ## Hacking on atom-ide-purescript
 
