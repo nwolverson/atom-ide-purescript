@@ -47,7 +47,8 @@
     "hover-tooltips": "^0.5.0"
   },
   "package-deps": [
-    "linter"
+    "linter",
+    "language-purescript"
   ],
   "providedServices": {
     "autocomplete.provider": {
