@@ -2,7 +2,102 @@
   'atom-text-editor[data-grammar*="source purescript psci"]:not([mini])':
     'PSCI: Reset': 'psci:reset'
 
-  'atom-text-editor[data-grammar*="source purescript"]:not([mini])':
-    'PSCI: Open': 'psci:open'
-    'PSCI: Send Line': 'psci:send-line'
-    'PSCI: Send Selection': 'psci:send-selection'
+  'atom-text-editor[data-grammar*="source purescript"]:not([mini])': [
+    {
+      'label': 'PSCI: Send Line'
+      'command': 'psci:send-line'
+    }
+    {
+      'label': 'PSCI: Send Selection'
+      'command': 'psci:send-selection'
+    }
+    {
+      'label': 'PureScript'
+      'submenu': [
+        {
+          'label': 'Add Import'
+          'command': 'purescript:add-explicit-import'
+        }
+        {
+          'label': 'Case Split'
+          'command': 'purescript:case-split'
+        }
+        {
+          'label': 'Add Clause'
+          'command': 'purescript:add-clause'
+        }
+        {
+          'label': 'Fix Typo'
+          'command': 'purescript:fix-typo'
+        }
+        {
+          'label': 'Show Quick Fixes'
+          'command': 'purescript:show-quick-fixes'
+        }
+      ]
+    }
+  ]
+
+'menu': [
+  {
+    'label': 'Packages'
+    'submenu': [
+      'label': 'PureScript'
+      'submenu': [
+        {
+          'label': 'Build'
+          'command': 'purescript:build'
+        }
+        {
+          'label': 'Search (local)'
+          'command': 'purescript:search'
+        }
+        {
+          'label': 'Search Pursuit'
+          'command': 'purescript:pursuit-search'
+        }
+        {
+          'label': 'Search Pursuit (modules/packages)'
+          'command': 'purescript:pursuit-search-modules'
+        }
+        {
+          'label': 'Add Import (open)'
+          'command': 'purescript:add-module-import'
+        }
+        {
+          'label': 'Add Import (explicit)'
+          'command': 'purescript:add-explicit-import'
+        }
+        {
+          'label': 'Case Split'
+          'command': 'purescript:case-split'
+        }
+        {
+          'label': 'Add Clause'
+          'command': 'purescript:add-clause'
+        }
+        {
+          'label': 'Fix Typo'
+          'command': 'purescript:fix-typo'
+        }
+        {
+          'label': 'Show Quick Fixes'
+          'command': 'purescript:show-quick-fixes'
+        }
+        {
+          'label': 'PSCI: Open'
+          'command': 'psci:open'
+        }
+        {
+          'label': 'PSCI: Send Line'
+          'command': 'psci:send-line'
+        }
+        {
+          'label': 'PSCI: Send Selection'
+          'command': 'psci:send-selection'
+        }
+      ]
+    ]
+
+  }
+]

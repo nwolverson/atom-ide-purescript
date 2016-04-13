@@ -1,10 +1,12 @@
+# Removed the following selector as this hides entries from the menus:
+# [data-grammar~=purescript]':
 
-'.platform-win32 atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+'.platform-win32 atom-workspace atom-text-editor:not([mini])':
     'alt-/':'psci:send-line'
 
-'.platform-darwin atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+'.platform-darwin atom-workspace atom-text-editor:not([mini])':
     'ctrl-cmd-l':'psci:send-line'
 
-'atom-workspace atom-text-editor:not([mini])[data-grammar~=purescript]':
+'atom-workspace atom-text-editor:not([mini])':
     'cmd-enter':'psci:send-selection'
     'alt-enter':'purescript:show-quick-fixes'

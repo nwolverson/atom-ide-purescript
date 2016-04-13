@@ -7,6 +7,25 @@
   "activationHooks": [
     "language-purescript:grammar-used"
   ],
+  "activationCommands": {
+    "atom-workspace": [
+      "purescript:build",
+      "purescript:search",
+      "purescript:build",
+      "purescript:show-quick-fixes",
+      "purescript:pursuit-search",
+      "purescript:pursuit-search-modules",
+      "purescript:add-module-import",
+      "purescript:add-explicit-import",
+      "purescript:search",
+      "purescript:case-split",
+      "purescript:add-clause",
+      "purescript:fix-typo",
+      "psci:open",
+      "psci:send-line",
+      "psci:send-selection"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/nwolverson/atom-ide-purescript"
