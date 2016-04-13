@@ -10,6 +10,7 @@ import IdePurescript.PscIde (getCompletion, eitherToErr)
 import Prelude (return, map, ($), bind, (==), (/=), (||), (++))
 import PscIde as P
 import PscIde.Command as C
+import PscIde
 
 type ModuleInfo =
   { modules :: Array String
@@ -81,7 +82,7 @@ getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
 
     modResult prefix moduleName =
       { text: moduleName
-      , snippet: ""
+      , snippet: moduleName
       , displayText: moduleName
       , type: suggestionTypeAtomValue Module
       , description: ""
