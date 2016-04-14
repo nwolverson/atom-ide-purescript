@@ -8,7 +8,7 @@ import PscIde as P
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getText, getPath, getTextInRange, setTextInBufferRange, setTextInBufferRange', setText, getBuffer, getCursorBufferPosition)
+import Atom.Editor (TextEditor, EDITOR, toEditor, onDidSave, getPath, setTextInBufferRange, getTextInRange, getCursorBufferPosition, setText, getText, getBuffer)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Point (Point, getRow, getColumn, mkPoint)
 import Atom.Project (PROJECT)
@@ -34,10 +34,8 @@ import Data.Either (either, Either(..))
 import Data.Foldable (intercalate)
 import Data.Foreign (readBoolean)
 import Data.Function.Eff (mkEffFn1)
-import Data.Lens (lengthOf)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.String (contains)
-import Data.String as S
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
@@ -51,7 +49,7 @@ import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Atom.Tooltips (registerTooltips, getToken)
 import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), getQualModule, addModuleImport, addExplicitImport, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
-import IdePurescript.PscIde (getPursuitModuleCompletion, getPursuitCompletion, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
+import IdePurescript.PscIde (loadDeps, getPursuitModuleCompletion, getPursuitCompletion, getAvailableModules, getCompletion, eitherToErr, getLoadedModules)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import PscIde (NET)
@@ -84,6 +82,8 @@ useEditor modulesStateRef editor = do
   let mainModule = getMainModule text
   case path, mainModule of
     Just path', Just m -> runAff logError ignoreError $ do
+      -- We load all deps initially, but only post 0.8.4, and maybe something resets psc-ide state
+      loadDeps m
       state <- getModulesForFile path' text
       liftEff $ writeRef modulesStateRef state
       pure unit
