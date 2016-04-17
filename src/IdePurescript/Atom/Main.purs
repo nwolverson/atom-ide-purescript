@@ -135,7 +135,7 @@ main = do
       editor <- getActiveTextEditor atom.workspace
       linter <- readRef linterInternalRef
       case { editor, linter, n: length messages } of
-        { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes e l messages
+        { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes modulesState e l messages
         _ -> pure unit
 
     activate :: Eff MainEff Unit
