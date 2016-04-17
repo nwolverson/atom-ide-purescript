@@ -9,6 +9,7 @@ import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
+import Atom.Grammar (GRAMMAR)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
@@ -101,6 +102,7 @@ type MainEff =
   , avar :: AVAR
   , err :: EXCEPTION
   , dom :: DOM
+  , grammar :: GRAMMAR
   )
 
 main :: _
@@ -182,7 +184,7 @@ main = do
             editor <- getActiveTextEditor atom.workspace
             maybe (pure unit) (useEditor modulesState) editor
 
-      Psci.init
+      Psci.activate
 
     deactivate :: Eff MainEff Unit
     deactivate = join (readRef deactivateRef)
