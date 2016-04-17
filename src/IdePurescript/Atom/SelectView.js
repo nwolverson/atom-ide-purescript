@@ -2,6 +2,41 @@
 
 var SelectListView = require('atom-space-pen-views').SelectListView;
 
+exports.selectListViewStaticInlineImpl = function(viewForItem, confirmed, filterKey, items) {
+  function PurescriptSelectListView() {
+    SelectListView.call(this);
+    this.addClass('overlay');
+    this.addClass('ps-inline-overlay');
+  }
+
+  PurescriptSelectListView.prototype = Object.create(SelectListView.prototype);
+  PurescriptSelectListView.prototype.viewForItem = viewForItem;
+  PurescriptSelectListView.prototype.show = function() {
+    list.storeFocusedElement();
+    var editor = atom.workspace.getActiveTextEditor()
+      , marker = editor.getLastCursor().getMarker();
+    this.panel = editor.decorateMarker(marker, { type: "overlay", position: "tail", item: this });
+    setTimeout(function() {
+      list.focusFilterEditor();
+    }, 20);
+  };
+  PurescriptSelectListView.prototype.confirmed = function(item) {
+    confirmed(item);
+    this.panel && this.panel.destroy();
+  };
+  PurescriptSelectListView.prototype.cancelled = function() {
+    this.panel && this.panel.destroy();
+  };
+  PurescriptSelectListView.prototype.getFilterKey = function() {
+    return filterKey;
+  };
+
+  var list = new PurescriptSelectListView();
+  list.setItems(items);
+  list.show();
+  return {};
+}
+
 exports.selectListViewStaticImpl = function(viewForItem, confirmed, filterKey, items) {
   function PurescriptSelectListView() {
     SelectListView.call(this);

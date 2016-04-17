@@ -1,4 +1,4 @@
-module IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic) where
+module IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewStaticInline, selectListViewDynamic) where
 
 import Prelude
 import Control.Monad.Eff (Eff)
@@ -26,6 +26,24 @@ selectListViewStatic :: forall eff a.
   Eff (dom :: DOM | eff) Unit
 selectListViewStatic viewForItem confirmed filterKey items =
   runEffFn4 selectListViewStaticImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) items
+
+foreign import selectListViewStaticInlineImpl :: forall eff a. EffFn4 (dom :: DOM | eff)
+  (a -> String)
+  (EffFn1 (dom :: DOM | eff) a Unit)
+  (Nullable String)
+  (Array a)
+  Unit
+
+selectListViewStaticInline :: forall eff a.
+  (a -> String) ->
+  (a -> Eff (dom :: DOM | eff) Unit) ->
+  Maybe String ->
+  (Array a) ->
+  Eff (dom :: DOM | eff) Unit
+selectListViewStaticInline viewForItem confirmed filterKey items =
+  runEffFn4 selectListViewStaticInlineImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) items
+
+
 
 foreign import selectListViewDynamicImpl :: forall eff a. EffFn6 (dom :: DOM | eff)
   (a -> String)
