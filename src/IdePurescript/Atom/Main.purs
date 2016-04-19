@@ -11,6 +11,7 @@ import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
 import Atom.Grammar (GRAMMAR)
 import Atom.NotificationManager (NOTIFY, addError)
+import Atom.Pane (PANE)
 import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
@@ -99,6 +100,7 @@ type MainEff =
   , editor :: EDITOR
   , net :: NET
   , workspace :: WORKSPACE
+  , pane :: PANE
   , avar :: AVAR
   , err :: EXCEPTION
   , dom :: DOM

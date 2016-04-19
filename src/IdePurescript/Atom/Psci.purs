@@ -8,10 +8,11 @@ import Atom.Editor (setText, getText, TextEditor, EDITOR, getSelectedText, moveT
 import Atom.Grammar (GRAMMAR)
 import Atom.GrammarRegistry (grammarForScopeName)
 import Atom.NotificationManager (addError, NOTIFY)
+import Atom.Pane (PANE, destroyItem)
 import Atom.Point (getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
-import Atom.Workspace (getActiveTextEditor, WORKSPACE, defaultOpenOptions, open, addOpener)
+import Atom.Workspace (getActiveTextEditor, WORKSPACE, defaultOpenOptions, open, addOpener, paneForItem)
 import Control.Monad.Aff (Aff, makeAff)
 import Control.Monad.Eff (whileE, Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -54,9 +55,12 @@ createElement' elt = do
 
 foreign import getModel :: forall eff. Element -> Eff (dom :: DOM | eff) (Nullable TextEditor)
 
+paneUri :: String
+paneUri = "purescript://psci"
+
 opener :: forall eff. String -> Eff (dom :: DOM | eff) (Nullable PscPane)
 opener s =
-  case indexOf "purescript://psci" s of
+  case indexOf paneUri s of
     Just 0 -> do
       div <- createElement' "div"
       setClassName "psci-pane" div
@@ -78,12 +82,13 @@ openPsci :: forall eff. Aff (ref :: REF, console :: CONSOLE, workspace :: WORKSP
 openPsci = makeAff \err cb -> do
   atom <- getAtom
   addOpener atom.workspace (unsafeCoerce opener)
-  open atom.workspace "purescript://psci" (defaultOpenOptions { split = "right", activatePane = false }) cb (err $ error "Can't Open PSCI")
+  open atom.workspace paneUri (defaultOpenOptions { split = "right", activatePane = false }) cb (err $ error "Can't Open PSCI")
 
 type PsciEff eff =
   ( ref :: REF
   , console :: CONSOLE
   , workspace :: WORKSPACE
+  , pane :: PANE
   , note :: NOTIFY
   , grammar :: GRAMMAR
   , editor :: EDITOR
@@ -206,7 +211,12 @@ activate = do
             closePsci e p
             writeRef psciRef Nothing
             writeRef paneRef Nothing
+            atomPane <- paneForItem atom.workspace e
+            case atomPane of
+              Just pp -> void $ destroyItem pp e
+              Nothing -> pure unit
           _, _ -> pure unit
+
 
   let runCmd c = do
         pane <- liftEff $ readRef paneRef
@@ -226,7 +236,7 @@ activate = do
 
   let cmd isEditor name action = addCommand atom.commands "atom-workspace" ("psci:"++name) (const action)
         where scope = if isEditor then "atom-text-editor" else "atom-workspace"
-  cmd false "open" $ open
+  cmd false "open" $ reset
   cmd true  "send-line" $ launchAffAndRaise $ runCmd sendLine
   cmd true  "send-selection" $ launchAffAndRaise $ runCmd sendSelection
   cmd true  "reset" $ reset
