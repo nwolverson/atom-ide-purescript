@@ -41,27 +41,27 @@ type AddImport =
 
 data SuggestionType = Module | Type | Function | Value
 
-getModuleSuggestions :: forall eff. String -> Aff (net :: P.NET | eff) (Array String)
-getModuleSuggestions prefix = do
-  list <- eitherToErr $ P.listAvailableModules
+getModuleSuggestions :: forall eff. Int -> String -> Aff (net :: P.NET | eff) (Array String)
+getModuleSuggestions port prefix = do
+  list <- eitherToErr $ P.listAvailableModules port
   return $ case list of
     (C.ModuleList lst) -> filter (\m -> indexOf prefix m == Just 0) lst
 
-getSuggestions :: forall eff. {
+getSuggestions :: forall eff. Int -> {
     line :: String,
     moduleInfo :: ModuleInfo
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
-getSuggestions { line, moduleInfo: { modules, getQualifiedModule } } =
+getSuggestions port { line, moduleInfo: { modules, getQualifiedModule } } =
   let moduleCompletion = indexOf "import" line == Just 0
 
   in case parsed of
     Just { mod, token } ->
       if moduleCompletion then do
         let prefix = getModuleName mod token
-        completions <- getModuleSuggestions prefix
+        completions <- getModuleSuggestions port prefix
         return $ map (modResult prefix) completions
       else do
-        completions <- getCompletion token mod moduleCompletion modules getQualifiedModule
+        completions <- getCompletion port token mod moduleCompletion modules getQualifiedModule
         return $ map (result mod token) completions
     Nothing -> return []
   where

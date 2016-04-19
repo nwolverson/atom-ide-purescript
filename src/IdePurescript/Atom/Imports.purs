@@ -37,17 +37,17 @@ launchAffAndRaise = runAff raiseError (const $ pure unit)
     atom <- getAtom
     addError atom.notifications (show e)
 
-addModuleImportCmd :: forall eff. Ref State -> Eff (AddModuleEff eff) Unit
-addModuleImportCmd modulesState = launchAffAndRaise do
-  modules <- getAvailableModules
-  liftEffI $ selectListViewStatic view (addImport modulesState) Nothing modules
+addModuleImportCmd :: forall eff. Int -> Ref State -> Eff (AddModuleEff eff) Unit
+addModuleImportCmd port modulesState = launchAffAndRaise do
+  modules <- getAvailableModules port
+  liftEffI $ selectListViewStatic view (addImport port modulesState) Nothing modules
   where
     view x = "<li>" ++ x ++ "</li>"
     liftEffI :: forall a. Eff (AddModuleEff eff) a -> Aff (AddModuleEff eff) a
     liftEffI = liftEff
 
-addExplicitImportCmd :: forall eff. Ref State -> Eff (AddModuleEff (command :: COMMAND | eff)) Unit
-addExplicitImportCmd modulesState = launchAffAndRaise do
+addExplicitImportCmd :: forall eff. Int -> Ref State -> Eff (AddModuleEff (command :: COMMAND | eff)) Unit
+addExplicitImportCmd port modulesState = launchAffAndRaise do
   atom <- liftEffM getAtom
   editor <- liftEffM $ getActiveTextEditor atom.workspace
   case editor of
@@ -55,23 +55,23 @@ addExplicitImportCmd modulesState = launchAffAndRaise do
       { line, col, pos, range } <- liftEffM $ getLinePosition ed
       promptText <- liftEffM $ maybe "" _.word <$> getToken ed pos
       res <- addPromptPanel "Identifier" promptText
-      maybe (pure unit) (addIdentImport modulesState Nothing) res
+      maybe (pure unit) (addIdentImport port modulesState Nothing) res
     Nothing -> pure unit
 
-addIdentImport :: forall eff. Ref State -> Maybe String -> String -> Aff (AddModuleEff eff) Unit
-addIdentImport modulesState moduleName ident = do
+addIdentImport :: forall eff. Int -> Ref State -> Maybe String -> String -> Aff (AddModuleEff eff) Unit
+addIdentImport port modulesState moduleName ident = do
   atom <- liftEffM $ getAtom
   editor <- liftEffM $ getActiveTextEditor atom.workspace
-  maybe (pure unit) (addIdentImport' modulesState moduleName ident) editor
+  maybe (pure unit) (addIdentImport' port modulesState moduleName ident) editor
 
-addIdentImport' :: forall eff. Ref State -> Maybe String -> String -> TextEditor -> Aff (AddModuleEff eff) Unit
-addIdentImport' modulesState moduleName ident editor = do
+addIdentImport' :: forall eff. Int -> Ref State -> Maybe String -> String -> TextEditor -> Aff (AddModuleEff eff) Unit
+addIdentImport' port modulesState moduleName ident editor = do
   text <- liftEffM $ getText editor
   path <- liftEffM $ getPath editor
   state <- liftEffM $ readRef modulesState
   case path of
     Just path' -> do
-      { state: newState, result: output} <- addExplicitImport state path' text moduleName ident
+      { state: newState, result: output} <- addExplicitImport state port path' text moduleName ident
       liftEffM $ writeRef modulesState newState
       liftEffM $ case output of
         UpdatedImports out -> do
@@ -84,16 +84,16 @@ addIdentImport' modulesState moduleName ident editor = do
   where
   runCompletion (Completion obj) = obj
   -- TODO nicer if we can make select view aff-ish
-  addImp { identifier, "module'": m } = launchAffAndRaise $ addIdentImport modulesState (Just m) identifier
+  addImp { identifier, "module'": m } = launchAffAndRaise $ addIdentImport port modulesState (Just m) identifier
   view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
 
-addSuggestionImport :: forall r eff. Ref State -> { editor :: TextEditor, suggestion :: C.AtomSuggestion | r } -> Aff (AddModuleEff eff) Unit
-addSuggestionImport modulesState { editor, suggestion: { addImport: Just { mod, identifier, qualifier: Nothing } } } =
-  addIdentImport' modulesState (Just mod) identifier editor
-addSuggestionImport _ _ = pure unit
+addSuggestionImport :: forall r eff. Int -> Ref State -> { editor :: TextEditor, suggestion :: C.AtomSuggestion | r } -> Aff (AddModuleEff eff) Unit
+addSuggestionImport port modulesState { editor, suggestion: { addImport: Just { mod, identifier, qualifier: Nothing } } } =
+  addIdentImport' port modulesState (Just mod) identifier editor
+addSuggestionImport _ _ _ = pure unit
 
-addImport :: forall eff. Ref State -> String -> Eff (ImportEff eff) Unit
-addImport modulesState moduleName = do
+addImport :: forall eff. Int -> Ref State -> String -> Eff (ImportEff eff) Unit
+addImport port modulesState moduleName = do
   atom <- getAtom
   maybeEditor <- getActiveTextEditor atom.workspace
   state <- readRef modulesState
@@ -105,7 +105,7 @@ addImport modulesState moduleName = do
       case path of
         Just path' ->
           launchAffAndRaise $ do
-            output <- addModuleImport state path' text moduleName
+            output <- addModuleImport state port path' text moduleName
             liftEff $ maybe (pure unit) (void <<< setText editor <<< _.result) output
         Nothing -> pure unit
 

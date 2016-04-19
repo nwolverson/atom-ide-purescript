@@ -28,8 +28,8 @@ type PursuitEff eff = (dom :: DOM
     , fs :: FS
     | eff)
 
-pursuitSearch :: forall eff. Eff (LocalEff eff) Unit
-pursuitSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") getPursuitCompletion 1000
+pursuitSearch :: forall eff. Int -> Eff (LocalEff eff) Unit
+pursuitSearch port = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") (getPursuitCompletion port) 1000
   where
   view {identifier, "type": ty, "module": mod, package} =
      "<li class='two-lines'>"
@@ -37,8 +37,8 @@ pursuitSearch = selectListViewDynamic view (\x -> log x.identifier) Nothing (con
      ++ "<div class='secondary-line'>" ++ mod ++ " (" ++ package ++ ")</div>"
      ++ "</li>"
 
-pursuitSearchModule :: forall eff. Ref State -> Eff (PursuitEff eff) Unit
-pursuitSearchModule modulesState = selectListViewDynamic view importDialog (Just "module") id getPursuitModuleCompletion 1000
+pursuitSearchModule :: forall eff. Int -> Ref State -> Eff (PursuitEff eff) Unit
+pursuitSearchModule port modulesState = selectListViewDynamic view importDialog (Just "module") id (getPursuitModuleCompletion port) 1000
   where
   view {"module": mod, package} =
      "<li class='two-lines'>"
@@ -49,16 +49,16 @@ pursuitSearchModule modulesState = selectListViewDynamic view importDialog (Just
   importDialog {"module": mod} = selectListViewStatic textView (doImport mod) Nothing ["Import module", "Cancel"]
     where
     textView x = "<li>" ++ x ++ "</li>"
-    doImport mod x = when (x == "Import module") $ addImport modulesState mod
+    doImport mod x = when (x == "Import module") $ addImport port modulesState mod
 
-localSearch ::forall eff. Ref State -> Eff (LocalEff (ref :: REF | eff)) Unit
-localSearch modulesState = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
+localSearch ::forall eff. Int -> Ref State -> Eff (LocalEff (ref :: REF | eff)) Unit
+localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
   where
   search text = do
     state <- liftEff $ readRef modulesState
-    modules <- getLoadedModules
+    modules <- getLoadedModules port
     let getQualifiedModule = (flip getQualModule) state
-    getCompletion text "" false modules getQualifiedModule
+    getCompletion port text "" false modules getQualifiedModule
 
   view {identifier, "type": ty, "module": mod} =
      "<li class='two-lines'>"

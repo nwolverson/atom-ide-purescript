@@ -1,6 +1,7 @@
 module IdePurescript.Atom.QuickFixes (showQuickFixes) where
 
 import Prelude
+import Atom.Config (CONFIG)
 import Atom.Editor (EDITOR, TextEditor, getCursorBufferPosition, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY)
 import Atom.Range (containsPoint)
@@ -29,6 +30,7 @@ type QuickFixEff a =
   , net :: NET
   , note :: NOTIFY
   , workspace :: WORKSPACE
+  , config :: CONFIG
   , fs :: FS
   , ref :: REF | a)
 

@@ -21,12 +21,12 @@ import PscIde (NET)
 foreign import data TooltipProvider :: *
 foreign import mkTooltipProvider :: forall eff a. EffFn1 eff (EffFn1 eff {line :: Int, column :: Int} (Promise a)) TooltipProvider
 
-registerTooltips :: forall eff. Ref (Modules.State) -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
-registerTooltips ref = do
+registerTooltips :: forall eff. Int -> Ref (Modules.State) -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
+registerTooltips port ref = do
   void $ runEffFn1 mkTooltipProvider (mkEffFn1 \{line,column} -> do
     state <- readRef ref
     let point = mkPoint (line-1) (column-1)
-    getTooltips state point)
+    getTooltips port state point)
 
 getToken :: forall eff. TextEditor -> Point -> Eff (editor :: EDITOR | eff) (Maybe { word :: String, range :: Range, qualifier :: Maybe String })
 getToken e pos = do
@@ -51,9 +51,9 @@ getToken e pos = do
                     Just { word : s++s', range : wordRange (length s) (length s'), qualifier }
               _ -> Nothing
 
-getTooltips :: forall eff. Modules.State -> Point
+getTooltips :: forall eff. Int -> Modules.State -> Point
   -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET | eff) (Promise { valid :: Boolean, info :: String })
-getTooltips state pos = do
+getTooltips port state pos = do
   atom <- getAtom
   editor <- getActiveTextEditor atom.workspace
   fromAff $ case editor of
@@ -62,7 +62,7 @@ getTooltips state pos = do
       case r of
         Just { word, qualifier } -> do
           let prefix = maybe "" id qualifier
-          ty <- getType word prefix (Modules.getUnqualActiveModules state $ Just word) (flip Modules.getQualModule $ state)
+          ty <- getType port word prefix (Modules.getUnqualActiveModules state $ Just word) (flip Modules.getQualModule $ state)
           pure { valid: length ty > 0, info: ty }
         _ -> pure { valid: false, info: "" }
     _ -> pure { valid: false, info: "" }
