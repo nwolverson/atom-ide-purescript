@@ -85,7 +85,7 @@ lint file config projdir linter statusElt = do
   port <- liftEffA getPscIdePort
 
   isFastBuild <- liftEffA $ readBoolean <$> getConfig config "ide-purescript.fastRebuild"
-  let fastBuild :: Maybe (Aff _ BuildResult)
+  let fastBuild :: Maybe (Aff (LintEff eff) BuildResult)
       fastBuild = case isFastBuild, file of
         Right true, Just fileName -> Just $ rebuild port fileName
         _, _ -> Nothing
