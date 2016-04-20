@@ -31,14 +31,14 @@ import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Array (length)
 import Data.Either (either, Either(..))
-import Data.Foreign (readInt, readBoolean)
+import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn1)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.String (contains)
 import IdePurescript.Atom.Assist (fixTypo, addClause, caseSplit)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
-import IdePurescript.Atom.Config (config)
+import IdePurescript.Atom.Config (getPscIdePort, config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
@@ -109,13 +109,7 @@ type MainEff =
   , grammar :: GRAMMAR
   )
 
-getPscIdePort :: forall eff. Eff (config :: CONFIG | eff) Int
-getPscIdePort = do
-  atom <- getAtom
-  port' <- readInt <$> getConfig atom.config "ide-purescript.pscIdePort"
-  pure $ either (const 4242) id port'
-
-main :: _
+main :: Eff MainEff Foreign
 main = do
   atom <- getAtom
   linterIndieRef <- newRef (Nothing :: Maybe LinterIndie)
@@ -126,15 +120,15 @@ main = do
   buildStatusRef <- newRef (Nothing :: Maybe Element)
 
   let
-    doLint :: Eff MainEff Unit
-    doLint = do
+    doLint :: (Maybe String) -> Eff MainEff Unit
+    doLint file = do
       root <- getProjectRoot
       linterIndie <- readRef linterIndieRef
       statusElt <- readRef buildStatusRef
       port <- getPscIdePort
       case { root, linterIndie, statusElt } of
         { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> runAff raiseError ignoreError $ do
-          messages <- lint atom.config root' linterIndie' statusElt'
+          messages <- lint file atom.config root' linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
           P.load port [] []
           editor <- liftEff $ getActiveTextEditor atom.workspace
@@ -156,7 +150,7 @@ main = do
       port <- getPscIdePort
 
       let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
-      cmd "build" doLint
+      cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
       cmd "pursuit-search" $ pursuitSearch port
       cmd "pursuit-search-modules" $ pursuitSearchModule port modulesState
@@ -176,7 +170,7 @@ main = do
             useEditor modulesState editor
             onDidSave editor (\_ -> do
               buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-              when (either (const false) id $ readBoolean buildOnSave) doLint -- TODO: Check if file is in project
+              when (either (const false) id $ readBoolean buildOnSave) (doLint path)-- TODO: Check if file is in project
             )
           _ -> pure unit
       )
@@ -202,7 +196,7 @@ main = do
     deactivate :: Eff MainEff Unit
     deactivate = join (readRef deactivateRef)
 
-  pure
+  pure $ toForeign
     { config
     , activate: mkEffFn1 \_ -> activate
     , deactivate: mkEffFn1 \_ -> deactivate

@@ -1,17 +1,16 @@
 module IdePurescript.Atom.Build where
 
+import Prelude
 import Control.Monad.Aff (Aff)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import IdePurescript.Build (Command(..), build)
-import IdePurescript.PscErrors (Position)
-import Prelude (($), (++), pure, (<$>), (-), bind)
+import IdePurescript.Build (BuildResult, Command(..), build)
+import IdePurescript.PscErrors (PscError(PscError), Position)
 
 -- This is really the same type but I'm using different fields
 type AtomLintTraceMessage =
   { "type" :: String
   , html :: String
   }
-
 
 type AtomLintMessage =
   { "type" :: String
@@ -35,12 +34,15 @@ type LintResult =
   , messages :: Array AtomLintMessage
   }
 
-linterBuild :: { command :: String, args :: Array String, directory :: String } -> Aff _ LintResult
-linterBuild {command,args,directory} = do
-  res <- build { command: Command command args, directory }
+linterBuild :: { command :: String, args :: Array String, directory :: String } -> Aff _ BuildResult
+linterBuild { command, args, directory } =
+  build { command: Command command args, directory }
+
+toLintResult :: BuildResult -> LintResult
+toLintResult res =
   let warnings = result "Warning" <$> res.errors.warnings
       errors = result "Error" <$> res.errors.errors
-  pure {
+  in {
     messages: errors ++ warnings
   , result: resultToString $ if res.success then Success else Errors
   }
@@ -50,7 +52,7 @@ linterBuild {command,args,directory} = do
   range (Just {startLine, startColumn, endLine, endColumn}) =
     [[startLine-1, startColumn-1], [endLine-1, endColumn-1]]
 
-  result errorType {message,filename,position,errorLink,errorCode,suggestion} =
+  result errorType (PscError {message,filename,position,errorLink,errorCode,suggestion}) =
     {
       "type": errorType
     , text: message

@@ -1,13 +1,25 @@
-module IdePurescript.Atom.Config (config) where
+module IdePurescript.Atom.Config (config, getPscIdePort) where
 
-import Prelude((++),(==))
+import Prelude
 import Node.Process as P
+import Atom.Atom (getAtom)
+import Atom.Config (getConfig, CONFIG)
+import Control.Monad.Eff (Eff)
+import Data.Either (either)
+import Data.Foreign (readInt, toForeign, Foreign)
 import Node.Platform (Platform(Win32))
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
 
-config =
+getPscIdePort :: forall eff. Eff (config :: CONFIG | eff) Int
+getPscIdePort = do
+  atom <- getAtom
+  port' <- readInt <$> getConfig atom.config "ide-purescript.pscIdePort"
+  pure $ either (const 4242) id port'
+
+config :: Foreign
+config = toForeign
   { pscIdePort:
     { title: "psc-ide port number"
     , description: "The port to use to communicate with `psc-ide-server`, also to launch the server with if required. "
@@ -22,7 +34,7 @@ config =
     , default: "psc-ide-server"
     }
   , buildCommand:
-    { title: "build command"
+    { title: "Build command"
     , description: "Command line to build the project. "
         ++ "Could be pulp (default), psc or a gulpfile, so long as it passes through errors from psc. "
         ++ "Should output json errors (`--json-errors` flag). "
@@ -32,8 +44,14 @@ config =
     , default: pulpCmd ++ " build --no-psa --json-errors"
     }
   , buildOnSave:
-    { title: "build on save"
+    { title: "Build on save"
     , description: "Build automatically on save. Enables in-line and collected errors. Otherwise a build command is available to be invoked manually."
+    , type: "boolean"
+    , default: true
+    }
+  , fastRebuild:
+    { title: "Use fast rebuild"
+    , description: "Use psc-ide-server rebuild function to build the current file only on save"
     , type: "boolean"
     , default: true
     }
