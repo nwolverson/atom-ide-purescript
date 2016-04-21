@@ -53,7 +53,7 @@ config = toForeign
     { title: "Use fast rebuild"
     , description: "Use psc-ide-server rebuild function to build the current file only on save"
     , type: "boolean"
-    , default: true
+    , default: false
     }
   , psciCommand:
     { title: "psci command (eg 'psci' or 'pulp psci' or full path)"
