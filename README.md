@@ -63,8 +63,9 @@ Command available from the command palette:
 
 ![PSCI window](http://nwolverson.github.io/atom-ide-purescript/assets/psci.png)
 
-Basic PSCI REPL integration (runs `pulp psci`). A *read-only* buffer which displays
-PSCI output, input can be sent from the current buffer by line or selection.
+Basic PSCI REPL integration (runs `pulp psci`). Comprises a read-only pane which displays
+PSCI output, and an input field to send expressions to the REPL (just hitting enter). Input 
+can be sent from the current buffer by line or selection.
 
 Command from the command palette:
   * PSCI: Open - open a PSCI buffer
