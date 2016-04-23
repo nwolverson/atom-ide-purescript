@@ -4,16 +4,16 @@ import Prelude
 import Atom.Config (CONFIG)
 import Atom.Editor (EDITOR, TextEditor, getCursorBufferPosition, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY)
-import Atom.Range (containsPoint)
+import Atom.Point (mkPoint)
+import Atom.Range (mkRange, containsPoint)
 import Atom.Workspace (WORKSPACE)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Ref (REF, Ref)
 import DOM (DOM)
-import Data.Array (catMaybes, filterM)
+import Data.Array (mapMaybe, filterM)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Nullable (toMaybe)
-import Data.Traversable (traverse)
 import IdePurescript.Atom.Assist (fixTypo)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.Hooks.Linter (LINTER, getMarkerBufferRange, getMessages, getEditorLinter, LinterInternal)
@@ -40,7 +40,7 @@ showQuickFixes modulesState editor linterMain messages = do
   editorLinter <- getEditorLinter linterMain editor
   messages <- getMessages editorLinter
   messages' <- filterM (inRange editorLinter pos) messages
-  fixes <- catMaybes <$> traverse (getFix editorLinter) messages'
+  let fixes = mapMaybe (getFix editorLinter) messages'
   selectListViewStaticInline view applyFix Nothing fixes
 
   where
@@ -48,9 +48,12 @@ showQuickFixes modulesState editor linterMain messages = do
       range <- toMaybe <$> getMarkerBufferRange editorLinter message
       pure $ maybe false (\r -> containsPoint r point) range
 
-    getFix editorLinter message@{suggestion : { hasSuggestion: true, replacement }, errorCode } = do
-      range <- toMaybe <$> getMarkerBufferRange editorLinter message
-      pure $ maybe Nothing getFix' range
+    getFix editorLinter message@{suggestion : { hasSuggestion: true, replacement, range }, errorCode } = do
+      -- range <- toMaybe <$> getMarkerBufferRange editorLinter message
+
+      case range of
+        [ [r, c], [r', c'] ] -> getFix' $ mkRange (mkPoint r c) (mkPoint r' c')
+        _ -> Nothing
       where
         getFix' range = Just
           { title: getTitle errorCode
@@ -72,9 +75,9 @@ showQuickFixes modulesState editor linterMain messages = do
       errorCode == "UnknownType" ||
       errorCode == "UnknownDataConstructor" ||
       errorCode == "UnknownTypeConstructor"
-      = pure $ Just { title: "Fix typo", action: fixTypo modulesState }
+      = Just { title: "Fix typo", action: fixTypo modulesState }
 
-    getFix _ _ = pure Nothing
+    getFix _ _ = Nothing
 
     view { title } = "<li>" ++ title ++ "</li>"
     applyFix { action } = action
