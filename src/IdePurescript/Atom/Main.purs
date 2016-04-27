@@ -145,10 +145,28 @@ main = do
         { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes modulesState e l messages
         _ -> pure unit
 
+    restartPscIdeServer :: Eff MainEff Unit
+    restartPscIdeServer = do
+      join $ readRef deactivateRef
+      startPscIdeServer
+
+    startPscIdeServer :: Eff MainEff Unit
+    startPscIdeServer =
+      runAff
+        (\_ -> log "Error starting server")
+        ignoreError
+        do
+          port <- liftEff $ getPscIdePort
+          deact <- startServer
+          liftEff $ writeRef deactivateRef deact
+          P.load port [] []
+          liftEff $ do
+            editor <- getActiveTextEditor atom.workspace
+            maybe (pure unit) (useEditor modulesState) editor
+
     activate :: Eff MainEff Unit
     activate = do
       port <- getPscIdePort
-
       let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
@@ -160,6 +178,7 @@ main = do
       cmd "case-split" caseSplit
       cmd "add-clause" addClause
       cmd "fix-typo" $ fixTypo modulesState
+      cmd "restart-psc-ide" $ restartPscIdeServer
 
       installDependencies
 
@@ -180,16 +199,7 @@ main = do
       )
 
       registerTooltips port modulesState
-      runAff
-        (\_ -> log "Error starting server")
-        ignoreError
-        do
-          deact <- startServer
-          liftEff $ writeRef deactivateRef deact
-          P.load port [] []
-          liftEff $ do
-            editor <- getActiveTextEditor atom.workspace
-            maybe (pure unit) (useEditor modulesState) editor
+      startPscIdeServer
 
       Psci.activate
 

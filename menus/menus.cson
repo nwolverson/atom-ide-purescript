@@ -96,6 +96,10 @@
           'label': 'PSCI: Send Selection'
           'command': 'psci:send-selection'
         }
+        {
+          'label': 'Restart psc-ide-server'
+          'command': 'purescript:restart-psc-ide'
+        }
       ]
     ]
 
