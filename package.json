@@ -44,7 +44,8 @@
     "atom-package-deps": "^4.0.1",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "hover-tooltips": "^0.5.0"
+    "hover-tooltips": "^0.5.0",
+    "which": "^1.2.4"
   },
   "package-deps": [
     "linter",

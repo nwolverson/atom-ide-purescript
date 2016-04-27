@@ -50,6 +50,7 @@ import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearc
 import IdePurescript.Atom.Tooltips (registerTooltips)
 import IdePurescript.Modules (State, getQualModule, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
 import IdePurescript.PscIde (loadDeps, getLoadedModules)
+import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import PscIde (NET)
@@ -94,6 +95,7 @@ type MainEff =
   , note :: NOTIFY
   , project :: PROJECT
   , fs :: FS
+  , buffer :: BUFFER
   , ref :: REF
   , cp :: CHILD_PROCESS
   , console :: CONSOLE
