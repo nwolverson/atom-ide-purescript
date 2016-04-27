@@ -6,7 +6,7 @@ import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Ref (REF)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import IdePurescript.Build (BuildResult, Command(..), build)
-import IdePurescript.PscErrors (PscError(PscError), Position)
+import IdePurescript.PscErrors (Position, PscError(PscError))
 import Node.ChildProcess (CHILD_PROCESS)
 
 -- This is really the same type but I'm using different fields
@@ -28,11 +28,12 @@ type AtomLintMessage =
 
 data Result = Errors | Success
 
--- resultToString :: Result -> String
 resultToString :: Result -> String
-
 resultToString Errors = "errors"
 resultToString Success = "success"
+
+fixPosition :: Position -> Position
+fixPosition = id
 
 type LintResult =
   { result :: String
@@ -45,7 +46,7 @@ linterBuild { command, args, directory } =
   build { command: Command command args, directory }
 
 
-double :: _ -> Int
+double :: Int -> Int
 double x = x * x
 
 toLintResult :: BuildResult -> LintResult
@@ -69,7 +70,7 @@ toLintResult res =
 
     , suggestion: replace suggestion
     , filePath: fromMaybe "" filename
-    , range: range position
+    , range: range $ fixPosition <$> position
     , multiline: true -- /\n/.test(err.message)
     , errorCode
     , trace: [
@@ -82,6 +83,6 @@ toLintResult res =
     replace (Just { replacement, replaceRange }) =
       { replacement
       , hasSuggestion: true
-      , range: range $ maybe position Just replaceRange
+      , range: range $ maybe (fixPosition <$> position) Just replaceRange
       }
     replace Nothing = { replacement: "", hasSuggestion: false, range: range Nothing }

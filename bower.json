@@ -21,7 +21,8 @@
     "purescript-aff-promise": "^0.0.1",
     "purescript-ide-purescript-core": "^0.4.0",
     "purescript-node-fs-aff": "^0.6.0",
-    "purescript-dom": "^0.2.20"
+    "purescript-dom": "^0.2.20",
+    "purescript-psa": "https://github.com/natefaubion/purescript-psa.git#^0.3.7"
   },
   "resolutions": {
     "purescript-argonaut": "^0.12.0",
