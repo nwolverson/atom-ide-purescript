@@ -20,12 +20,13 @@ import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.Foreign (readInt, readString)
 import Data.Functor ((<$))
-import Data.Maybe (maybe, Maybe(..))
+import Data.Maybe (Maybe(Just, Nothing), maybe, fromMaybe)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS, defaultExecOptions, execFile)
 import Node.Encoding (Encoding(UTF8))
 import Node.FS (FS)
+import Node.Process (PROCESS, lookupEnv)
 import Node.Which (which)
 import PscIde (NET)
 
@@ -34,6 +35,7 @@ type ServerEff e = ( project :: PROJECT
                    , net :: NET
                    , fs :: FS
                    , config :: CONFIG
+                   , process :: PROCESS
                    , cp :: CHILD_PROCESS
                    , console :: CONSOLE
                    , avar ::AVAR
@@ -49,10 +51,12 @@ startServer = do
   serverRaw <- liftEffS $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
   case { portRaw, serverRaw, path } of
     { portRaw: Right port, serverRaw: Right exe, path: Just path' } -> do
-        serverBins <- which exe
+        serverBins <- which exe <|> pure []
         case head serverBins of
           Nothing -> do
-            liftEff $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: " ++ exe
+            processPath <- liftEff $ lookupEnv "PATH"
+            liftEff $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: "
+              ++ exe ++ " in PATH: " ++ fromMaybe "" processPath
             pure $ pure unit
           Just bin -> do
             liftEff $ log $ "Resolved psc-ide-server:"

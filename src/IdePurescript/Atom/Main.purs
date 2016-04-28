@@ -53,6 +53,7 @@ import IdePurescript.PscIde (loadDeps, getLoadedModules)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
+import Node.Process (PROCESS)
 import PscIde (NET)
 
 getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
@@ -98,6 +99,7 @@ type MainEff =
   , buffer :: BUFFER
   , ref :: REF
   , cp :: CHILD_PROCESS
+  , process :: PROCESS
   , console :: CONSOLE
   , config :: CONFIG
   , linter :: LINTER
