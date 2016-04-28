@@ -7,6 +7,7 @@ import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Atom.NotificationManager (addWarning, NOTIFY, addError, addSuccess, addInfo)
 import Atom.Project (PROJECT)
+import Control.Alt ((<|>))
 import Control.Monad (when)
 import Control.Monad.Aff (makeAff, Aff, launchAff)
 import Control.Monad.Aff.AVar (AVAR)
@@ -54,7 +55,7 @@ startServer = do
           Just bin -> do
             liftEff $ log $ "Resolved psc-ide-server:"
             traverse_ (\x -> do
-              v <- getVersion exe
+              v <- getVersion x <|> pure "Error getting version"
               liftEff $ log $ x ++ ": " ++ v) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " ++ bin
             res <- P.startServer bin port path'
