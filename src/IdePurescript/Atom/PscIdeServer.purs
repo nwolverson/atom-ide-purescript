@@ -51,7 +51,9 @@ startServer = do
     { portRaw: Right port, serverRaw: Right exe, path: Just path' } -> do
         serverBins <- which exe
         case head serverBins of
-          Nothing -> pure $ pure unit
+          Nothing -> do
+            liftEff $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: " ++ exe
+            pure $ pure unit
           Just bin -> do
             liftEff $ log $ "Resolved psc-ide-server:"
             traverse_ (\x -> do
