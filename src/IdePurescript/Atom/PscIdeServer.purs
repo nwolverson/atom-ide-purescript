@@ -2,14 +2,12 @@ module IdePurescript.Atom.PscIdeServer where
 
 import Prelude
 import IdePurescript.PscIdeServer as P
-import Node.Buffer as Buffer
 import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Atom.NotificationManager (addWarning, NOTIFY, addError, addSuccess, addInfo)
 import Atom.Project (PROJECT)
-import Control.Alt ((<|>))
 import Control.Monad (when)
-import Control.Monad.Aff (makeAff, Aff, launchAff)
+import Control.Monad.Aff (Aff, launchAff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -20,15 +18,14 @@ import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.Foreign (readInt, readString)
 import Data.Functor ((<$))
-import Data.Maybe (Maybe(Just, Nothing), maybe, fromMaybe)
+import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import Node.Buffer (BUFFER)
-import Node.ChildProcess (CHILD_PROCESS, defaultExecOptions, execFile)
-import Node.Encoding (Encoding(UTF8))
+import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import Node.Process (PROCESS, lookupEnv)
-import Node.Which (which)
 import PscIde (NET)
+import PscIde.Server (findBins, Executable(Executable))
 
 type ServerEff e = ( project :: PROJECT
                    , note :: NOTIFY
@@ -43,7 +40,8 @@ type ServerEff e = ( project :: PROJECT
 
 -- | Start a psc-ide server instance, or find one already running on the right path.
 -- | Returns an Eff that can be evaluated to close the server later.
-startServer :: forall eff eff'. Aff (ServerEff eff) (Eff (err :: EXCEPTION, net :: NET, cp :: CHILD_PROCESS | eff') Unit)
+startServer :: forall eff eff'. Aff (ServerEff eff)
+  (Eff (err :: EXCEPTION, net :: NET, cp :: CHILD_PROCESS | eff') Unit)
 startServer = do
   atom <- liftEffS getAtom
   path <- liftEffS getProjectRoot
@@ -51,18 +49,17 @@ startServer = do
   serverRaw <- liftEffS $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
   case { portRaw, serverRaw, path } of
     { portRaw: Right port, serverRaw: Right exe, path: Just path' } -> do
-        serverBins <- which exe <|> pure []
+        serverBins <- findBins exe
         case head serverBins of
           Nothing -> do
-            processPath <- liftEff $ lookupEnv "PATH"
-            liftEff $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: "
+            processPath <- liftEffS $ lookupEnv "PATH"
+            liftEffS $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: "
               ++ exe ++ " in PATH: " ++ fromMaybe "" processPath
             pure $ pure unit
-          Just bin -> do
+          Just (Executable bin _) -> do
             liftEff $ log $ "Resolved psc-ide-server:"
-            traverse_ (\x -> do
-              v <- getVersion x <|> pure "Error getting version"
-              liftEff $ log $ x ++ ": " ++ v) serverBins
+            traverse_ (\(Executable x vv) -> do
+              liftEff $ log $ x ++ ": " ++ fromMaybe "ERROR" vv) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " ++ bin
             res <- P.startServer bin port path'
             childProc <- liftEff $ case res of
@@ -78,8 +75,3 @@ startServer = do
 
   where liftEffS :: forall a. Eff (ServerEff eff) a -> Aff (ServerEff eff) a
         liftEffS = liftEff
-
-getVersion :: forall eff. String -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS | eff) String
-getVersion exe = makeAff $ \err succ ->
-  execFile exe ["--version"] defaultExecOptions \({error, stdout}) -> do
-    maybe (Buffer.readString UTF8 0 100 stdout >>= succ) err error
