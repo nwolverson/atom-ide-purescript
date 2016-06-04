@@ -58,7 +58,7 @@ localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifi
     state <- liftEff $ readRef modulesState
     modules <- getLoadedModules port
     let getQualifiedModule = (flip getQualModule) state
-    getCompletion port text "" false modules getQualifiedModule
+    getCompletion port text state.main "" false modules getQualifiedModule
 
   view {identifier, "type": ty, "module": mod} =
      "<li class='two-lines'>"

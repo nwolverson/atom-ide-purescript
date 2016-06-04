@@ -14,7 +14,7 @@ import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error)
-import Control.Monad.Eff.Ref (REF, Ref)
+import Control.Monad.Eff.Ref (REF, Ref, readRef)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import DOM (DOM)
 import Data.Either (either)
@@ -102,7 +102,8 @@ fixTypo modulesState = do
     ed :: TextEditor <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
     { line, col, pos, range } <- lift $ liftEff'' $ getLinePosition ed
     { word, range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
-    corrections <- lift $ eitherToErr (P.suggestTypos port word 2)
+    state <- lift $ liftEff'' $ readRef modulesState
+    corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main)
     liftEff $ selectListViewStatic view (replaceTypo port ed wordRange) Nothing (runCompletion <$> corrections)
     where
       runCompletion (Completion obj) = obj

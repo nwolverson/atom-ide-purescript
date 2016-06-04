@@ -67,7 +67,7 @@ getSuggestions state ({editor, bufferPosition, activatedManually}) = Promise.fro
   let autoCompleteAllModules = either (const false) id $ readBoolean configRaw
   modules <- if activatedManually || autoCompleteAllModules then getLoadedModules port else pure $ getUnqualActiveModules state Nothing
   let getQualifiedModule = (flip getQualModule) state
-  C.getSuggestions port { line, moduleInfo: { modules, getQualifiedModule }}
+  C.getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule: state.main }}
   where
   raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Array C.AtomSuggestion)
   raiseError' x e = do

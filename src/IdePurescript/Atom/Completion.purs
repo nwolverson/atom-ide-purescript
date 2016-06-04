@@ -15,6 +15,7 @@ import PscIde
 type ModuleInfo =
   { modules :: Array String
   , getQualifiedModule :: String -> Array String
+  , mainModule :: Maybe String
   }
 
 moduleRegex :: Regex
@@ -51,7 +52,7 @@ getSuggestions :: forall eff. Int -> {
     line :: String,
     moduleInfo :: ModuleInfo
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
-getSuggestions port { line, moduleInfo: { modules, getQualifiedModule } } =
+getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule } } =
   let moduleCompletion = indexOf "import" line == Just 0
 
   in case parsed of
@@ -61,7 +62,7 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule } } =
         completions <- getModuleSuggestions port prefix
         return $ map (modResult prefix) completions
       else do
-        completions <- getCompletion port token mod moduleCompletion modules getQualifiedModule
+        completions <- getCompletion port token mainModule mod moduleCompletion modules getQualifiedModule
         return $ map (result mod token) completions
     Nothing -> return []
   where
