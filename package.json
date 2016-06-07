@@ -37,7 +37,7 @@
   "scripts": {
     "prepublish": "npm run bundle",
     "build": "pulp build",
-    "bundle": "pulp build --no-psa --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
+    "bundle": "pulp build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
     "atom-linter": "^3.0.0",
