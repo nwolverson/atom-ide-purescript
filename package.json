@@ -35,7 +35,7 @@
     "atom": ">=1.0.0 <2.0.0"
   },
   "scripts": {
-    "prepublish": "npm run bundle",
+    "prepublish": "bower install && npm run bundle",
     "build": "pulp build",
     "bundle": "pulp build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
