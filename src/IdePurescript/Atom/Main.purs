@@ -2,6 +2,7 @@ module IdePurescript.Atom.Main where
 
 import Prelude
 import Control.Promise as Promise
+import Data.StrMap as StrMap
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Psci as Psci
 import PscIde as P
@@ -22,26 +23,30 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
+import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, newRef)
 import Control.Monad.Error.Class (catchError)
 import Control.Promise (Promise)
 import DOM (DOM)
 import DOM.Node.Types (Element)
-import Data.Array (length)
-import Data.Either (either, Either(..))
+import Data.Array (catMaybes, length)
+import Data.Either (either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn1)
-import Data.Maybe (Maybe(Just, Nothing), maybe)
+import Data.Maybe (maybe, Maybe(Just, Nothing))
+import Data.StrMap (lookup, empty)
 import Data.String (contains)
+import Data.Traversable (for, sequence)
+import Data.Tuple (Tuple(Tuple))
 import IdePurescript.Atom.Assist (fixTypo, addClause, caseSplit)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
-import IdePurescript.Atom.Config (getPscIdePort, config)
+import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addSuggestionImport, addExplicitImportCmd, addModuleImportCmd)
-import IdePurescript.Atom.LinterBuild (lint, getProjectRoot)
+import IdePurescript.Atom.LinterBuild (getProjectRoots, lint, getRoot)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
@@ -54,13 +59,12 @@ import Node.FS (FS)
 import Node.Process (PROCESS)
 import PscIde (NET)
 
-getSuggestions :: forall eff. State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
+getSuggestions :: forall eff. Int -> State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
   -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Promise (Array C.AtomSuggestion))
-getSuggestions state ({editor, bufferPosition, activatedManually}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
+getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
   line <- liftEff'' $ getTextInRange editor range
   atom <- liftEff'' getAtom
-  port <- liftEff'' getPscIdePort
   configRaw <- liftEff'' $ getConfig atom.config "ide-purescript.autocomplete.allModules"
   let autoCompleteAllModules = either (const false) id $ readBoolean configRaw
   modules <- if activatedManually || autoCompleteAllModules then getLoadedModules port else pure $ getUnqualActiveModules state Nothing
@@ -74,11 +78,11 @@ getSuggestions state ({editor, bufferPosition, activatedManually}) = Promise.fro
   liftEff'' :: forall a. Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a
   liftEff'' = liftEff
 
-useEditor :: forall eff. (Ref State) -> TextEditor -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
-useEditor modulesStateRef editor = do
+useEditor :: forall eff. Int -> (Ref State) -> TextEditor
+  -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
+useEditor port modulesStateRef editor = do
   path <- getPath editor
   text <- getText editor
-  port <- getPscIdePort
   let mainModule = getMainModule text
   case path, mainModule of
     Just path', Just m -> void $ runAff logError ignoreError $ do
@@ -87,6 +91,13 @@ useEditor modulesStateRef editor = do
       state <- getModulesForFile port path' text
       liftEff $ writeRef modulesStateRef state
       pure unit
+    _, _ -> pure unit
+
+useEditor' :: forall eff. (Ref State) -> Maybe Int -> Maybe TextEditor
+  -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
+useEditor' modulesStateRef port editor = do
+  case port, editor of
+    Just port', Just editor' -> useEditor port' modulesStateRef editor'
     _, _ -> pure unit
 
 type MainEff =
@@ -109,6 +120,7 @@ type MainEff =
   , err :: EXCEPTION
   , dom :: DOM
   , grammar :: GRAMMAR
+  , random :: RANDOM
   )
 
 main :: Eff MainEff Foreign
@@ -118,25 +130,37 @@ main = do
   modulesState <- newRef (initialModulesState)
   messagesRef <- newRef ([] :: Array AtomLintMessage)
   linterInternalRef <- newRef (Nothing :: Maybe LinterInternal)
-  deactivateRef <- newRef (pure unit :: Eff MainEff Unit)
   buildStatusRef <- newRef (Nothing :: Maybe Element)
 
+  serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
+
   let
+
+    getPort :: String -> Eff MainEff (Maybe { root :: String, port :: Int })
+    getPort file = do
+      servers <- readRef serversRef
+      root <- getRoot file
+      pure $ case root of
+        Just root' ->
+          case lookup root' servers of
+            Just { port } -> Just { port, root: root' }
+            Nothing -> Nothing
+        Nothing -> Nothing
+
     doLint :: (Maybe String) -> Eff MainEff Unit
     doLint file = do
-      root <- getProjectRoot
       linterIndie <- readRef linterIndieRef
       statusElt <- readRef buildStatusRef
-      port <- getPscIdePort
-      case { root, linterIndie, statusElt } of
-        { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> void $ runAff raiseError ignoreError $ do
-          messages <- lint file atom.config root' linterIndie' statusElt'
+      portRes <- maybe (pure Nothing) getPort file
+      case portRes, linterIndie, statusElt of
+        -- TODO if no psc-ide port, should still be able to do FULL build
+        Just { port, root }, Just linterIndie', Just statusElt' -> void $ runAff raiseError ignoreError $ do
+          messages <- lint (Just port) file atom.config root linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
           P.load port [] []
           editor <- liftEff $ getActiveTextEditor atom.workspace
-          liftEff $ maybe (pure unit) (useEditor modulesState) editor
-          pure unit
-        _ -> pure unit
+          liftEff $ useEditor' modulesState (Just port) editor
+        _, _, _ -> pure unit
 
     quickFix :: Eff MainEff Unit
     quickFix = do
@@ -144,12 +168,12 @@ main = do
       editor <- getActiveTextEditor atom.workspace
       linter <- readRef linterInternalRef
       case { editor, linter, n: length messages } of
-        { editor: Just e, linter: Just l, n } | n > 0 -> showQuickFixes modulesState e l messages
+        { editor: Just e, linter: Just l, n } | n > 0 -> withPort \port -> showQuickFixes port modulesState e l messages
         _ -> pure unit
 
     restartPscIdeServer :: Eff MainEff Unit
     restartPscIdeServer = do
-      join $ readRef deactivateRef
+      deactivate
       startPscIdeServer
 
     startPscIdeServer :: Eff MainEff Unit
@@ -158,28 +182,46 @@ main = do
         (\_ -> log "Error starting server")
         ignoreError
         do
-          port <- liftEff $ getPscIdePort
-          deact <- startServer
-          liftEff $ writeRef deactivateRef deact
-          P.load port [] []
-          liftEff $ do
-            editor <- getActiveTextEditor atom.workspace
-            maybe (pure unit) (useEditor modulesState) editor
+          roots <- liftEff $ getProjectRoots
+          res <- for roots $ \root -> do
+            { port, quit } <- startServer root
+            maybe (pure unit) (\p -> void $ P.load p [] []) port
+            liftEff $ do
+              editor <- getActiveTextEditor atom.workspace
+              useEditor' modulesState port editor
+              registerTooltips getPortActiveEditor modulesState
+            pure $ maybe Nothing (\port' -> Just (Tuple root { port: port', quit })) port
+          liftEff $ writeRef serversRef $ StrMap.fromFoldable (catMaybes res)
+
+    getPortActiveEditor :: Eff MainEff (Maybe Int)
+    getPortActiveEditor = do
+      editor <- getActiveTextEditor atom.workspace
+      case editor of
+        Just ed -> do
+          file <- getPath ed
+          res <- maybe (pure Nothing) getPort file
+          pure (_.port <$> res)
+        Nothing -> pure Nothing
+
+    withPortDef :: forall a. Eff MainEff a -> (Int -> Eff MainEff a) -> Eff MainEff a
+    withPortDef def e = getPortActiveEditor >>= maybe def e
+
+    withPort :: (Int -> Eff MainEff Unit) -> Eff MainEff Unit
+    withPort = withPortDef (pure unit)
 
     activate :: Eff MainEff Unit
     activate = do
-      port <- getPscIdePort
       let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"<>name) (const action)
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
-      cmd "pursuit-search" $ pursuitSearch port
-      cmd "pursuit-search-modules" $ pursuitSearchModule port modulesState
-      cmd "add-module-import" $ addModuleImportCmd port modulesState
-      cmd "add-explicit-import" $ addExplicitImportCmd port modulesState
-      cmd "search" $ localSearch port modulesState
-      cmd "case-split" caseSplit
-      cmd "add-clause" addClause
-      cmd "fix-typo" $ fixTypo modulesState
+      cmd "pursuit-search" $ withPort pursuitSearch
+      cmd "pursuit-search-modules" $ withPort $ \port -> pursuitSearchModule port modulesState
+      cmd "add-module-import" $ withPort $ \port -> addModuleImportCmd port modulesState
+      cmd "add-explicit-import" $ withPort $ \port -> addExplicitImportCmd port modulesState
+      cmd "search" $  withPort $ \port -> localSearch port modulesState
+      cmd "case-split" $ withPort caseSplit
+      cmd "add-clause" $ withPort addClause
+      cmd "fix-typo" $ withPort $ fixTypo modulesState
       cmd "restart-psc-ide" $ restartPscIdeServer
 
       installDependencies
@@ -188,25 +230,27 @@ main = do
         path <- getPath editor
         case path of
           Just path' | contains ".purs" path' -> do
-            useEditor modulesState editor
+            port <- getPort path'
+            useEditor' modulesState (_.port <$> port) (Just editor)
             onDidSave editor (\_ -> do
               buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-              when (either (const false) id $ readBoolean buildOnSave) (doLint path)-- TODO: Check if file is in project
+              let buildOnSaveEnabled = either (const false) id $ readBoolean buildOnSave
+              when buildOnSaveEnabled (doLint path)
             )
           _ -> pure unit
       )
 
-      onDidChangeActivePaneItem atom.workspace (\item ->
-        maybe (pure unit) (useEditor modulesState) (toEditor item)
+      onDidChangeActivePaneItem atom.workspace (\item -> do
+        withPort \port -> useEditor' modulesState (Just port) (toEditor item)
       )
 
-      registerTooltips port modulesState
       startPscIdeServer
-
       Psci.activate
 
     deactivate :: Eff MainEff Unit
-    deactivate = join (readRef deactivateRef)
+    deactivate = do
+      servers <- readRef serversRef --  (empty :: StrMap.StrMap { port :: Int, quit :: QuitCallback MainEff })
+      void $ sequence $ _.quit <$> StrMap.values servers
 
   pure $ toForeign
     { config
@@ -228,12 +272,11 @@ main = do
         , excludeLowerPriority: true
         , getSuggestions: mkEffFn1 $ \x -> do
             state <- readRef modulesState
-            getSuggestions state x
+            withPortDef (Promise.fromAff $ pure []) (\p -> getSuggestions p state x)
         , onDidInsertSuggestion: mkEffFn1 \x -> do
-            shouldAddImport <- getConfig atom.config "ide-purescript.autocomplete.addImport"
-            port <- getPscIdePort
-            when (readBoolean shouldAddImport == Right true)
-              (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
+            shouldAddImport <- either (const false) id <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.addImport"
+            withPort \port ->
+              when shouldAddImport (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
         }
     }
 

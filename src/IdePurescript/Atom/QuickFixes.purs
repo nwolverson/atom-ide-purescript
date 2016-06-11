@@ -34,14 +34,15 @@ type QuickFixEff a =
   , fs :: FS
   , ref :: REF | a)
 
-showQuickFixes :: forall eff. Ref State -> TextEditor -> LinterInternal -> Array AtomLintMessage -> Eff (QuickFixEff eff) Unit
-showQuickFixes modulesState editor linterMain messages = do
+showQuickFixes :: forall eff. Int -> Ref State -> TextEditor -> LinterInternal -> Array AtomLintMessage -> Eff (QuickFixEff eff) Unit
+showQuickFixes port modulesState editor linterMain messages = do
   pos <- getCursorBufferPosition editor
   editorLinter <- getEditorLinter linterMain editor
   messages <- getMessages editorLinter
   messages' <- filterM (inRange editorLinter pos) messages
   let fixes = mapMaybe (getFix editorLinter) messages'
   selectListViewStaticInline view applyFix Nothing fixes
+  pure unit
 
   where
     inRange editorLinter point message = do
@@ -52,7 +53,7 @@ showQuickFixes modulesState editor linterMain messages = do
       -- range <- toMaybe <$> getMarkerBufferRange editorLinter message
 
       case range of
-        [ [r, c], [r', c'] ] -> getFix' $ mkRange (mkPoint r c) (mkPoint r' c')
+        [ [r, c], [r', c'] ] -> let newRange = mkRange (mkPoint r c) (mkPoint r' c') in getFix' newRange
         _ -> Nothing
       where
         getFix' range = Just
@@ -70,12 +71,13 @@ showQuickFixes modulesState editor linterMain messages = do
         getTitle "ImplicitImport"              = "Make import explicit"
         getTitle "UnusedExplicitImport"        = "Remove unused references"
         getTitle _                             = "Apply Suggestion"
+
     getFix _ { errorCode } |
       errorCode == "UnknownValue" ||
       errorCode == "UnknownType" ||
       errorCode == "UnknownDataConstructor" ||
       errorCode == "UnknownTypeConstructor"
-      = Just { title: "Fix typo", action: fixTypo modulesState }
+      = Just { title: "Fix typo", action: fixTypo modulesState port }
 
     getFix _ _ = Nothing
 

@@ -1,33 +1,16 @@
-module IdePurescript.Atom.Config (config, getPscIdePort) where
+module IdePurescript.Atom.Config (config) where
 
 import Prelude
 import Node.Process as P
-import Atom.Atom (getAtom)
-import Atom.Config (getConfig, CONFIG)
-import Control.Monad.Eff (Eff)
-import Data.Either (either)
-import Data.Foreign (readInt, toForeign, Foreign)
+import Data.Foreign (Foreign, toForeign)
 import Node.Platform (Platform(Win32))
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
 
-getPscIdePort :: forall eff. Eff (config :: CONFIG | eff) Int
-getPscIdePort = do
-  atom <- getAtom
-  port' <- readInt <$> getConfig atom.config "ide-purescript.pscIdePort"
-  pure $ either (const 4242) id port'
-
 config :: Foreign
 config = toForeign
-  { pscIdePort:
-    { title: "psc-ide port number"
-    , description: "The port to use to communicate with `psc-ide-server`, also to launch the server with if required. "
-        <> "The default port is 4242 and this only need be changed if you've explicitly chosen to use another port."
-    , type: "integer"
-    , default: 4242
-    }
-  , pscIdeServerExe:
+  { pscIdeServerExe:
     { title: "psc-ide-server executable location"
     , description: "The location of the `psc-ide-server` executable. Note this is *not* `psc-ide-client`. May be on the PATH."
     , type: "string"
