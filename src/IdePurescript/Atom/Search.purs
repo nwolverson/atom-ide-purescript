@@ -4,7 +4,6 @@ import Prelude
 import Atom.Editor (EDITOR)
 import Atom.NotificationManager (NOTIFY)
 import Atom.Workspace (WORKSPACE)
-import Control.Monad (when)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
@@ -33,22 +32,22 @@ pursuitSearch port = selectListViewDynamic view (\x -> log x.identifier) Nothing
   where
   view {identifier, "type": ty, "module": mod, package} =
      "<li class='two-lines'>"
-     ++ "<div class='primary-line'>" ++ identifier ++ ": <span class='text-info'>" ++ ty ++ "</span></div>"
-     ++ "<div class='secondary-line'>" ++ mod ++ " (" ++ package ++ ")</div>"
-     ++ "</li>"
+     <> "<div class='primary-line'>" <> identifier <> ": <span class='text-info'>" <> ty <> "</span></div>"
+     <> "<div class='secondary-line'>" <> mod <> " (" <> package <> ")</div>"
+     <> "</li>"
 
 pursuitSearchModule :: forall eff. Int -> Ref State -> Eff (PursuitEff eff) Unit
 pursuitSearchModule port modulesState = selectListViewDynamic view importDialog (Just "module") id (getPursuitModuleCompletion port) 1000
   where
   view {"module": mod, package} =
      "<li class='two-lines'>"
-     ++ "<div class='primary-line'>" ++ mod ++ "</span></div>"
-     ++ "<div class='secondary-line'>" ++ package ++ "</div>"
-     ++ "</li>"
+     <> "<div class='primary-line'>" <> mod <> "</span></div>"
+     <> "<div class='secondary-line'>" <> package <> "</div>"
+     <> "</li>"
   importDialog :: forall a. {"module" :: String | a} -> Eff (PursuitEff eff) Unit
   importDialog {"module": mod} = selectListViewStatic textView (doImport mod) Nothing ["Import module", "Cancel"]
     where
-    textView x = "<li>" ++ x ++ "</li>"
+    textView x = "<li>" <> x <> "</li>"
     doImport mod x = when (x == "Import module") $ addImport port modulesState mod
 
 localSearch ::forall eff. Int -> Ref State -> Eff (LocalEff (ref :: REF | eff)) Unit
@@ -62,6 +61,6 @@ localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifi
 
   view {identifier, "type": ty, "module": mod} =
      "<li class='two-lines'>"
-     ++ "<div class='primary-line'>" ++ identifier ++ ": <span class='text-info'>" ++ ty ++ "</span></div>"
-     ++ "<div class='secondary-line'>" ++ mod ++ "</div>"
-     ++ "</li>"
+     <> "<div class='primary-line'>" <> identifier <> ": <span class='text-info'>" <> ty <> "</span></div>"
+     <> "<div class='secondary-line'>" <> mod <> "</div>"
+     <> "</li>"

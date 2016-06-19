@@ -16,8 +16,6 @@ import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Bind (join)
-import Control.Monad (when)
 import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
@@ -83,7 +81,7 @@ useEditor modulesStateRef editor = do
   port <- getPscIdePort
   let mainModule = getMainModule text
   case path, mainModule of
-    Just path', Just m -> runAff logError ignoreError $ do
+    Just path', Just m -> void $ runAff logError ignoreError $ do
       -- We load all deps initially, but only post 0.8.4, and maybe something resets psc-ide state
       loadDeps port m
       state <- getModulesForFile port path' text
@@ -131,7 +129,7 @@ main = do
       statusElt <- readRef buildStatusRef
       port <- getPscIdePort
       case { root, linterIndie, statusElt } of
-        { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> runAff raiseError ignoreError $ do
+        { root: Just root', linterIndie: Just linterIndie', statusElt: Just statusElt' } -> void $ runAff raiseError ignoreError $ do
           messages <- lint file atom.config root' linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
           P.load port [] []
@@ -156,7 +154,7 @@ main = do
 
     startPscIdeServer :: Eff MainEff Unit
     startPscIdeServer =
-      runAff
+      void $ runAff
         (\_ -> log "Error starting server")
         ignoreError
         do
@@ -171,7 +169,7 @@ main = do
     activate :: Eff MainEff Unit
     activate = do
       port <- getPscIdePort
-      let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"++name) (const action)
+      let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"<>name) (const action)
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
       cmd "pursuit-search" $ pursuitSearch port
@@ -235,7 +233,7 @@ main = do
             shouldAddImport <- getConfig atom.config "ide-purescript.autocomplete.addImport"
             port <- getPscIdePort
             when (readBoolean shouldAddImport == Right true)
-              (runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
+              (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
         }
     }
 

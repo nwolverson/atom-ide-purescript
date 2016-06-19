@@ -6,7 +6,6 @@ import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Atom.NotificationManager (addWarning, NOTIFY, addError, addSuccess, addInfo)
 import Atom.Project (PROJECT)
-import Control.Monad (when)
 import Control.Monad.Aff (Aff, launchAff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
@@ -54,23 +53,23 @@ startServer = do
           Nothing -> do
             processPath <- liftEffS $ lookupEnv "PATH"
             liftEffS $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: "
-              ++ exe ++ " in PATH: " ++ fromMaybe "" processPath
+              <> exe <> " in PATH: " <> fromMaybe "" processPath
             pure $ pure unit
           Just (Executable bin _) -> do
             liftEff $ log $ "Resolved psc-ide-server:"
             traverse_ (\(Executable x vv) -> do
-              liftEff $ log $ x ++ ": " ++ fromMaybe "ERROR" vv) serverBins
-            liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " ++ bin
+              liftEff $ log $ x <> ": " <> fromMaybe "ERROR" vv) serverBins
+            liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " <> bin
             res <- P.startServer bin port path'
             childProc <- liftEff $ case res of
               P.CorrectPath -> Nothing <$ addInfo atom.notifications "Found existing psc-ide-server with correct path"
-              P.WrongPath wrongPath -> Nothing <$ (addError atom.notifications $ "Found existing psc-ide-server with wrong path: '" ++wrongPath++"'. Correct, kill or configure a different port, and restart.")
+              P.WrongPath wrongPath -> Nothing <$ (addError atom.notifications $ "Found existing psc-ide-server with wrong path: '" <>wrongPath<>"'. Correct, kill or configure a different port, and restart.")
               P.Started cp -> Just cp <$ addSuccess atom.notifications "Started psc-ide-server"
               P.Closed -> Nothing <$ addInfo atom.notifications "psc-ide-server exited with success code"
-              P.StartError err -> Nothing <$ (addError atom.notifications $ "Could not start psc-ide-server process. Check the configured port number is valid.\n" ++err)
+              P.StartError err -> Nothing <$ (addError atom.notifications $ "Could not start psc-ide-server process. Check the configured port number is valid.\n" <>err)
             case childProc of
               Nothing -> pure $ pure unit
-              Just cp -> pure $ launchAff $ P.stopServer port cp -- $ kill SIGKILL cp
+              Just cp -> pure $ void $ launchAff $ P.stopServer port cp -- $ kill SIGKILL cp
     _ -> pure $ pure unit
 
   where liftEffS :: forall a. Eff (ServerEff eff) a -> Aff (ServerEff eff) a

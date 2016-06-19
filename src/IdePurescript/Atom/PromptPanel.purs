@@ -8,7 +8,7 @@ import Control.Monad.Aff (Aff, makeAff)
 import Control.Monad.Eff (Eff)
 import DOM (DOM)
 import DOM.Event.EventTarget (eventListener, addEventListener)
-import DOM.Event.EventTypes (blur)
+import DOM.HTML.Event.EventTypes (blur)
 import DOM.HTML (window)
 import DOM.HTML.Types (htmlDocumentToDocument)
 import DOM.HTML.Window (document)
@@ -48,13 +48,13 @@ addPromptPanel promptText initialText = makeAff $ \err succ ->
   focussed <- toMaybe <$> getActiveElement
   focus editor
 
-  let close :: forall a. Boolean -> a -> Eff _ Unit
+  let close :: forall a. Boolean -> a -> Eff (dom :: DOM, command :: COMMAND, workspace :: WORKSPACE, editor :: EDITOR | eff) Unit
       close isSucc _ = do
-        model <- getEditorModel editor
-        restext <- getText model
+        model' <- getEditorModel editor
+        restext' <- getText model'
         destroyPanel panel
         maybe (pure unit) focus focussed
-        succ (if isSucc then Just restext else Nothing)
+        succ (if isSucc then Just restext' else Nothing)
 
   addCommand' cr editor "core:confirm" (close true)
   addCommand' cr editor "core:cancel" (close false)

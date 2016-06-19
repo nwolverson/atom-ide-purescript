@@ -12,10 +12,11 @@ import Control.Promise (Promise, fromAff)
 import Data.Function.Eff (EffFn1, mkEffFn1, runEffFn1)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (length, take)
-import Data.String.Regex (match, noFlags, regex)
+import Data.String.Regex (noFlags, regex)
 import IdePurescript.Modules as Modules
 import IdePurescript.PscIde (getType)
-import Prelude (id, Unit, pure, ($), (>), flip, bind, (++), (+), unit, void, (-))
+import IdePurescript.Regex
+import Prelude (id, Unit, pure, ($), (>), flip, bind, (<>), (+), unit, void, (-))
 import PscIde (NET)
 
 foreign import data TooltipProvider :: *
@@ -41,14 +42,14 @@ getToken e pos = do
   textBefore <- getTextInRange e (mkRange beforePos pos)
   textAfter <- getTextInRange e (mkRange pos afterPos)
   let wordRange left right = mkRange (mkPoint row (col - left)) (mkPoint row (col + right))
-  pure $ case { before: match beforeRegex textBefore, after: match afterRegex textAfter } of
+  pure $ case { before: match' beforeRegex textBefore, after: match' afterRegex textAfter } of
               { before: Just [Just s], after: Just [Just s'] }
                 ->
-                  let qualifier = case match moduleRegex (take (length textBefore - length s) textBefore) of
+                  let qualifier = case match' moduleRegex (take (length textBefore - length s) textBefore) of
                                       Just [ _, mm ] -> mm
                                       _ -> Nothing
                   in
-                    Just { word : s++s', range : wordRange (length s) (length s'), qualifier }
+                    Just { word : s<>s', range : wordRange (length s) (length s'), qualifier }
               _ -> Nothing
 
 getTooltips :: forall eff. Int -> Modules.State -> Point

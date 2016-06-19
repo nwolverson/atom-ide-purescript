@@ -32,10 +32,8 @@ import Node.FS (FS)
 import PscIde (NET)
 import PscIde.Command (Completion(..))
 
-
--- TODO
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
-launchAffAndRaise = runAff raiseError (const $ pure unit)
+launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
   where
   raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
   raiseError e = do
@@ -111,5 +109,5 @@ fixTypo modulesState = do
         launchAffAndRaise $ do
          liftEff $ setTextInBufferRange ed wordRange identifier
          addIdentImport port modulesState (Just mod) identifier
-      view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
+      view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
       getIdentFromCompletion (Completion c) = c.identifier

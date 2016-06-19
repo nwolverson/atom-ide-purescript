@@ -30,7 +30,7 @@ type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :
 
 -- TODO
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
-launchAffAndRaise = runAff raiseError (const $ pure unit)
+launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
   where
   raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
   raiseError e = do
@@ -42,7 +42,7 @@ addModuleImportCmd port modulesState = launchAffAndRaise do
   modules <- getAvailableModules port
   liftEffI $ selectListViewStatic view (addImport port modulesState) Nothing modules
   where
-    view x = "<li>" ++ x ++ "</li>"
+    view x = "<li>" <> x <> "</li>"
     liftEffI :: forall a. Eff (AddModuleEff eff) a -> Aff (AddModuleEff eff) a
     liftEffI = liftEff
 
@@ -85,7 +85,7 @@ addIdentImport' port modulesState moduleName ident editor = do
   runCompletion (Completion obj) = obj
   -- TODO nicer if we can make select view aff-ish
   addImp { identifier, "module'": m } = launchAffAndRaise $ addIdentImport port modulesState (Just m) identifier
-  view {identifier, "module'": m} = "<li>" ++ m ++ "." ++ identifier ++ "</li>"
+  view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
 
 addSuggestionImport :: forall r eff. Int -> Ref State -> { editor :: TextEditor, suggestion :: C.AtomSuggestion | r } -> Aff (AddModuleEff eff) Unit
 addSuggestionImport port modulesState { editor, suggestion: { addImport: Just { mod, identifier, qualifier: Nothing } } } =
