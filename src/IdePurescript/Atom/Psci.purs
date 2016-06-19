@@ -2,6 +2,7 @@ module IdePurescript.Atom.Psci where
 
 import Prelude
 import Atom.Atom (getAtom)
+import Data.Foldable (traverse_)
 import Atom.CommandRegistry (addCommand', COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (setText, getText, TextEditor, EDITOR, getSelectedText, moveToBeginningOfLine, moveDown, getTextInRange, getCursorBufferPosition)
@@ -29,13 +30,15 @@ import DOM.Node.Node (setTextContent, firstChild, removeChild, hasChildNodes, ap
 import DOM.Node.ParentNode (querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
 import DOM.Util (setScrollTop, getScrollHeight)
-import Data.Array (uncons)
+import Data.Array (uncons, (!!), cons, drop)
 import Data.Either (either)
+import Data.Int (fromNumber)
 import Data.Foreign (readString)
-import Data.Maybe (maybe, Maybe(Nothing, Just))
+import Data.Maybe (maybe, Maybe(Nothing, Just), isJust, fromMaybe)
 import Data.Nullable (toNullable, Nullable, toMaybe)
 import Data.String (indexOf, trim)
-import Data.String.Regex (noFlags, regex, split)
+import Global (readInt)
+import Data.String.Regex (noFlags, regex, split, replace, match)
 import IdePurescript.Atom.Imports (launchAffAndRaise)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import Node.ChildProcess (Exit(Normally), onClose, onError, stdin, ChildProcess, CHILD_PROCESS, stderr, stdout, defaultSpawnOptions, spawn)
@@ -43,6 +46,7 @@ import Node.Encoding (Encoding(UTF8))
 import Node.FS (FS)
 import Node.Stream (end, writeString, onDataString)
 import Unsafe.Coerce (unsafeCoerce)
+import Ansi.Codes (Color(..))
 
 foreign import init :: forall eff. Eff eff Unit
 
@@ -99,11 +103,91 @@ type PsciEff eff =
   , dom :: DOM
   , command :: COMMAND | eff)
 
+-- TODO: contribute to purescript-ansi
+colorForCode :: Int -> Maybe Color
+colorForCode c =
+  case c of
+    30 -> Just Black
+    31 -> Just Red
+    32 -> Just Green
+    33 -> Just Yellow
+    34 -> Just Blue
+    35 -> Just Magenta
+    36 -> Just Cyan
+    37 -> Just White
+    90 -> Just Grey
+    91 -> Just BrightRed
+    92 -> Just BrightGreen
+    93 -> Just BrightYellow
+    94 -> Just BrightBlue
+    95 -> Just BrightMagenta
+    96 -> Just BrightCyan
+    97 -> Just BrightWhite
+    _  -> Nothing
+
+data Rgb = Rgb Int Int Int
+
+xtermColor :: Color -> Rgb
+xtermColor c = case c of
+  White         -> Rgb 229 229 229
+  Black         -> Rgb 0 0 0
+  Blue          -> Rgb 0 0 238
+  Cyan          -> Rgb 0 205 205
+  Green         -> Rgb 0 205 0
+  Magenta       -> Rgb 205 0 205
+  Red           -> Rgb 205 0 0
+  Yellow        -> Rgb 205 205 0
+  Grey          -> Rgb 127 127 127
+  BrightBlack   -> Rgb 127 127 127
+  BrightRed     -> Rgb 255 0 0
+  BrightGreen   -> Rgb 0 255 0
+  BrightYellow  -> Rgb 255 255 0
+  BrightBlue    -> Rgb 92 92 255
+  BrightMagenta -> Rgb 255 0 255
+  BrightCyan    -> Rgb 0 255 255
+  BrightWhite   -> Rgb 255 255 255
+
+renderRgbCss :: Rgb -> String
+renderRgbCss (Rgb r g b) = "rgb(" <> show r <> "," <> show g <> "," <> show b <> ")"
+
+replaceAnsiColor :: forall eff. String -> Eff (PsciEff eff) (Array Element)
+replaceAnsiColor text = toNodes parts
+  where
+    parts :: Array String
+    parts = split (regex """(\x1b\[[0-9;]+m)""" noFlags) text
+
+    colEscape :: String -> Maybe Int
+    colEscape text = case match (regex """\x1b\[([0-9]+)m""" noFlags) text of
+      Just [_, Just num] -> fromNumber (readInt 10 num)
+      _ -> Nothing
+
+    colorCss :: Int -> String
+    colorCss n = "color: " <> maybe "black" (renderRgbCss <<< xtermColor) (colorForCode n)
+
+    toNodes :: Array String -> Eff (PsciEff eff) (Array Element)
+    toNodes [] = pure []
+    toNodes xs | (maybe Nothing colEscape (xs !! 2)) == Just 0 && isJust (maybe Nothing colEscape (xs !! 0)) =
+      case maybe Nothing colEscape (xs !! 0), xs !! 1 of
+        Just n, Just innerText -> do
+          span <- createElement' "span"
+          setTextContent innerText (elementToNode span)
+          setAttribute "style" (colorCss n) span
+          rest <- toNodes (drop 3 xs)
+          pure $ cons span rest
+        _, _ -> pure []
+    toNodes xs = do
+      let text = fromMaybe "" (xs !! 0)
+      span <- createElement' "span"
+      setTextContent text (elementToNode span)
+      rest <- toNodes (drop 1 xs)
+      pure $ cons span rest
+
 appendText :: forall eff. PscPane  -> String -> Eff (PsciEff eff) Unit
-appendText {element} text = do
+appendText {element} text =
+do
   div <- createElement' "div"
   setClassName "psci-line" div
-  setTextContent text (elementToNode div)
+  replaceAnsiColor text >>= traverse_ \node -> appendChild (elementToNode node) (elementToNode div)
   lines <- toMaybe <$> querySelector ".psci-lines" (elementToParentNode element)
   maybe (pure unit) (\lines' -> do
     appendChild (elementToNode div) (elementToNode lines')
