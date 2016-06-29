@@ -43,7 +43,9 @@ exports.getMarkerBufferRange = function (editorLinter) {
     return function() {
       var marker = editorLinter.markers.get(message);
       if (marker && marker.isValid()) {
-        return marker.getBufferRange();
+        // Newer linter versions have different marker type here, Marker instead of TextEditorMarker or whatever
+        var update = marker.getBufferRange || marker.getRange;
+        return update && update.call(marker);
       } else {
         return null;
       }

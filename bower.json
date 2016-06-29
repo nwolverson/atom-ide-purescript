@@ -11,8 +11,8 @@
   ],
   "dependencies": {
     "purescript-console": "^0.1.0",
-    "purescript-psc-ide": "^3.0.0",
-    "purescript-atom-api": "git@github.com:nwolverson/purescript-atom-api.git#ide-purescript",
+    "purescript-psc-ide": "3.0.0",
+    "purescript-atom-api": "git@github.com:nwolverson/purescript-atom-api.git#c6ff5c946bda442756362a1137153975f6e9fcd1",
     "purescript-aff": "~0.16.1",
     "purescript-nullable": "~0.2.1",
     "purescript-refs": "~0.2.0",
