@@ -59,7 +59,7 @@ showQuickFixes modulesState editor linterMain messages = do
           { title: getTitle errorCode
           , action: do
               setTextInBufferRange editor range replacement
-              log $ "Applied fix: " ++ errorCode
+              log $ "Applied fix: " <> errorCode
           }
 
         getTitle "UnusedImport"                = "Remove import"
@@ -79,5 +79,5 @@ showQuickFixes modulesState editor linterMain messages = do
 
     getFix _ _ = Nothing
 
-    view { title } = "<li>" ++ title ++ "</li>"
+    view { title } = "<li>" <> title <> "</li>"
     applyFix { action } = action

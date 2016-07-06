@@ -54,7 +54,7 @@ toLintResult res =
   let warnings = result "Warning" <$> res.errors.warnings
       errors = result "Error" <$> res.errors.errors
   in {
-    messages: errors ++ warnings
+    messages: errors <> warnings
   , result: resultToString $ if res.success then Success else Errors
   }
   where
@@ -76,7 +76,7 @@ toLintResult res =
     , trace: [
       {
         type: "Link"
-      , html: "<a href=\"" ++ errorLink ++ "\">More info (wiki)</a>"
+      , html: "<a href=\"" <> errorLink <> "\">More info (wiki)</a>"
       }
     ]}
     where

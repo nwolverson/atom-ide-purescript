@@ -6,7 +6,6 @@ import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
 import Atom.NotificationManager (NOTIFY, addError, addWarning)
 import Atom.Project (PROJECT, getPaths)
-import Control.Monad (when)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -44,11 +43,11 @@ getProjectRoot = do
       addWarning atom.notifications "Doesn't look like a purescript project - didn't find any src dir"
       pure Nothing
     Just { head: dir, tail } -> do
-      when (not $ null tail) $ (addWarning atom.notifications $ "Multiple project roots, using first: " ++ dir)
-      when (null tail && length dirs > 1) $ (addWarning atom.notifications $ "Multiple project roots but only 1 looks valid: " ++ dir)
+      when (not $ null tail) $ (addWarning atom.notifications $ "Multiple project roots, using first: " <> dir)
+      when (null tail && length dirs > 1) $ (addWarning atom.notifications $ "Multiple project roots but only 1 looks valid: " <> dir)
       let output = P.concat [dir, "output"]
       outputExists <- FS.exists output
-      when (not outputExists) $ (addWarning atom.notifications $  "Doesn't look like a project has been built - didn't find: " ++ output)
+      when (not outputExists) $ (addWarning atom.notifications $  "Doesn't look like a project has been built - didn't find: " <> output)
       pure $ Just dir
   where
 
@@ -81,7 +80,9 @@ lint file config projdir linter statusElt = do
   atom <- liftEffA $ getAtom
   fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
-  let buildCommand = either (const []) (split (regex "\\s+" noFlags) <<< trim) $ readString fullBuildPath
+  let buildCommand = case regex "\\s+" noFlags, readString fullBuildPath of
+                      Right r, Right s -> split r $ trim $ s
+                      _, _ -> []
   port <- liftEffA getPscIdePort
 
   isFastBuild <- liftEffA $ readBoolean <$> getConfig config "ide-purescript.fastRebuild"
@@ -111,7 +112,7 @@ lint file config projdir linter statusElt = do
             status (if result == "success" then Success else Errors) Nothing
             pure messages
       `catchError` \(e :: Error) -> do
-        liftEffA $ failure $ "Error running PureScript build command: " ++ show e
+        liftEffA $ failure $ "Error running PureScript build command: " <> show e
         pure Nothing
 
     failure :: String -> Eff (LintEff eff) Unit
@@ -123,7 +124,7 @@ lint file config projdir linter statusElt = do
     status :: BuildStatus -> (Maybe String) -> Eff (LintEff eff) Unit
     status s msg = do
       updateBuildStatus statusElt s
-      (if s == Failure then error else log) $ "PureScript build status: " ++ show s ++ (maybe "" (": " ++ _)  msg)
+      (if s == Failure then error else log) $ "PureScript build status: " <> show s <> (maybe "" (": " <> _)  msg)
 
     liftEffA :: forall a. Eff (LintEff eff) a -> Aff (LintEff eff) a
     liftEffA = liftEff

@@ -31,14 +31,15 @@ import DOM.Node.ParentNode (querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
 import DOM.Util (setScrollTop, getScrollHeight)
 import Data.Array (uncons, (!!), cons, drop)
-import Data.Either (either)
+import Data.Either (either, Either(..))
 import Data.Int (fromNumber)
 import Data.Foreign (readString)
 import Data.Maybe (maybe, Maybe(Nothing, Just), isJust, fromMaybe)
 import Data.Nullable (toNullable, Nullable, toMaybe)
 import Data.String (indexOf, trim)
 import Global (readInt)
-import Data.String.Regex (noFlags, regex, split, replace, match)
+import Data.String.Regex (split, noFlags, regex)
+import IdePurescript.Regex (match')
 import IdePurescript.Atom.Imports (launchAffAndRaise)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import Node.ChildProcess (Exit(Normally), onClose, onError, stdin, ChildProcess, CHILD_PROCESS, stderr, stdout, defaultSpawnOptions, spawn)
@@ -154,10 +155,10 @@ replaceAnsiColor :: forall eff. String -> Eff (PsciEff eff) (Array Element)
 replaceAnsiColor text = toNodes parts
   where
     parts :: Array String
-    parts = split (regex """(\x1b\[[0-9;]+m)""" noFlags) text
+    parts = either (const []) (\r -> split r text) (regex """(\x1b\[[0-9;]+m)""" noFlags)
 
     colEscape :: String -> Maybe Int
-    colEscape text = case match (regex """\x1b\[([0-9]+)m""" noFlags) text of
+    colEscape text = case match' (regex """\x1b\[([0-9]+)m""" noFlags) text of
       Just [_, Just num] -> fromNumber (readInt 10 num)
       _ -> Nothing
 
@@ -183,8 +184,7 @@ replaceAnsiColor text = toNodes parts
       pure $ cons span rest
 
 appendText :: forall eff. PscPane  -> String -> Eff (PsciEff eff) Unit
-appendText {element} text =
-do
+appendText {element} text = do
   div <- createElement' "div"
   setClassName "psci-line" div
   replaceAnsiColor text >>= traverse_ \node -> appendChild (elementToNode node) (elementToNode div)
@@ -203,7 +203,7 @@ clearText {element} = do
 
 sendText :: forall eff. PscPane -> ChildProcess -> String -> Eff (PsciEff eff) Unit
 sendText pane proc text = do
-  let text' = trim text ++ "\n"
+  let text' = trim text <> "\n"
   appendText pane text'
   void $ writeString (stdin proc) UTF8 text' (pure unit)
 
@@ -248,7 +248,9 @@ startRepl paneRef psciRef = do
 
   cmd <- liftEff'' $ readString <$> getConfig atom.config "ide-purescript.psciCommand"
   rootPath <- liftEff'' getProjectRoot
-  let command = either (const []) (split (regex "\\s+" noFlags) <<< trim) $ cmd
+  let command = case cmd, regex "\\s+" noFlags of
+                  Right cmd', Right r -> split r cmd'
+                  _, _ -> []
   psciProcess <- liftEff'' $ case rootPath, uncons command of
     Just _, Just { head: bin, tail: args } ->
        Just <$> spawn bin args (defaultSpawnOptions { cwd = rootPath })
@@ -318,7 +320,7 @@ activate = do
         maybe (pure unit) clearText ed
         open
 
-  let cmd isEditor name action = addCommand atom.commands "atom-workspace" ("psci:"++name) (const action)
+  let cmd isEditor name action = addCommand atom.commands "atom-workspace" ("psci:"<>name) (const action)
         where scope = if isEditor then "atom-text-editor" else "atom-workspace"
   cmd false "open" $ reset
   cmd true  "send-line" $ launchAffAndRaise $ runCmd sendLine

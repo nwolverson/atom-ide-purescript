@@ -33,7 +33,7 @@ getBuildStatus = do
   pure span
 
 statusIcon :: BuildStatus -> String
-statusIcon status = "purescript-build-status icon icon-" ++ case status of
+statusIcon status = "purescript-build-status icon icon-" <> case status of
   Success -> "check"
   Errors -> "alert"
   Failure -> "bug"
