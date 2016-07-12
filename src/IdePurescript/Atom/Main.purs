@@ -136,17 +136,12 @@ main = do
   serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
 
   let
-
     getPort :: String -> Eff MainEff (Maybe { root :: String, port :: Int })
-    getPort file = do
-      servers <- readRef serversRef
-      root <- getRoot file
-      pure $ case root of
-        Just root' ->
-          case lookup root' servers of
-            Just { port } -> Just { port, root: root' }
-            Nothing -> Nothing
-        Nothing -> Nothing
+    getPort file = runMaybeT $ do
+      servers <- liftEff $ readRef serversRef
+      root <- MaybeT $ getRoot file
+      { port } <- MaybeT $ pure $ lookup root servers
+      pure { root, port }
 
     doLint :: (Maybe String) -> Eff MainEff Unit
     doLint file = do
@@ -204,14 +199,10 @@ main = do
               Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
 
     getPortActiveEditor :: Eff MainEff (Maybe Int)
-    getPortActiveEditor = do
-      editor <- getActiveTextEditor atom.workspace
-      case editor of
-        Just ed -> do
-          file <- getPath ed
-          res <- maybe (pure Nothing) getPort file
-          pure (_.port <$> res)
-        Nothing -> pure Nothing
+    getPortActiveEditor = runMaybeT do
+      editor <- MaybeT $ getActiveTextEditor atom.workspace
+      file <- MaybeT $ getPath editor
+      _.port <$> (MaybeT $ getPort file)
 
     withPortDef :: forall a. Eff MainEff a -> (Int -> Eff MainEff a) -> Eff MainEff a
     withPortDef def e = getPortActiveEditor >>= maybe def e
