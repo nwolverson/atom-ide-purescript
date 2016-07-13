@@ -19,3 +19,11 @@ exports.getScrollHeight = function (e) {
     return e.scrollHeight;
   };
 };
+
+exports.setTimeout = function(n) {
+  return function (f) {
+    return function() {
+      return setTimeout(f, n);
+    };
+  };
+};

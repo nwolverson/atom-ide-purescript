@@ -1,8 +1,8 @@
 module IdePurescript.Atom.Psci where
 
 import Prelude
+import Ansi.Codes (Color(..))
 import Atom.Atom (getAtom)
-import Data.Foldable (traverse_)
 import Atom.CommandRegistry (addCommand', COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (setText, getText, TextEditor, EDITOR, getSelectedText, moveToBeginningOfLine, moveDown, getTextInRange, getCursorBufferPosition)
@@ -29,25 +29,26 @@ import DOM.Node.Element (setClassName, setAttribute)
 import DOM.Node.Node (setTextContent, firstChild, removeChild, hasChildNodes, appendChild)
 import DOM.Node.ParentNode (querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
-import DOM.Util (setScrollTop, getScrollHeight)
+import DOM.Util (setTimeout, setScrollTop, getScrollHeight)
 import Data.Array (uncons, (!!), cons, drop)
 import Data.Either (either, Either(..))
-import Data.Int (fromNumber)
+import Data.Foldable (traverse_)
 import Data.Foreign (readString)
+import Data.Int (fromNumber)
 import Data.Maybe (maybe, Maybe(Nothing, Just), isJust, fromMaybe)
 import Data.Nullable (toNullable, Nullable, toMaybe)
 import Data.String (indexOf, trim)
-import Global (readInt)
 import Data.String.Regex (split, noFlags, regex)
-import IdePurescript.Regex (match')
+import Global (readInt)
 import IdePurescript.Atom.Imports (launchAffAndRaise)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
+import IdePurescript.Atom.PromptPanel (focus)
+import IdePurescript.Regex (match')
 import Node.ChildProcess (Exit(Normally), onClose, onError, stdin, ChildProcess, CHILD_PROCESS, stderr, stdout, defaultSpawnOptions, spawn)
 import Node.Encoding (Encoding(UTF8))
 import Node.FS (FS)
 import Node.Stream (end, writeString, onDataString)
 import Unsafe.Coerce (unsafeCoerce)
-import Ansi.Codes (Color(..))
 
 foreign import init :: forall eff. Eff eff Unit
 
@@ -80,6 +81,9 @@ opener s =
       appendChild (elementToNode editorElt) (elementToNode bottomDiv)
 
       appendChild (elementToNode bottomDiv) (elementToNode div)
+
+      setTimeout 10 $ focus editorElt
+
       pure $ toNullable $ Just { getTitle: \_ -> "PSCI", element: div }
     _ -> pure $ toNullable Nothing
 
