@@ -22,12 +22,14 @@ import PscIde (NET)
 foreign import data TooltipProvider :: *
 foreign import mkTooltipProvider :: forall eff a. EffFn1 eff (EffFn1 eff {line :: Int, column :: Int} (Promise a)) TooltipProvider
 
-registerTooltips :: forall eff. Int -> Ref (Modules.State) -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
-registerTooltips port ref = do
+registerTooltips :: forall eff. Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) (Maybe Int) -> Ref (Modules.State) -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
+registerTooltips getPort ref = do
   void $ runEffFn1 mkTooltipProvider (mkEffFn1 \{line,column} -> do
     state <- readRef ref
     let point = mkPoint (line-1) (column-1)
-    getTooltips port state point)
+    port <- getPort
+    maybe (fromAff $ pure { valid: false, info: "" }) (\p -> getTooltips p state point) port
+  )
 
 getToken :: forall eff. TextEditor -> Point -> Eff (editor :: EDITOR | eff) (Maybe { word :: String, range :: Range, qualifier :: Maybe String })
 getToken e pos = do

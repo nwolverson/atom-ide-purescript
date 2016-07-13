@@ -247,7 +247,7 @@ startRepl paneRef psciRef = do
     )
 
   cmd <- liftEff'' $ readString <$> getConfig atom.config "ide-purescript.psciCommand"
-  rootPath <- liftEff'' getProjectRoot
+  rootPath <- liftEff'' $ getProjectRoot false
   let command = case cmd, regex "\\s+" noFlags of
                   Right cmd', Right r -> split r cmd'
                   _, _ -> []

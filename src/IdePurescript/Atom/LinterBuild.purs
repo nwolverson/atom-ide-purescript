@@ -24,7 +24,6 @@ import Data.String.Regex (noFlags, regex, split)
 import Data.Traversable (traverse)
 import IdePurescript.Atom.Build (AtomLintMessage, linterBuild, toLintResult)
 import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Building), updateBuildStatus)
-import IdePurescript.Atom.Config (getPscIdePort)
 import IdePurescript.Atom.Hooks.Linter (LinterIndie, LINTER, setMessages, deleteMessages)
 import IdePurescript.Build (BuildResult, rebuild)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -32,22 +31,46 @@ import Node.FS (FS) as FS
 import Node.FS.Sync (exists) as FS
 import PscIde (NET)
 
-getProjectRoot :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
-getProjectRoot = do
+
+
+getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
+getRoot path =
+  let parent = getParent path
+      src = P.concat [path, "src"] in
+  if path == "" || path == parent then
+    pure Nothing
+  else do
+    exists <- FS.exists src
+    if exists then pure $ Just path else getRoot parent
+
+  where
+    getParent :: P.FilePath -> P.FilePath
+    getParent p = P.concat [p, ".."]
+
+
+getProjectRoots :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Array String)
+getProjectRoots = do
+  atom <- getAtom
+  paths <- getPaths atom.project
+  dirs <- catMaybes <$> traverse getRoot paths
+  pure dirs
+
+getProjectRoot :: forall eff. Boolean -> Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
+getProjectRoot warn = do
   atom <- getAtom
   paths <- getPaths atom.project
   dirs <- catMaybes <$> traverse getRoot paths
   validDirs <- filterM validDir dirs
   case uncons validDirs of
     Nothing -> do
-      addWarning atom.notifications "Doesn't look like a purescript project - didn't find any src dir"
+      when warn $ addWarning atom.notifications "Doesn't look like a purescript project - didn't find any src dir"
       pure Nothing
     Just { head: dir, tail } -> do
-      when (not $ null tail) $ (addWarning atom.notifications $ "Multiple project roots, using first: " <> dir)
-      when (null tail && length dirs > 1) $ (addWarning atom.notifications $ "Multiple project roots but only 1 looks valid: " <> dir)
+      when (warn && (not $ null tail)) $ (addWarning atom.notifications $ "Multiple project roots, using first: " <> dir)
+      when (warn && null tail && length dirs > 1) $ (addWarning atom.notifications $ "Multiple project roots but only 1 looks valid: " <> dir)
       let output = P.concat [dir, "output"]
       outputExists <- FS.exists output
-      when (not outputExists) $ (addWarning atom.notifications $  "Doesn't look like a project has been built - didn't find: " <> output)
+      when (warn && not outputExists) $ (addWarning atom.notifications $  "Doesn't look like a project has been built - didn't find: " <> output)
       pure $ Just dir
   where
 
@@ -60,36 +83,22 @@ getProjectRoot = do
   --     else
   --       false
 
-  getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
-  getRoot path =
-    let parent = getParent path
-        src = P.concat [path, "src"] in
-    if path == "" || path == parent then
-      pure Nothing
-    else do
-      exists <- FS.exists src
-      if exists then pure $ Just path else getRoot parent
-
-  getParent :: P.FilePath -> P.FilePath
-  getParent p = P.concat [p, ".."]
-
 type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET | e)
 
-lint :: forall eff. (Maybe String) -> Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
-lint file config projdir linter statusElt = do
+lint :: forall eff. Maybe Int -> Maybe String -> Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
+lint port file config projdir linter statusElt = do
   atom <- liftEffA $ getAtom
   fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
   let buildCommand = case regex "\\s+" noFlags, readString fullBuildPath of
                       Right r, Right s -> split r $ trim $ s
                       _, _ -> []
-  port <- liftEffA getPscIdePort
 
   isFastBuild <- liftEffA $ readBoolean <$> getConfig config "ide-purescript.fastRebuild"
   let fastBuild :: Maybe (Aff (LintEff eff) BuildResult)
-      fastBuild = case isFastBuild, file of
-        Right true, Just fileName -> Just $ rebuild port fileName
-        _, _ -> Nothing
+      fastBuild = case isFastBuild, file, port of
+        Right true, Just fileName, Just p -> Just $ rebuild p fileName
+        _, _, _ -> Nothing
   pure unit
 
   case fastBuild, uncons buildCommand of

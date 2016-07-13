@@ -43,8 +43,6 @@ selectListViewStaticInline :: forall eff a.
 selectListViewStaticInline viewForItem confirmed filterKey items =
   runEffFn4 selectListViewStaticInlineImpl viewForItem (mkEffFn1 confirmed) (toNullable filterKey) items
 
-
-
 foreign import selectListViewDynamicImpl :: forall eff a. EffFn6 (dom :: DOM | eff)
   (a -> String)
   (EffFn1 (dom :: DOM | eff) a Unit)
