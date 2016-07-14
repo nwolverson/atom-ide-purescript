@@ -61,15 +61,23 @@ createElement' elt = do
 
 foreign import getModel :: forall eff. Element -> Eff (dom :: DOM | eff) (Nullable TextEditor)
 
+foreign import copy :: forall eff. Eff (dom :: DOM | eff) Unit
+
 paneUri :: String
 paneUri = "purescript://psci"
 
-opener :: forall eff. String -> Eff (dom :: DOM | eff) (Nullable PscPane)
+registerCommands :: forall eff. Eff (command :: COMMAND, dom :: DOM | eff) Unit
+registerCommands = do
+  atom <- getAtom
+  addCommand atom.commands ".psci-pane" "psci:copy" $ const copy
+
+opener :: forall eff. String -> Eff (dom :: DOM, console :: CONSOLE | eff) (Nullable PscPane)
 opener s =
   case indexOf paneUri s of
     Just 0 -> do
       div <- createElement' "div"
       setClassName "psci-pane" div
+      setAttribute "tabindex" "0" div
       topDiv <- createElement' "div"
       setClassName "psci-lines" topDiv
       appendChild (elementToNode topDiv) (elementToNode div)

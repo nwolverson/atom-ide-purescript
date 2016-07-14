@@ -10,3 +10,12 @@
 'atom-workspace atom-text-editor:not([mini])':
     'cmd-enter':'psci:send-selection'
     'alt-enter':'purescript:show-quick-fixes'
+
+'.platform-darwin atom-workspace div.psci-pane':
+    'cmd-c': 'psci:copy'
+
+'.platform-win32 atom-workspace div.psci-pane':
+    'ctrl-c': 'psci:copy'
+
+'.platform-linux atom-workspace div.psci-pane':
+    'ctrl-c': 'psci:copy'

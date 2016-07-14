@@ -14,3 +14,7 @@ exports.getModel = function(element) {
     return null;
   }
 }
+
+exports.copy = function() {
+  atom.clipboard.write(document.getSelection().toString());
+};

@@ -1,7 +1,14 @@
 'context-menu':
-  'atom-text-editor[data-grammar*="source purescript psci"]:not([mini])':
-    'PSCI: Reset': 'psci:reset'
-
+  '.psci-pane': [
+    {
+      'label': 'Copy'
+      'command': 'psci:copy'
+    }
+    {
+      'label': 'PSCI: Reset'
+      'command': 'psci:reset'
+    }
+  ]
   'atom-text-editor[data-grammar*="source purescript"]:not([mini])': [
     {
       'label': 'PSCI: Send Line'

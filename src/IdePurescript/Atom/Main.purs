@@ -48,6 +48,7 @@ import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addSuggestionImport, addExplicitImportCmd, addModuleImportCmd)
 import IdePurescript.Atom.LinterBuild (getRoot, lint)
 import IdePurescript.Atom.PscIdeServer (startServer)
+import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
 import IdePurescript.Atom.Tooltips (registerTooltips)
@@ -224,6 +225,7 @@ main = do
       cmd "add-clause" $ withPort addClause
       cmd "fix-typo" $ withPort $ fixTypo modulesState
       cmd "restart-psc-ide" $ restartPscIdeServer
+      registerCommands
 
       installDependencies
 
