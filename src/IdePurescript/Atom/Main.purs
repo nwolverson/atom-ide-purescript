@@ -213,7 +213,7 @@ main = do
 
     activate :: Eff MainEff Unit
     activate = do
-      let cmd name action = addCommand atom.commands "atom-workspace" ("purescript:"<>name) (const action)
+      let cmd name action = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name) (const action)
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
       cmd "pursuit-search" $ withPort pursuitSearch

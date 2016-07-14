@@ -2,20 +2,28 @@
 # [data-grammar~=purescript]':
 
 '.platform-win32 atom-workspace atom-text-editor:not([mini])':
-    'alt-/':'psci:send-line'
+    'alt-/':'ide-purescript:psci-send-line'
 
 '.platform-darwin atom-workspace atom-text-editor:not([mini])':
-    'ctrl-cmd-l':'psci:send-line'
+    'ctrl-cmd-l':'ide-purescript:psci-send-line'
 
 'atom-workspace atom-text-editor:not([mini])':
-    'cmd-enter':'psci:send-selection'
-    'alt-enter':'purescript:show-quick-fixes'
+    'cmd-alt-enter':'ide-purescript:psci-send-selection'
+    'alt-enter':'ide-purescript:show-quick-fixes'
+    'ctrl-o b':'ide-purescript:build'
+    'ctrl-o i':'ide-purescript:add-explicit-import'
+    'ctrl-o I':'ide-purescript:add-module-import'
+    'ctrl-o /':'ide-purescript:search'
+    'ctrl-o p':'ide-purescript:pursuit-search'
+    'ctrl-o P':'ide-purescript:pursuit-search-modules'
+    'ctrl-o c':'ide-purescript:add-clause'
+    'ctrl-o s':'ide-purescript:case-split'
 
 '.platform-darwin atom-workspace div.psci-pane':
-    'cmd-c': 'psci:copy'
+    'cmd-c': 'ide-purescript:psci-copy'
 
 '.platform-win32 atom-workspace div.psci-pane':
-    'ctrl-c': 'psci:copy'
+    'ctrl-c': 'ide-purescript:psci-copy'
 
 '.platform-linux atom-workspace div.psci-pane':
-    'ctrl-c': 'psci:copy'
+    'ctrl-c': 'ide-purescript:psci-copy'

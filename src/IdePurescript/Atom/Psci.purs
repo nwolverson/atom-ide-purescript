@@ -69,7 +69,7 @@ paneUri = "purescript://psci"
 registerCommands :: forall eff. Eff (command :: COMMAND, dom :: DOM | eff) Unit
 registerCommands = do
   atom <- getAtom
-  addCommand atom.commands ".psci-pane" "psci:copy" $ const copy
+  addCommand atom.commands ".psci-pane" "ide-purescript:psci-copy" $ const copy
 
 opener :: forall eff. String -> Eff (dom :: DOM, console :: CONSOLE | eff) (Nullable PscPane)
 opener s =
@@ -332,7 +332,7 @@ activate = do
         maybe (pure unit) clearText ed
         open
 
-  let cmd isEditor name action = addCommand atom.commands "atom-workspace" ("psci:"<>name) (const action)
+  let cmd isEditor name action = addCommand atom.commands "atom-workspace" ("ide-purescript:psci-"<>name) (const action)
         where scope = if isEditor then "atom-text-editor" else "atom-workspace"
   cmd false "open" $ reset
   cmd true  "send-line" $ launchAffAndRaise $ runCmd sendLine
