@@ -1,4 +1,4 @@
-module IdePurescript.Atom.Assist (caseSplit, addClause, fixTypo, CaseEff, TypoEff) where
+module IdePurescript.Atom.Assist (caseSplit, addClause, fixTypo, CaseEff, TypoEff, gotoDef) where
 
 import Prelude
 import PscIde as P
@@ -9,26 +9,27 @@ import Atom.Editor (EDITOR, TextEditor, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Point (getColumn)
 import Atom.Range (getEnd, getStart)
-import Atom.Workspace (WORKSPACE, getActiveTextEditor)
+import Atom.Workspace (defaultOpenOptions, open, WORKSPACE, getActiveTextEditor)
 import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Ref (REF, Ref, readRef)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import DOM (DOM)
 import Data.Foldable (intercalate)
-import Data.Maybe (Maybe(Nothing, Just))
+import Data.Maybe (maybe, Maybe(Nothing, Just))
 import IdePurescript.Atom.Editor (getLinePosition)
 import IdePurescript.Atom.Imports (addIdentImport)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
 import IdePurescript.Atom.SelectView (selectListViewStatic)
 import IdePurescript.Atom.Tooltips (getToken)
-import IdePurescript.Modules (State)
-import IdePurescript.PscIde (eitherToErr)
+import IdePurescript.Modules (getQualModule, getUnqualActiveModules, State)
+import IdePurescript.PscIde (getTypeInfo, eitherToErr)
 import Node.FS (FS)
 import PscIde (NET)
-import PscIde.Command (Completion(..))
+import PscIde.Command (TypePosition(TypePosition), Completion(..))
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
 launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
@@ -86,8 +87,8 @@ fixTypo modulesState port = do
   body :: MaybeT (Aff (TypoEff eff)) Unit
   body = do
     atom <- lift $ liftEff'' getAtom
-    ed :: TextEditor <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
-    { line, col, pos, range } <- lift $ liftEff'' $ getLinePosition ed
+    ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
+    { pos } <- lift $ liftEff'' $ getLinePosition ed
     { word, range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
     state <- lift $ liftEff'' $ readRef modulesState
     corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main)
@@ -100,3 +101,26 @@ fixTypo modulesState port = do
          addIdentImport port modulesState (Just mod) identifier
       view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
       getIdentFromCompletion (Completion c) = c.identifier
+
+type GotoEff e = TypoEff (console :: CONSOLE | e)
+
+gotoDef ::  forall eff. Ref State -> Int -> Eff (GotoEff eff) Unit
+gotoDef modulesState port = do
+  launchAffAndRaise $ runMaybeT body
+  where
+  body :: MaybeT (Aff (GotoEff eff)) Unit
+  body = do
+    atom <- lift $ liftEff'' getAtom
+    ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
+    { pos } <- lift $ liftEff'' $ getLinePosition ed
+    { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
+    let prefix = maybe "" id qualifier
+    state <- lift $ liftEff'' $ readRef modulesState
+    info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
+    case info of
+      Just { position : Just (TypePosition { start, end, name }) } -> lift $ liftEff'' $
+        open atom.workspace name
+          (defaultOpenOptions { initialLine = start.line - 1, initialColumn = start.column - 1 })
+          (const $ pure unit) (pure unit)
+
+      _ -> pure unit

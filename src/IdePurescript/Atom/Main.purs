@@ -38,7 +38,7 @@ import Data.Maybe (maybe, Maybe(Just, Nothing))
 import Data.StrMap (lookup, empty)
 import Data.String (contains)
 import Data.Traversable (sequence)
-import IdePurescript.Atom.Assist (fixTypo, addClause, caseSplit)
+import IdePurescript.Atom.Assist (fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
@@ -224,6 +224,7 @@ main = do
       cmd "case-split" $ withPort caseSplit
       cmd "add-clause" $ withPort addClause
       cmd "fix-typo" $ withPort $ fixTypo modulesState
+      cmd "goto-definition" $ withPort $ gotoDef modulesState
       cmd "restart-psc-ide" $ restartPscIdeServer
       registerCommands
 

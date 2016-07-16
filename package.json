@@ -9,21 +9,22 @@
   ],
   "activationCommands": {
     "atom-workspace": [
-      "purescript:build",
-      "purescript:search",
-      "purescript:build",
-      "purescript:show-quick-fixes",
-      "purescript:pursuit-search",
-      "purescript:pursuit-search-modules",
-      "purescript:add-module-import",
-      "purescript:add-explicit-import",
-      "purescript:search",
-      "purescript:case-split",
-      "purescript:add-clause",
-      "purescript:fix-typo",
-      "psci:open",
-      "psci:send-line",
-      "psci:send-selection"
+      "ide-purescript:build",
+      "ide-purescript:search",
+      "ide-purescript:build",
+      "ide-purescript:show-quick-fixes",
+      "ide-purescript:pursuit-search",
+      "ide-purescript:pursuit-search-modules",
+      "ide-purescript:add-module-import",
+      "ide-purescript:add-explicit-import",
+      "ide-purescript:search",
+      "ide-purescript:case-split",
+      "ide-purescript:add-clause",
+      "ide-purescript:fix-typo",
+      "ide-purescript:goto-definition",
+      "ide-purescript:psci-open",
+      "ide-purescript:psci-send-line",
+      "ide-purescript:psci-send-selection"
     ]
   },
   "repository": {

@@ -18,6 +18,7 @@
     'ctrl-o P':'ide-purescript:pursuit-search-modules'
     'ctrl-o c':'ide-purescript:add-clause'
     'ctrl-o s':'ide-purescript:case-split'
+    'ctrl-o g':'ide-purescript:goto-definition'
 
 '.platform-darwin atom-workspace div.psci-pane':
     'cmd-c': 'ide-purescript:psci-copy'

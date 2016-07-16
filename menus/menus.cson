@@ -2,44 +2,48 @@
   '.psci-pane': [
     {
       'label': 'Copy'
-      'command': 'psci:copy'
+      'command': 'ide-purescript:psci-copy'
     }
     {
       'label': 'PSCI: Reset'
-      'command': 'psci:reset'
+      'command': 'ide-purescript:psci-reset'
     }
   ]
   'atom-text-editor[data-grammar*="source purescript"]:not([mini])': [
     {
       'label': 'PSCI: Send Line'
-      'command': 'psci:send-line'
+      'command': 'ide-purescript:psci-send-line'
     }
     {
       'label': 'PSCI: Send Selection'
-      'command': 'psci:send-selection'
+      'command': 'ide-purescript:psci-send-selection'
     }
     {
       'label': 'PureScript'
       'submenu': [
         {
           'label': 'Add Import'
-          'command': 'purescript:add-explicit-import'
+          'command': 'ide-purescript:add-explicit-import'
         }
         {
           'label': 'Case Split'
-          'command': 'purescript:case-split'
+          'command': 'ide-purescript:case-split'
         }
         {
           'label': 'Add Clause'
-          'command': 'purescript:add-clause'
+          'command': 'ide-purescript:add-clause'
         }
         {
           'label': 'Fix Typo'
-          'command': 'purescript:fix-typo'
+          'command': 'ide-purescript:fix-typo'
         }
         {
           'label': 'Show Quick Fixes'
-          'command': 'purescript:show-quick-fixes'
+          'command': 'ide-purescript:show-quick-fixes'
+        }
+        {
+          'label': 'Go to Definition'
+          'command': 'ide-purescript:goto-definition'
         }
       ]
     }
@@ -53,59 +57,63 @@
       'submenu': [
         {
           'label': 'Build'
-          'command': 'purescript:build'
+          'command': 'ide-purescript:build'
         }
         {
           'label': 'Search (local)'
-          'command': 'purescript:search'
+          'command': 'ide-purescript:search'
         }
         {
           'label': 'Search Pursuit'
-          'command': 'purescript:pursuit-search'
+          'command': 'ide-purescript:pursuit-search'
         }
         {
           'label': 'Search Pursuit (modules/packages)'
-          'command': 'purescript:pursuit-search-modules'
+          'command': 'ide-purescript:pursuit-search-modules'
         }
         {
           'label': 'Add Import (open)'
-          'command': 'purescript:add-module-import'
+          'command': 'ide-purescript:add-module-import'
         }
         {
           'label': 'Add Import (explicit)'
-          'command': 'purescript:add-explicit-import'
+          'command': 'ide-purescript:add-explicit-import'
         }
         {
           'label': 'Case Split'
-          'command': 'purescript:case-split'
+          'command': 'ide-purescript:case-split'
         }
         {
           'label': 'Add Clause'
-          'command': 'purescript:add-clause'
+          'command': 'ide-purescript:add-clause'
         }
         {
           'label': 'Fix Typo'
-          'command': 'purescript:fix-typo'
+          'command': 'ide-purescript:fix-typo'
         }
         {
           'label': 'Show Quick Fixes'
-          'command': 'purescript:show-quick-fixes'
+          'command': 'ide-purescript:show-quick-fixes'
+        }
+        {
+          'label': 'Go to Definition'
+          'command': 'ide-purescript:goto-definition'
         }
         {
           'label': 'PSCI: Open'
-          'command': 'psci:open'
+          'command': 'ide-purescript:psci-open'
         }
         {
           'label': 'PSCI: Send Line'
-          'command': 'psci:send-line'
+          'command': 'ide-purescript:psci-send-line'
         }
         {
           'label': 'PSCI: Send Selection'
-          'command': 'psci:send-selection'
+          'command': 'ide-purescript:psci-send-selection'
         }
         {
           'label': 'Restart psc-ide-server'
-          'command': 'purescript:restart-psc-ide'
+          'command': 'ide-purescript:restart-psc-ide'
         }
       ]
     ]

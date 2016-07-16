@@ -1,5 +1,8 @@
 module IdePurescript.Atom.Tooltips where
 
+import Prelude
+import IdePurescript.Regex (match')
+import IdePurescript.Modules as Modules
 import Atom.Atom (getAtom)
 import Atom.Editor (EDITOR, TextEditor, getTextInRange)
 import Atom.Point (Point, getColumn, getRow, mkPoint)
@@ -13,16 +16,14 @@ import Data.Function.Eff (EffFn1, mkEffFn1, runEffFn1)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (length, take)
 import Data.String.Regex (noFlags, regex)
-import IdePurescript.Modules as Modules
 import IdePurescript.PscIde (getType)
-import IdePurescript.Regex
-import Prelude (id, Unit, pure, ($), (>), flip, bind, (<>), (+), unit, void, (-))
 import PscIde (NET)
 
 foreign import data TooltipProvider :: *
 foreign import mkTooltipProvider :: forall eff a. EffFn1 eff (EffFn1 eff {line :: Int, column :: Int} (Promise a)) TooltipProvider
 
-registerTooltips :: forall eff. Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) (Maybe Int) -> Ref (Modules.State) -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
+registerTooltips :: forall eff. Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) (Maybe Int) -> Ref (Modules.State)
+  -> Eff (workspace :: WORKSPACE, editor :: EDITOR, net :: NET, ref:: REF | eff) Unit
 registerTooltips getPort ref = do
   void $ runEffFn1 mkTooltipProvider (mkEffFn1 \{line,column} -> do
     state <- readRef ref
