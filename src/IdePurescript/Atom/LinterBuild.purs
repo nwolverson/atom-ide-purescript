@@ -4,7 +4,7 @@ import Prelude
 import Node.Path as P
 import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
-import Atom.NotificationManager (NOTIFY, addError, addWarning)
+import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Project (PROJECT, getPaths)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
@@ -15,7 +15,7 @@ import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Error.Class (catchError)
 import DOM (DOM)
 import DOM.Node.Types (Element)
-import Data.Array (uncons, null, length, catMaybes, filterM)
+import Data.Array (uncons, catMaybes)
 import Data.Either (Either(Right), either)
 import Data.Foreign (readBoolean, readString)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
@@ -31,57 +31,29 @@ import Node.FS (FS) as FS
 import Node.FS.Sync (exists) as FS
 import PscIde (NET)
 
-
-
 getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
 getRoot path =
   let parent = getParent path
-      src = P.concat [path, "src"] in
+      src = P.concat [path, "src"] -- Not sure this is necessary
+      bower = P.concat [path, "bower.json"] in
   if path == "" || path == parent then
     pure Nothing
   else do
-    exists <- FS.exists src
-    if exists then pure $ Just path else getRoot parent
+    hasSrc <- FS.exists src
+    hasBower <- FS.exists bower
+    if hasSrc || hasBower then pure $ Just path else getRoot parent
 
   where
     getParent :: P.FilePath -> P.FilePath
     getParent p = P.concat [p, ".."]
 
-
-getProjectRoots :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Array String)
-getProjectRoots = do
-  atom <- getAtom
-  paths <- getPaths atom.project
-  dirs <- catMaybes <$> traverse getRoot paths
-  pure dirs
-
+-- TODO: Now only used by PSCI
 getProjectRoot :: forall eff. Boolean -> Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
-getProjectRoot warn = do
+getProjectRoot _ = do
   atom <- getAtom
   paths <- getPaths atom.project
   dirs <- catMaybes <$> traverse getRoot paths
-  validDirs <- filterM validDir dirs
-  case uncons validDirs of
-    Nothing -> do
-      when warn $ addWarning atom.notifications "Doesn't look like a purescript project - didn't find any src dir"
-      pure Nothing
-    Just { head: dir, tail } -> do
-      when (warn && (not $ null tail)) $ (addWarning atom.notifications $ "Multiple project roots, using first: " <> dir)
-      when (warn && null tail && length dirs > 1) $ (addWarning atom.notifications $ "Multiple project roots but only 1 looks valid: " <> dir)
-      let output = P.concat [dir, "output"]
-      outputExists <- FS.exists output
-      when (warn && not outputExists) $ (addWarning atom.notifications $  "Doesn't look like a project has been built - didn't find: " <> output)
-      pure $ Just dir
-  where
-
-  validDir :: forall eff'. P.FilePath -> Eff eff' Boolean
-  validDir = const $ pure true
-  --   validDir = (d) ->
-  --     if d
-  --       files = glob.sync("src/**/*.purs", {cwd: d.path})
-  --       files && files.length > 0
-  --     else
-  --       false
+  pure $ _.head <$> uncons dirs
 
 type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET | e)
 

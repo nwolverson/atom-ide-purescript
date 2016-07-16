@@ -57,7 +57,7 @@ startServer path = do
               <> exe <> " in PATH: " <> fromMaybe "" processPath
             pure { quit: pure unit, port: Nothing }
           Just (Executable bin _) -> do
-            liftEff $ log $ "Resolved psc-ide-server:"
+            liftEff $ log $ "Resolved psc-ide-server paths (1st is used):"
             traverse_ (\(Executable x vv) -> do
               liftEff $ log $ x <> ": " <> fromMaybe "ERROR" vv) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " <> bin
