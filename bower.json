@@ -19,7 +19,7 @@
     "purescript-node-process": "~1.0.0",
     "purescript-node-child-process": "~1.0.0",
     "purescript-aff-promise": "^0.1.0",
-    "purescript-ide-purescript-core": "https://github.com/nwolverson/purescript-ide-purescript-core.git#start-multiple-servers",
+    "purescript-ide-purescript-core": "^0.5.1",
     "purescript-node-fs-aff": "^1.0.0",
     "purescript-dom": "^1.0.0",
     "purescript-psa": "https://github.com/nwolverson/purescript-psa.git#0.9-updates"
