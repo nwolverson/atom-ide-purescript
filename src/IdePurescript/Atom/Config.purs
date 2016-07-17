@@ -1,16 +1,43 @@
-module IdePurescript.Atom.Config (config) where
+module IdePurescript.Atom.Config (config, getSrcGlob) where
 
 import Prelude
 import Node.Process as P
-import Data.Foreign (Foreign, toForeign)
+import Atom.Atom (getAtom)
+import Atom.Config (CONFIG, getConfig)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
+import Data.Array (mapMaybe)
+import Data.Bifunctor (rmap)
+import Data.Either (either)
+import Data.Foreign (readString, readArray, Foreign, toForeign)
+import Data.Maybe (Maybe(..))
 import Node.Platform (Platform(Win32))
+
+defaultSrcGlob :: Array String
+defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs"]
+
+getSrcGlob :: forall eff. Eff (config :: CONFIG | eff) (Array String)
+getSrcGlob = do
+  atom <- getAtom
+  srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
+  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
+  pure $ either (const defaultSrcGlob) id srcGlob'
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
 
 config :: Foreign
 config = toForeign
-  { pscIdeServerExe:
+  { pscSourceGlob:
+    { title: "PureScript source glob"
+    , description: "Source glob to use to find .purs source files. Currently used for psc-ide-server to power goto-definition."
+    , type: "array"
+    , default: defaultSrcGlob
+    , items:
+      { type: "string"
+      }
+    }
+  , pscIdeServerExe:
     { title: "psc-ide-server executable location"
     , description: "The location of the `psc-ide-server` executable. Note this is *not* `psc-ide-client`. May be on the PATH."
     , type: "string"

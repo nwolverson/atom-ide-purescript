@@ -33,12 +33,13 @@ import DOM.Node.Types (Element)
 import Data.Array (length)
 import Data.Either (either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import Data.Function.Eff (mkEffFn1)
+import Data.Function.Eff (mkEffFn2, mkEffFn1)
 import Data.Maybe (maybe, Maybe(Just, Nothing))
+import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (contains)
 import Data.Traversable (sequence)
-import IdePurescript.Atom.Assist (fixTypo, addClause, caseSplit, gotoDef)
+import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
@@ -51,9 +52,9 @@ import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
-import IdePurescript.Atom.Tooltips (registerTooltips)
+import IdePurescript.Atom.Tooltips (getToken, registerTooltips)
 import IdePurescript.Modules (State, getQualModule, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
-import IdePurescript.PscIde (loadDeps, getLoadedModules)
+import IdePurescript.PscIde (getLoadedModules)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
@@ -88,7 +89,8 @@ useEditor port modulesStateRef editor = do
   case path, mainModule of
     Just path', Just m -> void $ runAff logError ignoreError $ do
       -- We load all deps initially, but only post 0.8.4, and maybe something resets psc-ide state
-      loadDeps port m
+      -- loadDeps port m
+
       state <- getModulesForFile port path' text
       liftEff $ writeRef modulesStateRef state
       pure unit
@@ -154,7 +156,7 @@ main = do
         Just { port, root }, Just linterIndie', Just statusElt' -> void $ runAff raiseError ignoreError $ do
           messages <- lint (Just port) file atom.config root linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
-          P.load port [] []
+          -- P.load port [] []
           editor <- liftEff $ getActiveTextEditor atom.workspace
           liftEff $ useEditor' modulesState (Just port) editor
         _, _, _ -> pure unit
@@ -289,6 +291,16 @@ main = do
             withPort \port ->
               when shouldAddImport (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
         }
+    , provideHyperclick: \_ ->
+      {
+        getSuggestion: mkEffFn2 \editor pos -> do
+          rangeM <- getToken editor pos
+          pure $ toNullable $ (_ <$> rangeM) \{range} ->
+            {
+              range,
+              callback: withPort \port -> gotoDefHyper modulesState port editor pos
+            }
+      }
     }
 
 raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit

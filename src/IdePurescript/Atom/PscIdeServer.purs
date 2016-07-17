@@ -13,11 +13,12 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (log, CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
-import Data.Array (length, head)
-import Data.Either (Either(..))
+import Data.Array (mapMaybe, length, head)
+import Data.Bifunctor (rmap)
+import Data.Either (either, Either(..))
 import Data.Foldable (traverse_)
-import Data.Foreign (readString)
-import Data.Functor ((<$))
+import Data.Foreign (readArray, readString)
+import Data.Functor (map, (<$))
 import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -47,6 +48,9 @@ startServer :: forall eff eff'. String -> Aff (ServerEff eff) { quit :: QuitCall
 startServer path = do
   atom <- liftEffS getAtom
   serverRaw <- liftEffS $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
+  srcGlob <- liftEffS $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
+  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
+  let glob = either (const ["src/**/*.purs", "bower_components/**/*.purs"]) id srcGlob'
   case serverRaw of
     Right exe -> do
         serverBins <- findBins exe
@@ -61,7 +65,7 @@ startServer path = do
             traverse_ (\(Executable x vv) -> do
               liftEff $ log $ x <> ": " <> fromMaybe "ERROR" vv) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " <> bin
-            res <- P.startServer bin path
+            res <- P.startServer bin path glob
             let noRes = { quit: pure unit, port: Nothing }
             liftEff $ case res of
               P.CorrectPath usedPort -> { quit: pure unit, port: Just usedPort } <$ addInfo atom.notifications ("Found existing psc-ide-server with correct path on port " <> show usedPort)

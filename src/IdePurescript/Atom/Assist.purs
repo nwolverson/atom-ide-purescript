@@ -1,4 +1,4 @@
-module IdePurescript.Atom.Assist (caseSplit, addClause, fixTypo, CaseEff, TypoEff, gotoDef) where
+module IdePurescript.Atom.Assist (caseSplit, addClause, fixTypo, CaseEff, TypoEff, gotoDef, gotoDefHyper) where
 
 import Prelude
 import PscIde as P
@@ -7,7 +7,7 @@ import Atom.CommandRegistry (COMMAND)
 import Atom.Config (CONFIG)
 import Atom.Editor (EDITOR, TextEditor, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY, addError)
-import Atom.Point (getColumn)
+import Atom.Point (Point, getColumn)
 import Atom.Range (getEnd, getStart)
 import Atom.Workspace (defaultOpenOptions, open, WORKSPACE, getActiveTextEditor)
 import Control.Monad.Aff (runAff, Aff)
@@ -113,6 +113,26 @@ gotoDef modulesState port = do
     atom <- lift $ liftEff'' getAtom
     ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
     { pos } <- lift $ liftEff'' $ getLinePosition ed
+    { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
+    let prefix = maybe "" id qualifier
+    state <- lift $ liftEff'' $ readRef modulesState
+    info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
+    case info of
+      Just { position : Just (TypePosition { start, end, name }) } -> lift $ liftEff'' $
+        open atom.workspace name
+          (defaultOpenOptions { initialLine = start.line - 1, initialColumn = start.column - 1 })
+          (const $ pure unit) (pure unit)
+
+      _ -> pure unit
+
+-- TODO refactor
+gotoDefHyper ::  forall eff. Ref State -> Int -> TextEditor -> Point -> Eff (GotoEff eff) Unit
+gotoDefHyper modulesState port ed pos = do
+  launchAffAndRaise $ runMaybeT body
+  where
+  body :: MaybeT (Aff (GotoEff eff)) Unit
+  body = do
+    atom <- lift $ liftEff'' getAtom
     { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
     let prefix = maybe "" id qualifier
     state <- lift $ liftEff'' $ readRef modulesState

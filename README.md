@@ -11,12 +11,19 @@ Package should trigger on opening a `.purs` file or running any PureScript/PSCI 
 
 ## Installation and General Use
 
-Atom packages [language-purescript](https://atom.io/packages/language-purescript) and [Linter](https://github.com/atom-community/linter) are required, these should be auto-installed by starting the package, eg by running any PureScript command.
-
 For best results (and default settings) install dependencies:
 
-  * `psc` >= 0.8.0
-  * `pulp` >= 8.0.0
+  * `psc` 0.8.5 or >= 0.9.1 (includes `psc-ide-server` as standard)
+    * 0.9.2 required for go-to definition, 0.9.x for some compiler suggestions
+  * `pulp` >= 8.0.0 (appropriate for your `psc` version)
+
+Required atom packages - these should be auto-installed by starting the package, eg by running any PureScript command.
+  * [language-purescript](https://atom.io/packages/language-purescript)
+  * [Linter](https://github.com/atom-community/linter) are required,
+
+Optional atom packages:
+
+  * [hyperclick](https://atom.io/packages/hyperclick) - click to go to definition (this package contains a hyperclick provider)
 
 For use with older versions of pulp, or for alternative build tools and configuration tips, [see below](#build). In brief
 the build command is configurable, but should output JSON errors.
@@ -67,7 +74,7 @@ Command available from the command palette:
 ![PSCI window](http://nwolverson.github.io/atom-ide-purescript/assets/psci.png)
 
 Basic PSCI REPL integration (runs `pulp psci`). Comprises a read-only pane which displays
-PSCI output, and an input field to send expressions to the REPL (just hitting enter). Input 
+PSCI output, and an input field to send expressions to the REPL (just hitting enter). Input
 can be sent from the current buffer by line or selection.
 
 Command from the command palette:
