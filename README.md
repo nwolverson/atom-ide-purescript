@@ -27,16 +27,19 @@ This package runs a server process, `psc-ide-server`, to provide type informatio
 etc. This package will automatically start `psc-ide-server` in your project
 directory (port is configurable) and kill it when closing, if for some reason
 you want a longer running server process you should be able to start that before
-starting atom. Multiple projects currently not supported, but you should be able
-to use the [project-manager](https://atom.io/packages/project-manager) package.
+starting atom.
+
+Multiple PureScript projects are now supported, whether in one or multiple Atom windows, see [release notes](https://github.com/nwolverson/atom-ide-purescript/releases/tag/v0.14.0) for details.
 
 Note `psc-ide-client` is not used.
 
-For all functions provided by `psc-ide` you will need to build your project first!
+For all functions provided by `psc-ide` you will need to build your project first! In particular a full build,
+not a "fast-build" on save, is required first time or after upgrading psc, afterwards saving individual files
+will update tooltips etc.
 
 ## Autocomplete
 
-Provided from `psc-ide`. Make sure your project is built first.
+Provided from `psc-ide`. Make sure your project is built first. Only for top level definitions.
 
 Completions will be sourced from all available modules by default; this is configurable to just those imported in the current file, in which case explicitly (re-)triggering the completion will expand to show all modules.
 
@@ -44,7 +47,7 @@ Imports will be inserted automatically for completions! Again this is configurab
 
 ## Tooltips
 
-Hovering over an identifier will show a tooltip with its type:
+Hovering over an identifier will show a tooltip with its type (only for top level definitions):
 
 ![Type tooltip](http://nwolverson.github.io/atom-ide-purescript/assets/type-tooltip.png)
 
