@@ -34,7 +34,7 @@ import Data.Array (length)
 import Data.Either (either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn2, mkEffFn1)
-import Data.Maybe (maybe, Maybe(Just, Nothing))
+import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (contains)
@@ -47,7 +47,7 @@ import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addSuggestionImport, addExplicitImportCmd, addModuleImportCmd)
-import IdePurescript.Atom.LinterBuild (getRoot, lint)
+import IdePurescript.Atom.LinterBuild (lint)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
@@ -60,6 +60,7 @@ import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import Node.Process (PROCESS)
 import PscIde (NET)
+import PscIde.Project (getRoot)
 
 getSuggestions :: forall eff. Int -> State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
   -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Promise (Array C.AtomSuggestion))
@@ -88,9 +89,6 @@ useEditor port modulesStateRef editor = do
   let mainModule = getMainModule text
   case path, mainModule of
     Just path', Just m -> void $ runAff logError ignoreError $ do
-      -- We load all deps initially, but only post 0.8.4, and maybe something resets psc-ide state
-      -- loadDeps port m
-
       state <- getModulesForFile port path' text
       liftEff $ writeRef modulesStateRef state
       pure unit
@@ -151,14 +149,15 @@ main = do
       linterIndie <- readRef linterIndieRef
       statusElt <- readRef buildStatusRef
       portRes <- maybe (pure Nothing) getPort file
-      case portRes, linterIndie, statusElt of
-        -- TODO if no psc-ide port, should still be able to do FULL build
-        Just { port, root }, Just linterIndie', Just statusElt' -> void $ runAff raiseError ignoreError $ do
-          messages <- lint (Just port) file atom.config root linterIndie' statusElt'
+      root' <- case portRes of
+        Just { root } -> pure $ Just root
+        Nothing -> runMaybeT $ getPathActiveEditor >>= getRoot >>> MaybeT
+      case root', linterIndie, statusElt of
+        Just root, Just linterIndie', Just statusElt' -> void $ runAff raiseError ignoreError $ do
+          messages <- lint (_.port <$> portRes) file atom.config root linterIndie' statusElt'
           liftEff $ maybe (pure unit) (writeRef messagesRef) messages
-          -- P.load port [] []
           editor <- liftEff $ getActiveTextEditor atom.workspace
-          liftEff $ useEditor' modulesState (Just port) editor
+          liftEff $ useEditor' modulesState (_.port <$> portRes) editor
         _, _, _ -> pure unit
 
     quickFix :: Eff MainEff Unit
@@ -177,8 +176,7 @@ main = do
 
     startPscIdeServer :: Eff MainEff Unit
     startPscIdeServer = void $ runMaybeT do
-      ed <- MaybeT $ getActiveTextEditor atom.workspace
-      path <- MaybeT $ getPath ed
+      path <- getPathActiveEditor
       liftEff $ log $ "Starting psc-ide-server for path: " <> path
       liftEff $ void $ runAff
                 (\_ -> log "Error starting server")
@@ -201,10 +199,15 @@ main = do
               Nothing -> pure unit
               Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
 
+
+    getPathActiveEditor :: MaybeT (Eff MainEff) String
+    getPathActiveEditor = do
+      editor <- MaybeT $ getActiveTextEditor atom.workspace
+      MaybeT $ getPath editor
+
     getPortActiveEditor :: Eff MainEff (Maybe Int)
     getPortActiveEditor = runMaybeT do
-      editor <- MaybeT $ getActiveTextEditor atom.workspace
-      file <- MaybeT $ getPath editor
+      file <- getPathActiveEditor
       _.port <$> (MaybeT $ getPort file)
 
     withPortDef :: forall a. Eff MainEff a -> (Int -> Eff MainEff a) -> Eff MainEff a

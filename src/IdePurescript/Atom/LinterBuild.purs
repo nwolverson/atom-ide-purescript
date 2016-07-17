@@ -1,7 +1,6 @@
 module IdePurescript.Atom.LinterBuild where
 
 import Prelude
-import Node.Path as P
 import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
 import Atom.NotificationManager (NOTIFY, addError)
@@ -17,35 +16,20 @@ import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Array (uncons, catMaybes)
 import Data.Either (Either(Right), either)
-import Data.Foreign (readBoolean, readString)
+import Data.Foreign (readString)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.String (trim)
 import Data.String.Regex (noFlags, regex, split)
 import Data.Traversable (traverse)
 import IdePurescript.Atom.Build (AtomLintMessage, linterBuild, toLintResult)
 import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Building), updateBuildStatus)
+import IdePurescript.Atom.Config (getFastRebuild)
 import IdePurescript.Atom.Hooks.Linter (LinterIndie, LINTER, setMessages, deleteMessages)
 import IdePurescript.Build (BuildResult, rebuild)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS) as FS
-import Node.FS.Sync (exists) as FS
 import PscIde (NET)
-
-getRoot :: forall eff'. P.FilePath -> Eff (fs :: FS.FS | eff') (Maybe P.FilePath)
-getRoot path =
-  let parent = getParent path
-      src = P.concat [path, "src"] -- Not sure this is necessary
-      bower = P.concat [path, "bower.json"] in
-  if path == "" || path == parent then
-    pure Nothing
-  else do
-    hasSrc <- FS.exists src
-    hasBower <- FS.exists bower
-    if hasSrc || hasBower then pure $ Just path else getRoot parent
-
-  where
-    getParent :: P.FilePath -> P.FilePath
-    getParent p = P.concat [p, ".."]
+import PscIde.Project (getRoot)
 
 -- TODO: Now only used by PSCI
 getProjectRoot :: forall eff. Boolean -> Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
@@ -66,10 +50,10 @@ lint port file config projdir linter statusElt = do
                       Right r, Right s -> split r $ trim $ s
                       _, _ -> []
 
-  isFastBuild <- liftEffA $ readBoolean <$> getConfig config "ide-purescript.fastRebuild"
+  isFastBuild <- liftEffA getFastRebuild
   let fastBuild :: Maybe (Aff (LintEff eff) BuildResult)
       fastBuild = case isFastBuild, file, port of
-        Right true, Just fileName, Just p -> Just $ rebuild p fileName
+        true, Just fileName, Just p -> Just $ rebuild p fileName
         _, _, _ -> Nothing
   pure unit
 

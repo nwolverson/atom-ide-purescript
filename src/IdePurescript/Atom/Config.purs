@@ -1,4 +1,4 @@
-module IdePurescript.Atom.Config (config, getSrcGlob) where
+module IdePurescript.Atom.Config (config, getSrcGlob, getFastRebuild) where
 
 import Prelude
 import Node.Process as P
@@ -9,7 +9,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
 import Data.Either (either)
-import Data.Foreign (readString, readArray, Foreign, toForeign)
+import Data.Foreign (readString, readArray, readBoolean, Foreign, toForeign)
 import Data.Maybe (Maybe(..))
 import Node.Platform (Platform(Win32))
 
@@ -22,6 +22,12 @@ getSrcGlob = do
   srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
   let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
   pure $ either (const defaultSrcGlob) id srcGlob'
+
+getFastRebuild :: forall eff. Eff (config :: CONFIG | eff) Boolean
+getFastRebuild = do
+  atom <- getAtom
+  fastRebuild <- readBoolean <$> getConfig atom.config "ide-purescript.fastRebuild"
+  pure $ either (const true) id $ fastRebuild
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
