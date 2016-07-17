@@ -3,9 +3,13 @@
 This package provides editor support for PureScript projects in Atom. Dependency [language-purescript](https://atom.io/packages/language-purescript) provides syntax highlighting.
 
 This package provides:
-  * Build and error reporting
-  * Autocompletion
-  * Type info tooltips
+  * [Autocomplete](#autocomplete)
+  * [Tooltips](#tooltips)
+  * [Pursuit lookup](#pursuit) and local search
+  * [PSCI](#PSCI)
+  * [Build](#build) and error reporting
+  * [Quick-Fix](#quick-fix)
+  * [Case-Split](#case-split)
 
 Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette.
 
@@ -88,6 +92,11 @@ Build support is provided via `pulp build` by default, configurable to any comma
 will output psc errors. This can be configured to run on save, alternatively there
 is a 'PureScript Build' command.
 
+As well as this there is "fast rebuild" via `psc-ide-server` on save (by default), this will
+build an individual file. The recommended approach is to run a full build initially and
+after any dependency upgrades, compiler updates, etc. or when producing build artifacts, and
+otherwise quick build for continuous error feedback.
+
 ### Build configuration hints
 
 The default build command is
@@ -117,14 +126,20 @@ the [project-manager](https://atom.io/packages/project-manager) package.
 You may be able to get away without thinking about all this if your project specific setup is only required for a "full" build
 (e.g. browserify step) and not just for the basic compilation stage.
 
-
-## Error Suggestions
+## Error Suggestions / Quick-Fix
 
 ![Error suggestions](https://cloud.githubusercontent.com/assets/2770891/12066635/d6b14964-afe2-11e5-8584-44d291044614.gif)
 
 Error suggestions may be triggered from some underlined compiler warnings. There
-is no visual indication, currently this will basically be for 'import' warnings,
-and can be triggered by 'alt-enter' (PureScript: Show Quick Fixes).
+is no additional visual indication. A context menu can be triggered by 'alt-enter' (PureScript: Show Quick Fixes)
+when the cursor is on an eligible warning. Currently fixable warnings:
+
+  * Unused or duplicate import (`UnusedImport`, `DuplicateImport`)
+  * Extraneous identifiers in explicit import list (`UnusedExplicitImport`)
+  * Implicit imports that should be made explicit - this will apply to all but remember that 1 open import is allowed without warning (`ImplicitImport`, `ImplicitQualifiedImport`, `HidingImport`)
+  * Missing top level type declaration - add type signature. Note you will need to quantify any type variables that appear,
+  and maybe re-qualify identifiers (`MissingTypeDeclaration`)
+  * Inferred type for wildcard `_` - fill in type signature. Notes as above. (`WildcardInferredType`)
 
 ## Case split / add clause
 
