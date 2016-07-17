@@ -1,24 +1,28 @@
 module IdePurescript.Atom.QuickFixes (showQuickFixes) where
 
 import Prelude
+import Data.String as Str
+import Data.String.Regex as Regex
 import Atom.Config (CONFIG)
-import Atom.Editor (EDITOR, TextEditor, getCursorBufferPosition, setTextInBufferRange)
+import Atom.Editor (getTextInRange, EDITOR, TextEditor, getCursorBufferPosition, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY)
-import Atom.Point (mkPoint)
-import Atom.Range (mkRange, containsPoint)
+import Atom.Point (getColumn, getRow, mkPoint)
+import Atom.Range (getEnd, getStart, mkRange, containsPoint)
 import Atom.Workspace (WORKSPACE)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Ref (REF, Ref)
 import DOM (DOM)
-import Data.Array (mapMaybe, filterM)
+import Data.Array (catMaybes, filterM)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Nullable (toMaybe)
+import Data.Traversable (traverse)
 import IdePurescript.Atom.Assist (fixTypo)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.Hooks.Linter (LINTER, getMarkerBufferRange, getMessages, getEditorLinter, LinterInternal)
 import IdePurescript.Atom.SelectView (selectListViewStaticInline)
 import IdePurescript.Modules (State)
+import IdePurescript.Regex (test')
 import Node.FS (FS)
 import PscIde (NET)
 
@@ -40,7 +44,7 @@ showQuickFixes port modulesState editor linterMain messages = do
   editorLinter <- getEditorLinter linterMain editor
   messages <- getMessages editorLinter
   messages' <- filterM (inRange editorLinter pos) messages
-  let fixes = mapMaybe (getFix editorLinter) messages'
+  fixes <- catMaybes <$> traverse (getFix editorLinter) messages'
   selectListViewStaticInline view applyFix Nothing fixes
   pure unit
 
@@ -50,16 +54,27 @@ showQuickFixes port modulesState editor linterMain messages = do
       pure $ maybe false (\r -> containsPoint r point) range
 
     getFix editorLinter message@{suggestion : { hasSuggestion: true, replacement, range }, errorCode } = do
-      -- range <- toMaybe <$> getMarkerBufferRange editorLinter message
+      markerRange <- toMaybe <$> getMarkerBufferRange editorLinter message
+      let markerRow = maybe 0 (getRow <<< getStart) markerRange -- must always be set
 
-      case range of
-        [ [r, c], [r', c'] ] -> let newRange = mkRange (mkPoint r c) (mkPoint r' c') in getFix' newRange
+      pure $ case range of
+        [ [r, c], [r', c'] ] ->
+          let
+            -- Always use replacement range from suggestion, but adjust to line of marker as marker will track buffer edits
+            -- TODO: Create markers for replacement ranges or wait until linter supports this
+            rowDiff = markerRow - r
+            newRange = mkRange (mkPoint (r+rowDiff) c) (mkPoint (r'+rowDiff) c')
+          in getFix' newRange
         _ -> Nothing
       where
         getFix' range = Just
           { title: getTitle errorCode
           , action: do
-              setTextInBufferRange editor range replacement
+              let trailingNewline = test' (Regex.regex "\n\\s+$" Regex.noFlags) replacement
+              extraText <- getTextInRange editor (mkRange (getEnd range) (mkPoint (getRow $ getEnd range) (10 + (getColumn $ getEnd range))))
+              let addNewline = trailingNewline && (not $ Str.null extraText)
+
+              setTextInBufferRange editor range (Str.trim replacement <> if addNewline then "\n" else "")
               log $ "Applied fix: " <> errorCode
           }
 
@@ -77,9 +92,9 @@ showQuickFixes port modulesState editor linterMain messages = do
       errorCode == "UnknownType" ||
       errorCode == "UnknownDataConstructor" ||
       errorCode == "UnknownTypeConstructor"
-      = Just { title: "Fix typo", action: fixTypo modulesState port }
+      = pure $ Just { title: "Fix typo", action: fixTypo modulesState port }
 
-    getFix _ _ = Nothing
+    getFix _ _ = pure Nothing
 
     view { title } = "<li>" <> title <> "</li>"
     applyFix { action } = action
