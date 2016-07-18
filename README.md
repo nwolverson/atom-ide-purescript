@@ -5,11 +5,12 @@ This package provides editor support for PureScript projects in Atom. Dependency
 This package provides:
   * [Autocomplete](#autocomplete)
   * [Tooltips](#tooltips)
-  * [Pursuit lookup](#pursuit) and local search
-  * [PSCI](#PSCI)
+  * [Go-to-definition](#go-to-definition)
+  * [Pursuit lookup](#pursuit-lookup) and local search
+  * [PSCI](#psci)
   * [Build](#build) and error reporting
-  * [Quick-Fix](#quick-fix)
-  * [Case-Split](#case-split)
+  * [Quick-Fix](#error-suggetsions--quick-fix)
+  * [Case-Split](#case-split--add-clause)
 
 Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette.
 
@@ -63,6 +64,15 @@ Hovering over an identifier will show a tooltip with its type (only for top leve
 ![Type tooltip](http://nwolverson.github.io/atom-ide-purescript/assets/type-tooltip.png)
 
 This is really stupid, and only cares that you hover over a word regardless of context, you will get some false positives.
+
+## Go to definitions
+
+The command _Ide PureScript: Goto Definition_ is available (default binding `ctrl-o g`). This is available with psc-ide version
+0.9.2 and above, and like tooltips/autocomplete works on identifiers bound at the top level. Placing the cursor on the identifier
+and executing the command should open the appropriate file at the correct place. In case source positions are not up to date (they
+  may not be updated on rebuild, try rebuilding or restarting psc-ide server).
+
+If the package [hyperclick](https://atom.io/packages/hyperclick) is installed, goto definition will be availble on alt/cmd-click also.
 
 ## Pursuit lookup
 
