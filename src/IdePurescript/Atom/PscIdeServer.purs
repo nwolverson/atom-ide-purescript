@@ -19,6 +19,7 @@ import Data.Either (either, Either(..))
 import Data.Foldable (traverse_)
 import Data.Foreign (readArray, readString)
 import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
+import Data.String (trim)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
@@ -59,12 +60,13 @@ startServer path = do
             liftEffS $ addError atom.notifications $ "Couldn't find psc-ide-server, check PATH. Looked for: "
               <> exe <> " in PATH: " <> fromMaybe "" processPath
             pure { quit: pure unit, port: Nothing }
-          Just (Executable bin _) -> do
+          Just (Executable bin version) -> do
             liftEff $ log $ "Resolved psc-ide-server paths (1st is used):"
             traverse_ (\(Executable x vv) -> do
               liftEff $ log $ x <> ": " <> fromMaybe "ERROR" vv) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " <> bin
-            res <- P.startServer bin path glob
+            let glob' = if trim <$> version == Just "0.9.2" then glob else [] -- TODO semantic version comparison >= 0.9.2
+            res <- P.startServer bin path glob'
             let noRes = { quit: pure unit, port: Nothing }
             liftEff $ case res of
               P.CorrectPath usedPort -> { quit: pure unit, port: Just usedPort } <$ addInfo atom.notifications ("Found existing psc-ide-server with correct path on port " <> show usedPort)
