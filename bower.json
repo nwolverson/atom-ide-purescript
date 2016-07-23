@@ -19,7 +19,7 @@
     "purescript-node-process": "~1.0.0",
     "purescript-node-child-process": "~1.0.0",
     "purescript-aff-promise": "^0.1.0",
-    "purescript-ide-purescript-core": "^0.5.4",
+    "purescript-ide-purescript-core": "^0.5.5",
     "purescript-node-fs-aff": "^1.0.0",
     "purescript-dom": "^1.0.0",
     "purescript-psa-utils": "^1.0.0"

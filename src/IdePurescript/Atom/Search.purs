@@ -1,6 +1,7 @@
 module IdePurescript.Atom.Search where
 
 import Prelude
+import PscIde.Command as C
 import Atom.Editor (EDITOR)
 import Atom.NotificationManager (NOTIFY)
 import Atom.Workspace (WORKSPACE)
@@ -13,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import IdePurescript.Atom.Imports (addImport)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Modules (State, getQualModule)
-import IdePurescript.PscIde (getCompletion, getLoadedModules, getPursuitModuleCompletion, getPursuitCompletion)
+import IdePurescript.PscIde (getCompletion', getLoadedModules, getPursuitModuleCompletion, getPursuitCompletion)
 import Node.FS (FS)
 import PscIde (NET)
 
@@ -57,7 +58,7 @@ localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifi
     state <- liftEff $ readRef modulesState
     modules <- getLoadedModules port
     let getQualifiedModule = (flip getQualModule) state
-    getCompletion port text state.main "" false modules getQualifiedModule
+    getCompletion' (Just $ C.Flex text) [] port state.main "" false modules getQualifiedModule
 
   view {identifier, "type": ty, "module": mod} =
      "<li class='two-lines'>"
