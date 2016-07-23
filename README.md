@@ -153,11 +153,12 @@ when the cursor is on an eligible warning. Currently fixable warnings:
 
 ## Case split / add clause
 
-*EXPERIMENTAL*
+![Case split/add clause](https://cloud.githubusercontent.com/assets/2770891/17080720/2c5391d8-5132-11e6-8bf3-0a7e0714da24.gif)
 
-Add clause - use psc-ide to add a clause to the current top-level function (from cursor on its type definition).
-Case split - with cursor on an function argument identifier, add clauses to the definition to case-split on that argument.
+Add clause (default binding: `^O c`) - use psc-ide to add a clause to the current top-level function (from cursor on its type definition).
+Case split (default binding: `^O s`) - with cursor on an function argument identifier, add clauses to the definition to case-split on that argument.
 
+Currently the type of the arguments must be provided by the user.
 
 ## Hacking on atom-ide-purescript
 
