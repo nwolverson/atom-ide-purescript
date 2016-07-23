@@ -60,7 +60,7 @@ caseSplit port = do
     { line, col, pos, range } <- lift $ liftEff'' $ getLinePosition ed
     { range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
     ty <- MaybeT $ addPromptPanel "Parameter type" ""
-    lines <- lift $ eitherToErr $ P.caseSplit port line (getColumn $ getStart wordRange) (getColumn $ getEnd wordRange) true ty
+    lines <- lift $ eitherToErr $ P.caseSplit port line (getColumn $ getStart wordRange) (getColumn $ getEnd wordRange) false ty
     lift $ void $ liftEff'' $ setTextInBufferRange ed range $ intercalate "\n" lines
 
 addClause :: forall eff. Int -> Eff (CaseEff eff) Unit
@@ -71,7 +71,7 @@ addClause port = do
     Just ed ->
       launchAffAndRaise $ do
         { line, col, range } <- liftEff $ getLinePosition ed
-        lines <- eitherToErr $ P.addClause port line true
+        lines <- eitherToErr $ P.addClause port line false
         liftEff $ setTextInBufferRange ed range $ intercalate "\n" lines
     _ -> pure unit
 
