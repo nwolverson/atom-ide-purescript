@@ -18,8 +18,11 @@ import Data.Bifunctor (rmap)
 import Data.Either (either, Either(..))
 import Data.Foldable (traverse_)
 import Data.Foreign (readArray, readString)
+import Data.Int (fromNumber)
 import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
-import Data.String (trim)
+import Data.String (split, trim)
+import Data.Traversable (traverse)
+import Global (readInt)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
@@ -41,6 +44,23 @@ type ServerEff e = ( project :: PROJECT
                    , buffer :: BUFFER | e )
 
 type QuitCallback eff = (Eff (err :: EXCEPTION, net :: NET, cp :: CHILD_PROCESS, fs :: FS | eff) Unit)
+
+data Version = Version Int Int Int
+
+parseVersion :: String -> Maybe Version
+parseVersion s =
+  case traverse fromNumber $ readInt 10 <$> split "." s of
+    Just [a, b, c] -> Just $ Version a b c
+    _ -> Nothing
+
+instance eqVersion :: Eq Version where
+  eq (Version a b c) (Version a' b' c') = a == a' && b == b' && c == c'
+
+instance ordVersion :: Ord Version where
+  compare (Version a b c) (Version a' b' c') = compare [a,b,c] [a',b',c']
+
+instance showVersion :: Show Version where
+  show (Version a b c) = show a <> "." <> show b <> "." <> show c
 
 -- | Start a psc-ide server instance, or find one already running on the right path.
 -- | Returns an Eff that can be evaluated to close the server later.
@@ -65,7 +85,7 @@ startServer path = do
             traverse_ (\(Executable x vv) -> do
               liftEff $ log $ x <> ": " <> fromMaybe "ERROR" vv) serverBins
             liftEff $ when (length serverBins > 1) $ addWarning atom.notifications $ "Found multiple psc-ide-server executables; using " <> bin
-            let glob' = if trim <$> version == Just "0.9.2" then glob else [] -- TODO semantic version comparison >= 0.9.2
+            let glob' = if join (parseVersion <$> trim <$> version) > Just (Version 0 9 2) then glob else []
             res <- P.startServer bin path glob'
             let noRes = { quit: pure unit, port: Nothing }
             liftEff $ case res of
