@@ -127,6 +127,7 @@ type MainEff =
 
 main :: Eff MainEff Foreign
 main = do
+  log "PureScript: Starting!"
   atom <- getAtom
   linterIndieRef <- newRef (Nothing :: Maybe LinterIndie)
   modulesState <- newRef (initialModulesState)
@@ -219,6 +220,7 @@ main = do
 
     activate :: Eff MainEff Unit
     activate = do
+      log "PureScript: Activating!"
       let cmd name action = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name) (const action)
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
