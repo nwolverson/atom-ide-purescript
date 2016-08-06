@@ -1,14 +1,13 @@
 module IdePurescript.Atom.Main where
 
 import Prelude
+import Atom.CommandRegistry (COMMAND, addCommand)
 import Control.Promise as Promise
 import Data.StrMap as StrMap
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Psci as Psci
 import PscIde as P
-
 import Atom.Atom (getAtom)
-import Atom.CommandRegistry
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
 import Atom.Grammar (GRAMMAR)
@@ -19,13 +18,14 @@ import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
 import Control.Monad.Aff (runAff, Aff)
-import Control.Monad.Aff.AVar (AVAR)
+import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
+import Control.Monad.Aff.Internal (AVar)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
-import Control.Monad.Eff.Ref (modifyRef, REF, Ref, readRef, writeRef, newRef)
+import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Error.Class (catchError)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Control.Promise (Promise)
@@ -35,7 +35,7 @@ import Data.Array (length)
 import Data.Either (either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn2, mkEffFn1)
-import Data.Maybe (Maybe(Just, Nothing), maybe)
+import Data.Maybe (isJust, Maybe(Just, Nothing), maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (contains)
@@ -137,6 +137,7 @@ main = do
 
   startedRef <- newRef (false :: Boolean)
   serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
+  startingV <- newRef (Nothing :: Maybe (AVar Unit))
 
   let
     getPort :: String -> Eff MainEff (Maybe { root :: String, port :: Int })
@@ -185,22 +186,38 @@ main = do
                 ignoreError
                 (startPscIdeServer' path)
 
+    getVar :: Aff MainEff (AVar Unit)
+    getVar = liftEff (readRef startingV) >>=
+      maybe
+        do
+          v <- makeVar' unit
+          liftEff $ writeRef startingV $ Just v
+          pure v
+        pure
+
     startPscIdeServer' :: String -> Aff MainEff Unit
     startPscIdeServer' path = do
+      var <- getVar
+      takeVar var
       root' <- liftEff $ getRoot path
       case root' of
         Nothing -> pure unit
         Just root -> do
-          { port, quit } <- startServer root
-          maybe (pure unit) (\p -> void $ P.load p [] []) port
-          liftEff $ do
-            editor <- getActiveTextEditor atom.workspace
-            useEditor' modulesState port editor
-            registerTooltips getPortActiveEditor modulesState
-            case port of
-              Nothing -> pure unit
-              Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
-
+          servers <- liftEff $ readRef serversRef
+          when (isJust $ lookup root servers) $ liftEff $ log $ "Not starting server - already started: " <> path
+          unless (isJust $ lookup root servers) do
+            { port, quit } <- startServer root
+            liftEff $ log $ "Loading modules: " <> path
+            maybe (pure unit) (\p -> void $ P.load p [] []) port
+            liftEff $ do
+              editor <- getActiveTextEditor atom.workspace
+              useEditor' modulesState port editor
+              registerTooltips getPortActiveEditor modulesState
+              case port of
+                Nothing -> pure unit
+                Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
+      liftEff $ log $ "Finished initialising server: " <> path
+      putVar var unit
 
     getPathActiveEditor :: MaybeT (Eff MainEff) String
     getPathActiveEditor = do

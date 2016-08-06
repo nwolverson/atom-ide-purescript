@@ -4,3 +4,5 @@ bower_components/
 .pulp-cache
 output/
 .psci_modules/
+.psa-stash
+.psc-ide-port
