@@ -26,8 +26,10 @@ import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Bui
 import IdePurescript.Atom.Config (getFastRebuild)
 import IdePurescript.Atom.Hooks.Linter (LinterIndie, LINTER, setMessages, deleteMessages)
 import IdePurescript.Build (BuildResult, rebuild)
+import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS) as FS
+import Node.Process (PROCESS)
 import PscIde (NET)
 import PscIde.Project (getRoot)
 
@@ -39,7 +41,7 @@ getProjectRoot _ = do
   dirs <- catMaybes <$> traverse getRoot paths
   pure $ _.head <$> uncons dirs
 
-type LintEff e = (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET | e)
+type LintEff e = (buffer :: BUFFER, fs :: FS.FS, process :: PROCESS, cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET | e)
 
 lint :: forall eff. Maybe Int -> Maybe String -> Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) (Maybe (Array AtomLintMessage))
 lint port file config projdir linter statusElt = do

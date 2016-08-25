@@ -1,13 +1,16 @@
 module IdePurescript.Atom.Build where
 
 import Prelude
+import Atom.Atom (Atom, getAtom)
+import Atom.Config (CONFIG, getConfig)
 import Control.Monad.Aff (Aff)
-import Control.Monad.Eff.Console (CONSOLE)
-import Control.Monad.Eff.Ref (REF)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
+import Data.Either (either)
+import Data.Foreign (readBoolean)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import IdePurescript.Build (BuildResult, Command(..), build)
+import IdePurescript.Build (BuildEff, BuildResult, Command(..), build)
 import IdePurescript.PscErrors (Position, PscError(PscError))
-import Node.ChildProcess (CHILD_PROCESS)
 
 -- This is really the same type but I'm using different fields
 type AtomLintTraceMessage =
@@ -41,9 +44,15 @@ type LintResult =
   }
 
 linterBuild :: forall eff. { command :: String, args :: Array String, directory :: String } ->
-  Aff (cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF | eff) BuildResult
-linterBuild { command, args, directory } =
-  build { command: Command command args, directory }
+  Aff (BuildEff (config :: CONFIG | eff)) BuildResult
+linterBuild { command, args, directory } = do
+  atom <- liftEff (getAtom :: Eff (BuildEff (config :: CONFIG | eff)) Atom)
+  addNpmPath <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.addNpmPath"
+  build
+    { command: Command command args
+    , directory
+    , useNpmDir: either (const false) id $ addNpmPath
+    }
 
 
 double :: Int -> Int

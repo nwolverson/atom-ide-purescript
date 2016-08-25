@@ -22,6 +22,7 @@ import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.Hooks.Linter (LINTER, getMarkerBufferRange, getMessages, getEditorLinter, LinterInternal)
 import IdePurescript.Atom.SelectView (selectListViewStaticInline)
 import IdePurescript.Modules (State)
+import IdePurescript.QuickFix (isUnknownToken, getTitle)
 import IdePurescript.Regex (test')
 import Node.FS (FS)
 import PscIde (NET)
@@ -78,20 +79,7 @@ showQuickFixes port modulesState editor linterMain messages = do
               log $ "Applied fix: " <> errorCode
           }
 
-        getTitle "UnusedImport"                = "Remove import"
-        getTitle "RedundantEmptyHidingImport"  = "Remove import"
-        getTitle "DuplicateImport"             = "Remove import"
-        getTitle "RedundantUnqualifiedImport"  = "Remove import"
-        getTitle "DeprecatedQualifiedSyntax"   = "Remove qualified keyword"
-        getTitle "ImplicitImport"              = "Make import explicit"
-        getTitle "UnusedExplicitImport"        = "Remove unused references"
-        getTitle _                             = "Apply Suggestion"
-
-    getFix _ { errorCode } |
-      errorCode == "UnknownValue" ||
-      errorCode == "UnknownType" ||
-      errorCode == "UnknownDataConstructor" ||
-      errorCode == "UnknownTypeConstructor"
+    getFix _ { errorCode } | isUnknownToken errorCode
       = pure $ Just { title: "Fix typo", action: fixTypo modulesState port }
 
     getFix _ _ = pure Nothing

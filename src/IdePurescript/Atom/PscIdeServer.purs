@@ -16,7 +16,7 @@ import Control.Monad.Eff.Random (RANDOM)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
 import Data.Either (either)
-import Data.Foreign (readArray, readString)
+import Data.Foreign (readArray, readString, readBoolean)
 import Data.Maybe (Maybe(Just, Nothing))
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -51,8 +51,10 @@ startServer path = do
   atom <- liftEff (getAtom :: Eff (ServerEff eff) Atom)
   serverRaw <- liftEff $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
   srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
+  addNpmPath <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.addNpmPath"
   let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
   let glob = either (const ["src/**/*.purs", "bower_components/**/*.purs"]) id srcGlob'
   let server = either (const "psc-ide-server") id serverRaw
+  let addNpmPath' = either (const false) id $ addNpmPath
 
-  P.startServer' path server glob (notify atom.notifications)
+  P.startServer' path server addNpmPath' glob (notify atom.notifications)

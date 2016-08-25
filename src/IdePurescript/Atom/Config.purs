@@ -49,6 +49,12 @@ config = toForeign
     , type: "string"
     , default: "psc-ide-server"
     }
+  , addNpmPath:
+    { title: "Use npm bin directory"
+    , description: "Whether to add the local npm bin directory to the PATH (e.g. to use locally installed psc-ide-server if available)."
+    , type: "boolean"
+    , default: false
+    }
   , buildCommand:
     { title: "Build command"
     , description: "Command line to build the project. "
