@@ -29,7 +29,7 @@ import IdePurescript.Modules (getQualModule, getUnqualActiveModules, State)
 import IdePurescript.PscIde (getTypeInfo, eitherToErr)
 import Node.FS (FS)
 import PscIde (NET)
-import PscIde.Command (TypePosition(TypePosition), Completion(..))
+import PscIde.Command (TypePosition(TypePosition), TypeInfo(..))
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
 launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
@@ -94,13 +94,13 @@ fixTypo modulesState port = do
     corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main)
     liftEff $ selectListViewStatic view (replaceTypo port ed wordRange) Nothing (runCompletion <$> corrections)
     where
-      runCompletion (Completion obj) = obj
+      runCompletion (TypeInfo obj) = obj
       replaceTypo port ed wordRange { identifier, "module'": mod } =
         launchAffAndRaise $ do
          liftEff $ setTextInBufferRange ed wordRange identifier
          addIdentImport port modulesState (Just mod) identifier
       view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
-      getIdentFromCompletion (Completion c) = c.identifier
+      getIdentFromCompletion (TypeInfo c) = c.identifier
 
 type GotoEff e = TypoEff (console :: CONSOLE | e)
 
@@ -118,7 +118,7 @@ gotoDef modulesState port = do
     state <- lift $ liftEff'' $ readRef modulesState
     info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
     case info of
-      Just { position : Just (TypePosition { start, end, name }) } -> lift $ liftEff'' $
+      Just (TypeInfo { definedAt : Just (TypePosition { start, end, name }) }) -> lift $ liftEff'' $
         open atom.workspace name
           (defaultOpenOptions { initialLine = start.line - 1, initialColumn = start.column - 1 })
           (const $ pure unit) (pure unit)
@@ -138,7 +138,7 @@ gotoDefHyper modulesState port ed pos = do
     state <- lift $ liftEff'' $ readRef modulesState
     info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
     case info of
-      Just { position : Just (TypePosition { start, end, name }) } -> lift $ liftEff'' $
+      Just (TypeInfo { definedAt : Just (TypePosition { start, end, name }) }) -> lift $ liftEff'' $
         open atom.workspace name
           (defaultOpenOptions { initialLine = start.line - 1, initialColumn = start.column - 1 })
           (const $ pure unit) (pure unit)

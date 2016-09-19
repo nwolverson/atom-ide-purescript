@@ -1,13 +1,13 @@
 module IdePurescript.Atom.Main where
 
 import Prelude
-import Atom.CommandRegistry (COMMAND, addCommand)
 import Control.Promise as Promise
 import Data.StrMap as StrMap
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Psci as Psci
 import PscIde as P
 import Atom.Atom (getAtom)
+import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
 import Atom.Grammar (GRAMMAR)

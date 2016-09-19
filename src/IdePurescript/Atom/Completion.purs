@@ -93,7 +93,7 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
       , addImport: Nothing
       }
 
-    result qualifier prefix {"type": ty, identifier, "module": mod} =
+    result qualifier prefix (C.TypeInfo {type', identifier, module': mod}) =
       -- include both text and snippet as suggestions must be unique by text+snippet
       -- we want duplicates to disambiguate modules, but only insert the ident while
       -- triggering an import for the module
@@ -103,7 +103,7 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
           Type -> identifier
           _ -> identifier
       , type: suggestionTypeAtomValue suggestType
-      , description: ty
+      , description: type'
       , replacementPrefix: prefix
       , rightLabel: mod
       , className: "purescript-suggestion"
@@ -111,6 +111,6 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
       }
       where
         suggestType =
-          if contains "->" ty then Function
+          if contains "->" type' then Function
           else if test' (regex "^[A-Z]" noFlags) identifier then Type
           else Value

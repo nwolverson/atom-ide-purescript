@@ -52,7 +52,7 @@ pursuitSearchModule port modulesState = selectListViewDynamic view importDialog 
     doImport mod x = when (x == "Import module") $ addImport port modulesState mod
 
 localSearch ::forall eff. Int -> Ref State -> Eff (LocalEff (ref :: REF | eff)) Unit
-localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") search 50
+localSearch port modulesState = selectListViewDynamic view (\(C.TypeInfo { identifier }) -> log identifier) Nothing (const "") search 50
   where
   search text = do
     state <- liftEff $ readRef modulesState
@@ -60,8 +60,8 @@ localSearch port modulesState = selectListViewDynamic view (\x -> log x.identifi
     let getQualifiedModule = (flip getQualModule) state
     getCompletion' (Just $ C.Flex text) [] port state.main "" false modules getQualifiedModule
 
-  view {identifier, "type": ty, "module": mod} =
+  view (C.TypeInfo {identifier, type', module'}) =
      "<li class='two-lines'>"
-     <> "<div class='primary-line'>" <> identifier <> ": <span class='text-info'>" <> ty <> "</span></div>"
-     <> "<div class='secondary-line'>" <> mod <> "</div>"
+     <> "<div class='primary-line'>" <> identifier <> ": <span class='text-info'>" <> type' <> "</span></div>"
+     <> "<div class='secondary-line'>" <> module' <> "</div>"
      <> "</li>"

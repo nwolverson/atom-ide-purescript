@@ -23,7 +23,7 @@ import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImport
 import IdePurescript.PscIde (getAvailableModules)
 import Node.FS (FS)
 import PscIde (NET)
-import PscIde.Command (Completion(..))
+import PscIde.Command (TypeInfo(..))
 
 type AddModuleEff eff = ImportEff (dom :: DOM | eff)
 type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :: NET, editor :: EDITOR, fs :: FS | eff)
@@ -82,7 +82,7 @@ addIdentImport' port modulesState moduleName ident editor = do
         _ -> pure unit
     _ -> pure unit
   where
-  runCompletion (Completion obj) = obj
+  runCompletion (TypeInfo obj) = obj
   -- TODO nicer if we can make select view aff-ish
   addImp { identifier, "module'": m } = launchAffAndRaise $ addIdentImport port modulesState (Just m) identifier
   view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
