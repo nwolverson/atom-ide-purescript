@@ -19,7 +19,7 @@ type ModuleInfo =
   }
 
 moduleRegex :: Either String Regex
-moduleRegex = regex """(?:^|[^A-Za-z_.])(?:((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.)?([a-zA-Z][a-zA-Z0-9_']*)?$""" noFlags
+moduleRegex = regex """(?:^|[^A-Za-z_.])(?:((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.)?([a-zA-Z_][a-zA-Z0-9_']*)?$""" noFlags
 
 type AtomSuggestion =
   { text :: String
