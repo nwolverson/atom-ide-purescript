@@ -23,7 +23,7 @@ import IdePurescript.Atom.Hooks.Linter (LINTER, getMarkerBufferRange, getMessage
 import IdePurescript.Atom.SelectView (selectListViewStaticInline)
 import IdePurescript.Modules (State)
 import IdePurescript.QuickFix (isUnknownToken, getTitle)
-import IdePurescript.Regex (test')
+import IdePurescript.Regex (replace', test')
 import Node.FS (FS)
 import PscIde (NET)
 
@@ -74,8 +74,8 @@ showQuickFixes port modulesState editor linterMain messages = do
               let trailingNewline = test' (Regex.regex "\n\\s+$" Regex.noFlags) replacement
               extraText <- getTextInRange editor (mkRange (getEnd range) (mkPoint (getRow $ getEnd range) (10 + (getColumn $ getEnd range))))
               let addNewline = trailingNewline && (not $ Str.null extraText)
-
-              setTextInBufferRange editor range (Str.trim replacement <> if addNewline then "\n" else "")
+              let replacement' = Str.trim $ replace' (Regex.regex "\\s+\n" Regex.noFlags { global = true }) "\n" replacement
+              setTextInBufferRange editor range (replacement' <> if addNewline then "\n" else "")
               log $ "Applied fix: " <> errorCode
           }
 
