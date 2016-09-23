@@ -1,5 +1,7 @@
 # ide-purescript package for Atom
 
+[![Build Status](https://travis-ci.org/nwolverson/atom-ide-purescript.svg?branch=master)](https://travis-ci.org/nwolverson/atom-ide-purescript)
+
 This package provides editor support for PureScript projects in Atom. Dependency [language-purescript](https://atom.io/packages/language-purescript) provides syntax highlighting.
 
 This package provides:
