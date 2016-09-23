@@ -10,7 +10,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Ref (REF, Ref, readRef)
 import DOM (DOM)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import IdePurescript.Atom.Imports (addImport)
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import IdePurescript.Modules (State, getQualModule)
@@ -31,9 +31,10 @@ type PursuitEff eff = (dom :: DOM
 pursuitSearch :: forall eff. Int -> Eff (LocalEff eff) Unit
 pursuitSearch port = selectListViewDynamic view (\x -> log x.identifier) Nothing (const "") (getPursuitCompletion port) 1000
   where
-  view {identifier, "type": ty, "module": mod, package} =
+  view {identifier, "type": typ, "module": mod, package, text} =
      "<li class='two-lines'>"
-     <> "<div class='primary-line'>" <> identifier <> ": <span class='text-info'>" <> ty <> "</span></div>"
+     <> "<div class='primary-line'>" <> identifier
+     <> (maybe "" (\ty -> " :: <span class='text-info'>" <> ty <> "</span><br/> " <> text <> "</div>") typ)
      <> "<div class='secondary-line'>" <> mod <> " (" <> package <> ")</div>"
      <> "</li>"
 
@@ -42,7 +43,7 @@ pursuitSearchModule port modulesState = selectListViewDynamic view importDialog 
   where
   view {"module": mod, package} =
      "<li class='two-lines'>"
-     <> "<div class='primary-line'>" <> mod <> "</span></div>"
+     <> "<div class='primary-line'>" <> mod <> "</div>"
      <> "<div class='secondary-line'>" <> package <> "</div>"
      <> "</li>"
   importDialog :: forall a. {"module" :: String | a} -> Eff (PursuitEff eff) Unit

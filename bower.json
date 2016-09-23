@@ -11,7 +11,7 @@
   ],
   "dependencies": {
     "purescript-console": "^1.0.0",
-    "purescript-psc-ide": "https://github.com/kRITZCREEK/purescript-psc-ide.git#unify-completion",
+    "purescript-psc-ide": "https://github.com/kRITZCREEK/purescript-psc-ide.git#ee60b3019ac4a639a6311dff73e295b797311493",
     "purescript-atom-api": "https://github.com/nwolverson/purescript-atom-api.git#ide-purescript",
     "purescript-aff": "~1.1.0",
     "purescript-nullable": "~1.0.1",
