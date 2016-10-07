@@ -17,7 +17,8 @@ import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Monad.Aff (runAff, Aff)
+import Control.Alt ((<|>))
+import Control.Monad.Aff (attempt, Aff, runAff, later')
 import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
 import Control.Monad.Aff.Internal (AVar)
 import Control.Monad.Eff (Eff)
@@ -32,7 +33,7 @@ import Control.Promise (Promise)
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Array (length)
-import Data.Either (either)
+import Data.Either (Either(Left, Right), either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn2, mkEffFn1)
 import Data.Maybe (isJust, Maybe(Just, Nothing), maybe)
@@ -182,7 +183,7 @@ main = do
       path <- getPathActiveEditor
       liftEff $ log $ "Starting psc-ide-server for path: " <> path
       liftEff $ void $ runAff
-                (\_ -> log "Error starting server")
+                (\e -> log $ "Error starting server: " <> show e)
                 ignoreError
                 (startPscIdeServer' path)
 
@@ -208,16 +209,26 @@ main = do
           unless (isJust $ lookup root servers) do
             { port, quit } <- startServer root
             liftEff $ log $ "Loading modules: " <> path
-            maybe (pure unit) (\p -> void $ P.load p [] []) port
-            liftEff $ do
-              editor <- getActiveTextEditor atom.workspace
-              useEditor' modulesState port editor
-              registerTooltips getPortActiveEditor modulesState
-              case port of
-                Nothing -> pure unit
-                Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
+            retry do
+              maybe (pure unit) (\p -> void $ P.load p [] []) port
+              liftEff $ do
+                editor <- getActiveTextEditor atom.workspace
+                useEditor' modulesState port editor
+                registerTooltips getPortActiveEditor modulesState
+                case port of
+                  Nothing -> pure unit
+                  Just port' -> modifyRef serversRef $ StrMap.insert root { port: port', quit}
       liftEff $ log $ "Finished initialising server: " <> path
       putVar var unit
+      where
+        retry :: Aff MainEff Unit -> Aff MainEff Unit
+        retry a = do
+          res <- attempt a
+          case res of
+            Right r -> pure r
+            Left err -> do
+              liftEff $ log $ "Retrying starting server after 500ms: " <> show err
+              later' 500 a
 
     getPathActiveEditor :: MaybeT (Eff MainEff) String
     getPathActiveEditor = do
