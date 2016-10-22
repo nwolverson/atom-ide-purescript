@@ -17,7 +17,6 @@ import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Alt ((<|>))
 import Control.Monad.Aff (attempt, Aff, runAff, later')
 import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
 import Control.Monad.Aff.Internal (AVar)
@@ -28,6 +27,7 @@ import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Error.Class (catchError)
+import Control.Monad.Except (runExcept)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Control.Promise (Promise)
 import DOM (DOM)
@@ -39,7 +39,7 @@ import Data.Function.Eff (mkEffFn2, mkEffFn1)
 import Data.Maybe (isJust, Maybe(Just, Nothing), maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
-import Data.String (contains)
+import Data.String (Pattern(Pattern), contains)
 import Data.Traversable (sequence)
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.Build (AtomLintMessage)
@@ -71,7 +71,7 @@ getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promis
   line <- liftEff'' $ getTextInRange editor range
   atom <- liftEff'' getAtom
   configRaw <- liftEff'' $ getConfig atom.config "ide-purescript.autocomplete.allModules"
-  let autoCompleteAllModules = either (const false) id $ readBoolean configRaw
+  let autoCompleteAllModules = either (const false) id $ runExcept $ readBoolean configRaw
   modules <- if activatedManually || autoCompleteAllModules then getLoadedModules port else pure $ getUnqualActiveModules state Nothing
   let getQualifiedModule = (flip getQualModule) state
   C.getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule: state.main }}
@@ -269,10 +269,10 @@ main = do
       observeTextEditors atom.workspace (\editor -> do
         path <- getPath editor
         case path of
-          Just path' | contains ".purs" path' -> do
+          Just path' | contains (Pattern ".purs") path' -> do
             onDidSave editor (\_ -> do
               buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
-              let buildOnSaveEnabled = either (const false) id $ readBoolean buildOnSave
+              let buildOnSaveEnabled = either (const false) id $ runExcept $ readBoolean buildOnSave
               when buildOnSaveEnabled (doLint path)
             )
           _ -> pure unit
@@ -321,7 +321,7 @@ main = do
             state <- readRef modulesState
             withPortDef (Promise.fromAff $ pure []) (\p -> getSuggestions p state x)
         , onDidInsertSuggestion: mkEffFn1 \x -> do
-            shouldAddImport <- either (const false) id <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.addImport"
+            shouldAddImport <- either (const false) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.addImport"
             withPort \port ->
               when shouldAddImport (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
         }

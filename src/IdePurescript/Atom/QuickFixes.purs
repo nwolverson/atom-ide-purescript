@@ -2,7 +2,8 @@ module IdePurescript.Atom.QuickFixes (showQuickFixes) where
 
 import Prelude
 import Data.String as Str
-import Data.String.Regex as Regex
+import Data.String.Regex (regex) as Regex
+import Data.String.Regex.Flags (global, noFlags) as Regex
 import Atom.Config (CONFIG)
 import Atom.Editor (getTextInRange, EDITOR, TextEditor, getCursorBufferPosition, setTextInBufferRange)
 import Atom.NotificationManager (NOTIFY)
@@ -74,7 +75,7 @@ showQuickFixes port modulesState editor linterMain messages = do
               let trailingNewline = test' (Regex.regex "\n\\s+$" Regex.noFlags) replacement
               extraText <- getTextInRange editor (mkRange (getEnd range) (mkPoint (getRow $ getEnd range) (10 + (getColumn $ getEnd range))))
               let addNewline = trailingNewline && (not $ Str.null extraText)
-              let replacement' = Str.trim $ replace' (Regex.regex "\\s+\n" Regex.noFlags { global = true }) "\n" replacement
+              let replacement' = Str.trim $ replace' (Regex.regex "\\s+\n" Regex.global) "\n" replacement
               setTextInBufferRange editor range (replacement' <> if addNewline then "\n" else "")
               log $ "Applied fix: " <> errorCode
           }

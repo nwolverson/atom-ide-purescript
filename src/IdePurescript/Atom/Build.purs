@@ -6,6 +6,7 @@ import Atom.Config (CONFIG, getConfig)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Except (runExcept)
 import Data.Either (either)
 import Data.Foreign (readBoolean)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
@@ -51,7 +52,7 @@ linterBuild { command, args, directory } = do
   build
     { command: Command command args
     , directory
-    , useNpmDir: either (const false) id $ addNpmPath
+    , useNpmDir: either (const false) id $ runExcept addNpmPath
     }
 
 

@@ -6,6 +6,7 @@ import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Except (runExcept)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
 import Data.Either (either)
@@ -19,15 +20,15 @@ defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs"]
 getSrcGlob :: forall eff. Eff (config :: CONFIG | eff) (Array String)
 getSrcGlob = do
   atom <- getAtom
-  srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
-  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
-  pure $ either (const defaultSrcGlob) id srcGlob'
+  srcGlob <- liftEff $ runExcept <$> readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
+  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< runExcept <<< readString) $ srcGlob
+  pure $ either (const defaultSrcGlob) id $ srcGlob'
 
 getFastRebuild :: forall eff. Eff (config :: CONFIG | eff) Boolean
 getFastRebuild = do
   atom <- getAtom
   fastRebuild <- readBoolean <$> getConfig atom.config "ide-purescript.fastRebuild"
-  pure $ either (const true) id $ fastRebuild
+  pure $ either (const true) id $ runExcept fastRebuild
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"

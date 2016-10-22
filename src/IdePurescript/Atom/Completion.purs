@@ -1,16 +1,17 @@
 module IdePurescript.Atom.Completion where
 
 import Prelude
-import Control.Monad.Aff (Aff)
-import Data.Array (filter)
-import Data.Maybe (Maybe(Nothing, Just), fromMaybe)
-import Data.Either (Either)
-import Data.String (indexOf, contains)
-import Data.String.Regex (Regex, noFlags, regex)
-import IdePurescript.PscIde (getCompletion, eitherToErr)
-import IdePurescript.Regex (test', match')
 import PscIde as P
 import PscIde.Command as C
+import Control.Monad.Aff (Aff)
+import Data.Array (filter)
+import Data.Either (Either)
+import Data.Maybe (Maybe(Nothing, Just), fromMaybe)
+import Data.String (Pattern(Pattern), indexOf, contains)
+import Data.String.Regex (Regex, regex)
+import Data.String.Regex.Flags (noFlags)
+import IdePurescript.PscIde (getCompletion, eitherToErr)
+import IdePurescript.Regex (test', match')
 
 type ModuleInfo =
   { modules :: Array String
@@ -46,14 +47,14 @@ getModuleSuggestions :: forall eff. Int -> String -> Aff (net :: P.NET | eff) (A
 getModuleSuggestions port prefix = do
   list <- eitherToErr $ P.listAvailableModules port
   pure $ case list of
-    (C.ModuleList lst) -> filter (\m -> indexOf prefix m == Just 0) lst
+    (C.ModuleList lst) -> filter (\m -> indexOf (Pattern prefix) m == Just 0) lst
 
 getSuggestions :: forall eff. Int -> {
     line :: String,
     moduleInfo :: ModuleInfo
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
 getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule } } =
-  let moduleCompletion = indexOf "import" line == Just 0
+  let moduleCompletion = indexOf (Pattern "import") line == Just 0
 
   in case parsed of
     Just { mod, token } ->
@@ -111,6 +112,6 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
       }
       where
         suggestType =
-          if contains "->" type' then Function
+          if contains (Pattern "->") type' then Function
           else if test' (regex "^[A-Z]" noFlags) identifier then Type
           else Value

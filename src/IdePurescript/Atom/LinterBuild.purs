@@ -12,6 +12,7 @@ import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Error.Class (catchError)
+import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Array (uncons, catMaybes)
@@ -19,7 +20,8 @@ import Data.Either (Either(Right), either)
 import Data.Foreign (readString)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.String (trim)
-import Data.String.Regex (noFlags, regex, split)
+import Data.String.Regex (regex, split)
+import Data.String.Regex.Flags (noFlags)
 import Data.Traversable (traverse)
 import IdePurescript.Atom.Build (AtomLintMessage, linterBuild, toLintResult)
 import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Building), updateBuildStatus)
@@ -48,7 +50,7 @@ lint port file config projdir linter statusElt = do
   atom <- liftEffA $ getAtom
   fullBuildPath <- liftEffA $ getConfig config "ide-purescript.buildCommand"
   let pathStr = either
-  let buildCommand = case regex "\\s+" noFlags, readString fullBuildPath of
+  let buildCommand = case regex "\\s+" noFlags, runExcept $ readString fullBuildPath of
                       Right r, Right s -> split r $ trim $ s
                       _, _ -> []
 
