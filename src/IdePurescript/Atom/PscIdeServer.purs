@@ -13,6 +13,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
+import Control.Monad.Except (runExcept)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
 import Data.Either (either)
@@ -52,9 +53,9 @@ startServer path = do
   serverRaw <- liftEff $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
   srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
   addNpmPath <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.addNpmPath"
-  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< readString) srcGlob
+  let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< runExcept <<< readString) $ runExcept srcGlob
   let glob = either (const ["src/**/*.purs", "bower_components/**/*.purs"]) id srcGlob'
-  let server = either (const "psc-ide-server") id serverRaw
-  let addNpmPath' = either (const false) id $ addNpmPath
+  let server = either (const "psc-ide-server") id $ runExcept serverRaw
+  let addNpmPath' = either (const false) id $ runExcept addNpmPath
 
   P.startServer' path server addNpmPath' glob (notify atom.notifications)

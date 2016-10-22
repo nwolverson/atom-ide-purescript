@@ -20,6 +20,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (catchException, error)
 import Control.Monad.Eff.Ref (readRef, writeRef, Ref, newRef, REF)
+import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.Types (htmlDocumentToDocument)
@@ -37,8 +38,9 @@ import Data.Foreign (readString)
 import Data.Int (fromNumber)
 import Data.Maybe (maybe, Maybe(Nothing, Just), isJust, fromMaybe)
 import Data.Nullable (toNullable, Nullable, toMaybe)
-import Data.String (indexOf, trim)
-import Data.String.Regex (split, noFlags, regex)
+import Data.String (Pattern(Pattern), indexOf, trim)
+import Data.String.Regex (split, regex)
+import Data.String.Regex.Flags (noFlags)
 import Global (readInt)
 import IdePurescript.Atom.Imports (launchAffAndRaise)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
@@ -73,7 +75,7 @@ registerCommands = do
 
 opener :: forall eff. String -> Eff (dom :: DOM, console :: CONSOLE | eff) (Nullable PscPane)
 opener s =
-  case indexOf paneUri s of
+  case indexOf (Pattern paneUri) s of
     Just 0 -> do
       div <- createElement' "div"
       setClassName "psci-pane" div
@@ -255,10 +257,9 @@ startRepl paneRef psciRef = do
     log "Started PSCI"
     grammar <- grammarForScopeName atom.grammars "source.purescript.psci"
     pure unit
-    -- setGrammar pane grammar
     )
 
-  cmd <- liftEff'' $ readString <$> getConfig atom.config "ide-purescript.psciCommand"
+  cmd <- liftEff'' $ runExcept <$> readString <$> getConfig atom.config "ide-purescript.psciCommand"
   rootPath <- liftEff'' $ getProjectRoot false
   let command = case cmd, regex "\\s+" noFlags of
                   Right cmd', Right r -> split r cmd'
