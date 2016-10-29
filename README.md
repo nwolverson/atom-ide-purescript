@@ -11,7 +11,7 @@ This package provides:
   * [Pursuit lookup](#pursuit-lookup) and local search
   * [PSCI](#psci)
   * [Build](#build) and error reporting
-  * [Quick-Fix](#error-suggetsions--quick-fix)
+  * [Quick-Fix](#error-suggestions--quick-fix)
   * [Case-Split](#case-split--add-clause)
 
 Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette.
