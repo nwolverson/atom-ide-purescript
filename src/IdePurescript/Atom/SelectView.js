@@ -97,15 +97,39 @@ exports.selectListViewDynamicImpl = function(viewForItem, confirmed, filterKey, 
   };
   PurescriptDynamicSelectListView.prototype.initialize = function() {
     SelectListView.prototype.initialize.call(this);
+
+    var searchText = "";
+    this.getEmptyMessage = function () {
+      var curText = buffer.getText();
+      if (curText === "") {
+        return "Enter text to search";
+      } else if (curText !== searchText) {
+        // Text changing and query not made yet
+        return "";
+      } else {
+        return "No matches found";
+      }
+    };
+
     var editor = this[0].firstChild.getModel();
     var buffer = editor.getBuffer();
     buffer.stoppedChangingDelay = changeDelay;
     var that = this;
-    buffer.onDidStopChanging(function(text) {
-      getCompletions(buffer.getText()).then(function (items) {
+    this.setItems([]);
+
+    function commitChanges() {
+      var currentSearchText = buffer.getText();
+      getCompletions(currentSearchText).then(function (items) {
+        searchText = currentSearchText;
         that.setItems(items);
       });
-    })
+    }
+
+    buffer.onDidStopChanging(commitChanges);
+    atom.commands.add(this[0].firstChild, "core:confirm", function (e) {
+        e.stopPropagation();
+        commitChanges();
+    });
   };
 
   var list = new PurescriptDynamicSelectListView();
