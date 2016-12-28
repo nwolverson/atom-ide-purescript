@@ -37,7 +37,7 @@ config :: Foreign
 config = toForeign
   { pscSourceGlob:
     { title: "PureScript source glob"
-    , description: "Source glob to use to find .purs source files. Currently used for psc-ide-server to power goto-definition."
+    , description: "Source glob to use to find .purs source files. Currently used for psc-ide-server to power goto-definition. (Requires restart/server restart command)"
     , type: "array"
     , default: defaultSrcGlob
     , items:
@@ -46,13 +46,13 @@ config = toForeign
     }
   , pscIdeServerExe:
     { title: "psc-ide-server executable location"
-    , description: "The location of the `psc-ide-server` executable. Note this is *not* `psc-ide-client`. May be on the PATH."
+    , description: "The location of the `psc-ide-server` executable. Note this is *not* `psc-ide-client`. May be on the PATH. (Requires restart/server restart command)"
     , type: "string"
     , default: "psc-ide-server"
     }
   , addNpmPath:
     { title: "Use npm bin directory"
-    , description: "Whether to add the local npm bin directory to the PATH (e.g. to use locally installed psc-ide-server if available)."
+    , description: "Whether to add the local npm bin directory to the PATH (e.g. to use locally installed psc-ide-server if available). (Requires restart/server restart command)"
     , type: "boolean"
     , default: false
     }
@@ -97,6 +97,12 @@ config = toForeign
       , allModules:
         { title: "Suggest from all modules"
         , description: "Whether to always autocomplete from all built modules, or just those imported in the file. Suggestions from all modules always available by explicitly triggering autocomplete."
+        , type: "boolean"
+        , default: true
+        }
+      , excludeLowerPriority:
+        { title: "Exclude other lower-priority providers"
+        , description: "Whether to set the excludeLowerPriority flag for autocomplete+: disable this to see plain-text suggestions from context, for example. (Requires restart)"
         , type: "boolean"
         , default: true
         }

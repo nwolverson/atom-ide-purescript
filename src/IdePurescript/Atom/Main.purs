@@ -312,11 +312,13 @@ main = do
         item <- getBuildStatus
         writeRef buildStatusRef $ Just item
         addLeftTile statusBar { item, priority: -50 }
-    , provideAutocomplete: \_ ->
-        { selector: ".source.purescript"
+    , provideAutocomplete: mkEffFn1 \_ -> do
+        excludeLowerPriority <- either (const true) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.excludeLowerPriority"
+        pure {
+          selector: ".source.purescript"
         , disableForSelector: ".source.purescript .comment, .source.purescript .string"
         , inclusionPriority: 1
-        , excludeLowerPriority: true
+        , excludeLowerPriority
         , getSuggestions: mkEffFn1 $ \x -> do
             state <- readRef modulesState
             withPortDef (Promise.fromAff $ pure []) (\p -> getSuggestions p state x)
