@@ -47,6 +47,7 @@ type CaseEff eff =
               , net :: NET
               , note :: NOTIFY
               , config :: CONFIG
+              , console :: CONSOLE
               | eff)
 
 caseSplit :: forall eff. Int -> Eff (CaseEff eff) Unit
@@ -78,7 +79,7 @@ addClause port = do
 liftEff'' :: forall e a. Eff e a -> Aff e a
 liftEff'' = liftEff
 
-type TypoEff e = (net :: NET, note :: NOTIFY, editor :: EDITOR, workspace :: WORKSPACE, dom :: DOM, fs :: FS, ref :: REF, config :: CONFIG | e)
+type TypoEff e = (net :: NET, note :: NOTIFY, editor :: EDITOR, workspace :: WORKSPACE, dom :: DOM, fs :: FS, ref :: REF, config :: CONFIG, console :: CONSOLE | e)
 
 fixTypo :: forall eff. Ref State -> Int -> Eff (TypoEff eff) Unit
 fixTypo modulesState port = do
@@ -102,7 +103,7 @@ fixTypo modulesState port = do
       view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
       getIdentFromCompletion (TypeInfo c) = c.identifier
 
-type GotoEff e = TypoEff (console :: CONSOLE | e)
+type GotoEff e = TypoEff e
 
 gotoDef ::  forall eff. Ref State -> Int -> Eff (GotoEff eff) Unit
 gotoDef modulesState port = do
@@ -126,7 +127,7 @@ gotoDef modulesState port = do
       _ -> pure unit
 
 -- TODO refactor
-gotoDefHyper ::  forall eff. Ref State -> Int -> TextEditor -> Point -> Eff (GotoEff eff) Unit
+gotoDefHyper :: forall eff. Ref State -> Int -> TextEditor -> Point -> Eff (GotoEff eff) Unit
 gotoDefHyper modulesState port ed pos = do
   launchAffAndRaise $ runMaybeT body
   where

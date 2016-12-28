@@ -46,7 +46,7 @@ import IdePurescript.Atom.Imports (launchAffAndRaise)
 import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import IdePurescript.Atom.PromptPanel (focus)
 import IdePurescript.Regex (match')
-import Node.ChildProcess (Exit(Normally), onClose, onError, stdin, ChildProcess, CHILD_PROCESS, stderr, stdout, defaultSpawnOptions, spawn)
+import Node.ChildProcess (CHILD_PROCESS, ChildProcess, Exit(Normally), defaultSpawnOptions, onClose, onError, spawn, stderr, stdin, stdout, toStandardError)
 import Node.Encoding (Encoding(UTF8))
 import Node.FS (FS)
 import Node.Stream (end, writeString, onDataString)
@@ -172,7 +172,7 @@ replaceAnsiColor text = toNodes parts
     parts = either (const []) (\r -> split r text) (regex """(\x1b\[[0-9;]+m)""" noFlags)
 
     colEscape :: String -> Maybe Int
-    colEscape text = case match' (regex """\x1b\[([0-9]+)m""" noFlags) text of
+    colEscape str = case match' (regex """\x1b\[([0-9]+)m""" noFlags) str of
       Just [_, Just num] -> fromNumber (readInt 10 num)
       _ -> Nothing
 
@@ -191,9 +191,9 @@ replaceAnsiColor text = toNodes parts
           pure $ cons span rest
         _, _ -> pure []
     toNodes xs = do
-      let text = fromMaybe "" (xs !! 0)
+      let str = fromMaybe "" (xs !! 0)
       span <- createElement' "span"
-      setTextContent text (elementToNode span)
+      setTextContent str (elementToNode span)
       rest <- toNodes (drop 1 xs)
       pure $ cons span rest
 
@@ -203,7 +203,7 @@ appendText {element} text = do
   setClassName "psci-line" div
   replaceAnsiColor text >>= traverse_ \node -> appendChild (elementToNode node) (elementToNode div)
   lines <- toMaybe <$> querySelector ".psci-lines" (elementToParentNode element)
-  maybe (pure unit) (\lines' -> do
+  maybe (log "appendText failed") (\lines' -> do
     appendChild (elementToNode div) (elementToNode lines')
     height <- getScrollHeight lines'
     setScrollTop lines' height) lines
@@ -250,14 +250,18 @@ sendSelection = sendText' getSelectedText
 startRepl :: forall eff. Ref (Maybe PscPane) -> Ref (Maybe ChildProcess) -> Aff (PsciEff eff) Unit
 startRepl paneRef psciRef = do
   atom <- liftEff'' getAtom
+  let notifyErr :: forall eff1. String -> Eff (console :: CONSOLE, note :: NOTIFY | eff1) Unit
+      notifyErr msg = do
+        log msg
+        addError atom.notifications msg
+
   pane :: PscPane <- unsafeCoerce openPsci
 
-  liftEff'' (do
+  liftEff'' do
     writeRef paneRef $ Just pane
     log "Started PSCI"
     grammar <- grammarForScopeName atom.grammars "source.purescript.psci"
     pure unit
-    )
 
   cmd <- liftEff'' $ runExcept <$> readString <$> getConfig atom.config "ide-purescript.psciCommand"
   rootPath <- liftEff'' $ getProjectRoot false
@@ -266,17 +270,18 @@ startRepl paneRef psciRef = do
                   _, _ -> []
   psciProcess <- liftEff'' $ case rootPath, uncons command of
     Just _, Just { head: bin, tail: args } ->
-       Just <$> spawn bin args (defaultSpawnOptions { cwd = rootPath })
-    _, _ -> pure Nothing
+      Just <$> spawn bin args (defaultSpawnOptions { cwd = rootPath })
+    Nothing, _ -> Nothing <$ notifyErr "Couldn't find project root, are you in a PureScript project?"
+    _, Nothing -> Nothing <$ (notifyErr $ "Couldn't parse PSCI command: " <> show command)
   liftEff'' $ maybe (pure unit) (writeRef psciRef <<< Just) psciProcess
-  liftEff'' $ maybe (pure unit) (\proc -> catchException (const $ pure unit) $ do
+  liftEff'' $ maybe (pure unit) (\proc -> catchException (\e -> notifyErr $ "Couldn't launch PSCI: " <> show e) $ do
     onDataString (stdout proc) UTF8 (appendText pane)
     onDataString (stderr proc) UTF8 (appendText pane)
-    onError proc (\err -> log $ "PSCI error")
+    onError proc (notifyErr <<< show <<< toStandardError)
     onClose proc (\exit ->
       case exit of
         Normally 0 -> log "psci exited successfully"
-        _ -> addError atom.notifications "PSCI exited abnormally"
+        _ -> notifyErr "PSCI exited abnormally"
       )
     editorElt <- toMaybe <$> querySelector ".psci-input atom-text-editor" (elementToParentNode pane.element)
     case editorElt of
@@ -291,6 +296,7 @@ startRepl paneRef psciRef = do
         ) editor
       )
       Nothing -> pure unit
+    log "Started PSCI"
   ) psciProcess
 
   where liftEff'' :: forall a. Eff (PsciEff eff) a -> Aff (PsciEff eff) a
