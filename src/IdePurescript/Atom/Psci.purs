@@ -172,7 +172,7 @@ replaceAnsiColor text = toNodes parts
     parts = either (const []) (\r -> split r text) (regex """(\x1b\[[0-9;]+m)""" noFlags)
 
     colEscape :: String -> Maybe Int
-    colEscape text = case match' (regex """\x1b\[([0-9]+)m""" noFlags) text of
+    colEscape str = case match' (regex """\x1b\[([0-9]+)m""" noFlags) str of
       Just [_, Just num] -> fromNumber (readInt 10 num)
       _ -> Nothing
 
@@ -191,9 +191,9 @@ replaceAnsiColor text = toNodes parts
           pure $ cons span rest
         _, _ -> pure []
     toNodes xs = do
-      let text = fromMaybe "" (xs !! 0)
+      let str = fromMaybe "" (xs !! 0)
       span <- createElement' "span"
-      setTextContent text (elementToNode span)
+      setTextContent str (elementToNode span)
       rest <- toNodes (drop 1 xs)
       pure $ cons span rest
 
