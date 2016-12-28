@@ -26,6 +26,7 @@ type PursuitEff eff = (dom :: DOM
     , net :: NET
     , editor :: EDITOR
     , fs :: FS
+    , console :: CONSOLE
     | eff)
 
 pursuitSearch :: forall eff. Int -> Eff (LocalEff eff) Unit

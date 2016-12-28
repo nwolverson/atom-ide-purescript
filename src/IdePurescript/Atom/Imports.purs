@@ -11,6 +11,7 @@ import Atom.Workspace (WORKSPACE, getActiveTextEditor)
 import Control.Monad.Aff (runAff, Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE, error)
 import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Ref (Ref, REF, readRef, writeRef)
 import DOM (DOM)
@@ -26,15 +27,16 @@ import PscIde (NET)
 import PscIde.Command (TypeInfo(..))
 
 type AddModuleEff eff = ImportEff (dom :: DOM | eff)
-type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :: NET, editor :: EDITOR, fs :: FS | eff)
+type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :: NET, editor :: EDITOR, fs :: FS, console :: CONSOLE | eff)
 
 -- TODO
-launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
+launchAffAndRaise :: forall a e. Aff (note :: NOTIFY, console :: CONSOLE | e) a -> Eff (note :: NOTIFY, console :: CONSOLE | e) Unit
 launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
   where
-  raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
+  raiseError :: forall eff. Error -> Eff (note :: NOTIFY, console :: CONSOLE | eff) Unit
   raiseError e = do
     atom <- getAtom
+    error (show e)
     addError atom.notifications (show e)
 
 addModuleImportCmd :: forall eff. Int -> Ref State -> Eff (AddModuleEff eff) Unit
