@@ -64,7 +64,7 @@ config = toForeign
         <> "This is not interpreted via a shell, arguments can be specified but don't use shell features or a command with spaces in its path."
         <> "See [examples on the README](https://github.com/nwolverson/atom-ide-purescript/#build-configuration-hints)"
     , type: "string"
-    , default: pulpCmd <> " build --no-psa --json-errors"
+    , default: pulpCmd <> " build -- --json-errors"
     }
   , buildOnSave:
     { title: "Build on save"

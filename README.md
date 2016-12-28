@@ -22,7 +22,7 @@ For best results (and default settings) install dependencies:
 
   * `psc` 0.8.5 or >= 0.9.1 (includes `psc-ide-server` as standard)
     * 0.9.2 required for go-to definition, 0.9.x for some compiler suggestions
-  * `pulp` >= 8.0.0 (appropriate for your `psc` version)
+  * `pulp` >= 8.0.0 (appropriate for your `psc` version). *>=10.0.0 recommended* to use default build command
 
 Required atom packages - these should be auto-installed by starting the package, eg by running any PureScript command.
   * [language-purescript](https://atom.io/packages/language-purescript)
@@ -113,21 +113,21 @@ otherwise quick build for continuous error feedback.
 
 The default build command is
 ```
-pulp build --no-psa --json-errors
+pulp build -- --json-errors
 ```
-(on windows `pulp.cmd` is called instead). This is configurable: the command should be
-on your PATH (or could be an explicit absolute path) with arguments, such that it will
+(on windows `pulp.cmd` is called instead). *Note* This default requires pulp 0.10 as command syntax changed to require `--` separator.
+This is configurable: the command should be on your PATH (or could be an explicit absolute path) with arguments, such that it will
 output JSON errors as per `psc`, on stderr. This is *not* interpreted via shell, simply
 pulled apart as a list of string separated arguments.
 
 Some alternatives:
   * Direct `psc` use: `psc bower_components/*/src/**/*.purs bower_components/*/src/**/*.js src/**/*.purs src/**/*.js --json-errors`
   * Run a `purescript-gulp` based build: `gulp` - again need to ensure this outputs JSON errors, you probably want a specific task for this.
-  * Pulp passing through `psa`: `pulp build --stash --json-errors`
+  * Pulp passing through `psa`: `pulp build -- --stash --json-errors`
 
     This will pass through `psc` errors as JSON but also integrate to any external `psa` stash,
     e.g. if you're running `psa` on a terminal somewhere. Right now the stashed warnings are not exposed in the JSON.
-  * Ensure tests are compiled in the build: `pulp build --include test --json-errors`
+  * Ensure tests are compiled in the build: `pulp build --include test -- --json-errors`
   * Via npm run script: `npm run -s build`. Or if the run script does not output json errors you might be able to pass
     an extra flag: `npm run -s build -- --json-errors` - more information [on this issue](https://github.com/nwolverson/atom-ide-purescript/issues/53#issuecomment-198621810).
 
