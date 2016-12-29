@@ -54,7 +54,7 @@ import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
-import IdePurescript.Atom.Tooltips (getToken, registerTooltips)
+import IdePurescript.Atom.Tooltips (getToken, registerTooltips, showTooltipAtCursor)
 import IdePurescript.Modules (State, getQualModule, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
 import IdePurescript.PscIde (getLoadedModules)
 import Node.Buffer (BUFFER)
@@ -246,6 +246,8 @@ main = do
     withPort :: (Int -> Eff MainEff Unit) -> Eff MainEff Unit
     withPort = withPortDef (pure unit)
 
+    withPortState f = withPort (\port -> f port modulesState)
+
     activate :: Eff MainEff Unit
     activate = do
       log "PureScript: Activating!"
@@ -253,15 +255,16 @@ main = do
       cmd "build" $ doLint Nothing
       cmd "show-quick-fixes" quickFix
       cmd "pursuit-search" $ withPort pursuitSearch
-      cmd "pursuit-search-modules" $ withPort $ \port -> pursuitSearchModule port modulesState
-      cmd "add-module-import" $ withPort $ \port -> addModuleImportCmd port modulesState
-      cmd "add-explicit-import" $ withPort $ \port -> addExplicitImportCmd port modulesState
+      cmd "pursuit-search-modules" $ withPortState pursuitSearchModule
+      cmd "add-module-import" $ withPortState addModuleImportCmd
+      cmd "add-explicit-import" $ withPortState addExplicitImportCmd
       cmd "search" $  withPort $ \port -> localSearch port modulesState
       cmd "case-split" $ withPort caseSplit
       cmd "add-clause" $ withPort addClause
       cmd "fix-typo" $ withPort $ fixTypo modulesState
       cmd "goto-definition" $ withPort $ gotoDef modulesState
       cmd "restart-psc-ide" $ restartPscIdeServer
+      cmd "show-tooltip" $ withPortState showTooltipAtCursor
       registerCommands
 
       installDependencies

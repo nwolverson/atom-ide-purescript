@@ -19,6 +19,7 @@
     'ctrl-o c':'ide-purescript:add-clause'
     'ctrl-o s':'ide-purescript:case-split'
     'ctrl-o g':'ide-purescript:goto-definition'
+    'ctrl-o t':'ide-purescript:show-tooltip'
 
 '.platform-darwin atom-workspace div.psci-pane':
     'cmd-c': 'ide-purescript:psci-copy'

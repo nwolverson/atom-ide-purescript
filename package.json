@@ -13,6 +13,7 @@
       "ide-purescript:search",
       "ide-purescript:build",
       "ide-purescript:show-quick-fixes",
+      "ide-purescript:show-tooltip",
       "ide-purescript:pursuit-search",
       "ide-purescript:pursuit-search-modules",
       "ide-purescript:add-module-import",

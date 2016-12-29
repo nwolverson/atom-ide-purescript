@@ -5,14 +5,13 @@ import IdePurescript.Atom.Completion as C
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND)
 import Atom.Editor (TextEditor, EDITOR, setText, getPath, getText, getBuffer)
-import Atom.NotificationManager (NOTIFY, addError)
+import Atom.NotificationManager (NOTIFY)
 import Atom.TextBuffer (setTextViaDiff)
 import Atom.Workspace (WORKSPACE, getActiveTextEditor)
-import Control.Monad.Aff (runAff, Aff)
+import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, error)
-import Control.Monad.Eff.Exception (Error)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Ref (Ref, REF, readRef, writeRef)
 import DOM (DOM)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
@@ -20,6 +19,7 @@ import IdePurescript.Atom.Editor (getLinePosition)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
 import IdePurescript.Atom.SelectView (selectListViewStatic)
 import IdePurescript.Atom.Tooltips (getToken)
+import IdePurescript.Atom.Util (launchAffAndRaise)
 import IdePurescript.Modules (State, ImportResult(AmbiguousImport, UpdatedImports), addModuleImport, addExplicitImport)
 import IdePurescript.PscIde (getAvailableModules)
 import Node.FS (FS)
@@ -28,16 +28,6 @@ import PscIde.Command (TypeInfo(..))
 
 type AddModuleEff eff = ImportEff (dom :: DOM | eff)
 type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :: NET, editor :: EDITOR, fs :: FS, console :: CONSOLE | eff)
-
--- TODO
-launchAffAndRaise :: forall a e. Aff (note :: NOTIFY, console :: CONSOLE | e) a -> Eff (note :: NOTIFY, console :: CONSOLE | e) Unit
-launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
-  where
-  raiseError :: forall eff. Error -> Eff (note :: NOTIFY, console :: CONSOLE | eff) Unit
-  raiseError e = do
-    atom <- getAtom
-    error (show e)
-    addError atom.notifications (show e)
 
 addModuleImportCmd :: forall eff. Int -> Ref State -> Eff (AddModuleEff eff) Unit
 addModuleImportCmd port modulesState = launchAffAndRaise do

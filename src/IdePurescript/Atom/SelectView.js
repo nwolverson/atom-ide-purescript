@@ -1,5 +1,3 @@
-// module IdePurescript.Atom.SelectView
-
 var SelectListView = require('atom-space-pen-views').SelectListView;
 
 exports.selectListViewStaticInlineImpl = function(viewForItem, confirmed, filterKey, items) {
