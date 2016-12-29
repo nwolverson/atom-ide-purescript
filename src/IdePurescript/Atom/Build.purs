@@ -37,7 +37,9 @@ resultToString Errors = "errors"
 resultToString Success = "success"
 
 fixPosition :: Position -> Position
-fixPosition = id
+fixPosition pos@{startLine, startColumn, endLine, endColumn }
+  | startLine == endLine && startColumn == endColumn = pos { endColumn = endColumn + 1}
+  | otherwise = pos
 
 type LintResult =
   { result :: String
