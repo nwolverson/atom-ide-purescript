@@ -78,6 +78,15 @@ config = toForeign
     , type: "boolean"
     , default: true
     }
+  , censorWarnings:
+    { title: "Censor warnings"
+    , description: "The warning codes to censor, both for fast rebuild and a full build. Unrelated to any psa setup. e.g.: ShadowedName,MissingTypeDeclaration"
+    , type: "array"
+    , default: []
+    , items:
+      { type: "string"
+      }
+    }
   , psciCommand:
     { title: "psci command (eg 'psci' or 'pulp psci' or full path)"
     , description: "Command line to use to launch PSCI for the repl buffer. "

@@ -57,10 +57,6 @@ linterBuild { command, args, directory } = do
     , useNpmDir: either (const false) id $ runExcept addNpmPath
     }
 
-
-double :: Int -> Int
-double x = x * x
-
 toLintResult :: BuildResult -> LintResult
 toLintResult res =
   let warnings = result "Warning" <$> res.errors.warnings
@@ -79,11 +75,10 @@ toLintResult res =
     {
       "type": errorType
     , text: message
-
     , suggestion: replace suggestion
     , filePath: fromMaybe "" filename
     , range: range $ fixPosition <$> position
-    , multiline: true -- /\n/.test(err.message)
+    , multiline: true
     , errorCode
     , trace: [
       {
