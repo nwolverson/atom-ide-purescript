@@ -11,7 +11,7 @@ import Atom.GrammarRegistry (grammarForScopeName)
 import Atom.NotificationManager (addError, NOTIFY)
 import Atom.Pane (PANE, destroyItem)
 import Atom.Point (getRow, mkPoint)
-import Atom.Project (PROJECT)
+import Atom.Project (PROJECT, getPaths)
 import Atom.Range (mkRange)
 import Atom.Workspace (getActiveTextEditor, WORKSPACE, defaultOpenOptions, open, addOpener, paneForItem)
 import Control.Monad.Aff (Aff, makeAff)
@@ -31,7 +31,7 @@ import DOM.Node.Node (setTextContent, firstChild, removeChild, hasChildNodes, ap
 import DOM.Node.ParentNode (querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
 import DOM.Util (setTimeout, setScrollTop, getScrollHeight)
-import Data.Array (uncons, (!!), cons, drop)
+import Data.Array (catMaybes, cons, drop, uncons, (!!))
 import Data.Either (either, Either(..))
 import Data.Foldable (traverse_)
 import Data.Foreign (readString)
@@ -41,8 +41,8 @@ import Data.Nullable (toNullable, Nullable, toMaybe)
 import Data.String (Pattern(Pattern), indexOf, trim)
 import Data.String.Regex (split, regex)
 import Data.String.Regex.Flags (noFlags)
+import Data.Traversable (traverse)
 import Global (readInt)
-import IdePurescript.Atom.LinterBuild (getProjectRoot)
 import IdePurescript.Atom.PromptPanel (focus)
 import IdePurescript.Atom.Util (launchAffAndRaise)
 import IdePurescript.Regex (match')
@@ -50,6 +50,7 @@ import Node.ChildProcess (CHILD_PROCESS, ChildProcess, Exit(Normally), defaultSp
 import Node.Encoding (Encoding(UTF8))
 import Node.FS (FS)
 import Node.Stream (end, writeString, onDataString)
+import PscIde.Project (getRoot)
 import Unsafe.Coerce (unsafeCoerce)
 
 foreign import init :: forall eff. Eff eff Unit
@@ -264,7 +265,7 @@ startRepl paneRef psciRef = do
     pure unit
 
   cmd <- liftEff'' $ runExcept <$> readString <$> getConfig atom.config "ide-purescript.psciCommand"
-  rootPath <- liftEff'' $ getProjectRoot false
+  rootPath <- liftEff'' getProjectRoot
   let command = case cmd, regex "\\s+" noFlags of
                   Right cmd', Right r -> split r cmd'
                   _, _ -> []
@@ -301,6 +302,13 @@ startRepl paneRef psciRef = do
 
   where liftEff'' :: forall a. Eff (PsciEff eff) a -> Aff (PsciEff eff) a
         liftEff'' = liftEff
+
+getProjectRoot :: forall eff. Eff (project :: PROJECT, note :: NOTIFY, fs :: FS | eff) (Maybe String)
+getProjectRoot = do
+  atom <- getAtom
+  paths <- getPaths atom.project
+  dirs <- catMaybes <$> traverse getRoot paths
+  pure $ _.head <$> uncons dirs
 
 activate :: forall eff. Eff (PsciEff eff) Unit
 activate = do

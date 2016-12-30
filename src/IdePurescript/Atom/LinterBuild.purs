@@ -4,7 +4,6 @@ import Prelude
 import Atom.Atom (getAtom)
 import Atom.Config (Config, CONFIG, getConfig)
 import Atom.NotificationManager (NOTIFY, addError)
-import Atom.Project (PROJECT, getPaths)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -15,7 +14,7 @@ import Control.Monad.Error.Class (catchError)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import DOM.Node.Types (Element)
-import Data.Array (catMaybes, filter, notElem, uncons)
+import Data.Array (filter, notElem, uncons)
 import Data.Either (Either(Right), either)
 import Data.Foreign (readArray, readString)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
@@ -33,15 +32,6 @@ import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS) as FS
 import Node.Process (PROCESS)
 import PscIde (NET)
-import PscIde.Project (getRoot)
-
--- TODO: Now only used by PSCI
-getProjectRoot :: forall eff. Boolean -> Eff (project :: PROJECT, note :: NOTIFY, fs :: FS.FS | eff) (Maybe String)
-getProjectRoot _ = do
-  atom <- getAtom
-  paths <- getPaths atom.project
-  dirs <- catMaybes <$> traverse getRoot paths
-  pure $ _.head <$> uncons dirs
 
 type LintEff e = (buffer :: BUFFER, fs :: FS.FS, process :: PROCESS, cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET | e)
 
@@ -77,7 +67,7 @@ lint port file config projdir linter statusElt = do
         liftEff $ Just <$> do
           censorCodes <- liftEff $ getConfig config "ide-purescript.censorWarnings"
           let codes = either (const []) id $ runExcept $ readArray censorCodes >>= traverse readString
-          let messages' = filter (\({errorCode}) -> errorCode `notElem` codes) messages
+          let messages' = filter (flip notElem codes <<< _.errorCode) messages
           deleteMessages linter
           setMessages linter messages'
           status (if result == "success" then Success else Errors) Nothing
