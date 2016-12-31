@@ -19,8 +19,17 @@ type ModuleInfo =
   , mainModule :: Maybe String
   }
 
+modulePart :: String
+modulePart = """((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))"""
+
+identPart :: String
+identPart = "([a-zA-Z_][a-zA-Z0-9_']*)"
+
 moduleRegex :: Either String Regex
-moduleRegex = regex """(?:^|[^A-Za-z_.])(?:((?:[A-Z][A-Za-z0-9]*\.)*(?:[A-Z][A-Za-z0-9]*))\.)?([a-zA-Z_][a-zA-Z0-9_']*)?$""" noFlags
+moduleRegex = regex ("(?:^|[^A-Za-z_.])(?:" <> modulePart <> """\.)?""" <> identPart <> "?$") noFlags
+
+explicitImportRegex :: Either String Regex
+explicitImportRegex = regex ("""^import\s+""" <> modulePart <> """\s+\([^)]*?""" <> identPart <> "$") noFlags
 
 type AtomSuggestion =
   { text :: String
@@ -54,14 +63,15 @@ getSuggestions :: forall eff. Int -> {
     moduleInfo :: ModuleInfo
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
 getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule } } =
-  let moduleCompletion = indexOf (Pattern "import") line == Just 0
-
-  in case parsed of
+  case parsed of
     Just { mod, token } ->
       if moduleCompletion then do
         let prefix = getModuleName mod token
         completions <- getModuleSuggestions port prefix
         pure $ map (modResult prefix) completions
+      else if moduleExplicit then do
+        completions <- getCompletion port token mainModule "" moduleCompletion [ mod ] getQualifiedModule
+        pure $ map (result mod token) completions
       else do
         completions <- getCompletion port token mainModule mod moduleCompletion modules getQualifiedModule
         pure $ map (result mod token) completions
@@ -70,11 +80,18 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
     getModuleName "" token  = token
     getModuleName mod token = mod <> "." <> token
 
+    isImport = indexOf (Pattern "import") line == Just 0
+    hasBracket = indexOf (Pattern "(") line /= Nothing
+    moduleCompletion = isImport && not hasBracket
+    moduleExplicit = isImport && hasBracket
+
     parsed =
-      case match' moduleRegex line of
+      case match' matchRegex line of
         Just [ Just _, mod, tok ] | mod /= Nothing || tok /= Nothing ->
-          Just { mod: fromMaybe "" mod , token: fromMaybe "" tok}
+          Just { mod: fromMaybe "" mod, token: fromMaybe "" tok}
         _ -> Nothing
+      where
+        matchRegex = if moduleExplicit then explicitImportRegex else moduleRegex
 
     suggestionTypeAtomValue s = case s of
       Module -> "import"
