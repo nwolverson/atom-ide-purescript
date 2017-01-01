@@ -73,8 +73,7 @@ constructTooltip port state pos = do
   case editor of
     Just e -> liftEff (getToken e pos) >>= case _ of
         Just { word, qualifier } -> do
-          let prefix = maybe "" id qualifier
-          ty <- getType port word state.main prefix (Modules.getUnqualActiveModules state $ Just word) (flip Modules.getQualModule $ state)
+          ty <- getType port word state.main qualifier (Modules.getUnqualActiveModules state $ Just word) (flip Modules.getQualModule $ state)
           pure $ if length ty > 0 then Just ty else Nothing
         _ -> pure Nothing
     _ -> pure Nothing

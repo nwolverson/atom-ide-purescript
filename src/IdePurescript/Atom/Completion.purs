@@ -58,25 +58,30 @@ getModuleSuggestions port prefix = do
   pure $ case list of
     (C.ModuleList lst) -> filter (\m -> indexOf (Pattern prefix) m == Just 0) lst
 
+
 getSuggestions :: forall eff. Int -> {
     line :: String,
     moduleInfo :: ModuleInfo
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
 getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule } } =
-  case parsed of
-    Just { mod, token } ->
-      if moduleCompletion then do
-        let prefix = getModuleName mod token
-        completions <- getModuleSuggestions port prefix
-        pure $ map (modResult prefix) completions
-      else if moduleExplicit then do
-        completions <- getCompletion port token mainModule "" moduleCompletion [ mod ] getQualifiedModule
-        pure $ map (result mod token) completions
-      else do
-        completions <- getCompletion port token mainModule mod moduleCompletion modules getQualifiedModule
-        pure $ map (result mod token) completions
-    Nothing -> pure []
-  where
+  if moduleExplicit then
+    case match' explicitImportRegex line of
+      Just [ Just _, Just mod, Just token ] -> do
+        completions <- getCompletion port token mainModule Nothing [ mod ] getQualifiedModule
+        pure $ map (result (Just mod) token) completions
+      _ -> pure []
+  else
+    case parsed of
+      Just { mod, token } ->
+        if moduleCompletion then do
+          let prefix = getModuleName (fromMaybe "" mod) token
+          completions <- getModuleSuggestions port prefix
+          pure $ map (modResult prefix) completions
+        else do
+          completions <- getCompletion port token mainModule mod modules getQualifiedModule
+          pure $ map (result mod token) completions
+      Nothing -> pure []
+    where
     getModuleName "" token  = token
     getModuleName mod token = mod <> "." <> token
 
@@ -85,13 +90,10 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
     moduleCompletion = isImport && not hasBracket
     moduleExplicit = isImport && hasBracket
 
-    parsed =
-      case match' matchRegex line of
+    parsed = case match' moduleRegex line of
         Just [ Just _, mod, tok ] | mod /= Nothing || tok /= Nothing ->
-          Just { mod: fromMaybe "" mod, token: fromMaybe "" tok}
+          Just { mod, token: fromMaybe "" tok}
         _ -> Nothing
-      where
-        matchRegex = if moduleExplicit then explicitImportRegex else moduleRegex
 
     suggestionTypeAtomValue s = case s of
       Module -> "import"
@@ -125,7 +127,7 @@ getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModul
       , replacementPrefix: prefix
       , rightLabel: mod
       , className: "purescript-suggestion"
-      , addImport: Just { mod, identifier, qualifier: if qualifier == "" then Nothing else Just qualifier }
+      , addImport: Just { mod, identifier, qualifier }
       }
       where
         suggestType =

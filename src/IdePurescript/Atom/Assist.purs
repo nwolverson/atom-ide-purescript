@@ -19,7 +19,7 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef)
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
 import DOM (DOM)
 import Data.Foldable (intercalate)
-import Data.Maybe (maybe, Maybe(Nothing, Just))
+import Data.Maybe (Maybe(Just, Nothing))
 import IdePurescript.Atom.Editor (getLinePosition)
 import IdePurescript.Atom.Imports (addIdentImport)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
@@ -115,9 +115,8 @@ gotoDef modulesState port = do
     ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
     { pos } <- lift $ liftEff'' $ getLinePosition ed
     { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
-    let prefix = maybe "" id qualifier
     state <- lift $ liftEff'' $ readRef modulesState
-    info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
+    info <- lift $ getTypeInfo port word state.main qualifier (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
     case info of
       Just (TypeInfo { definedAt : Just (TypePosition { start, end, name }) }) -> lift $ liftEff'' $
         open atom.workspace name
@@ -135,9 +134,8 @@ gotoDefHyper modulesState port ed pos = do
   body = do
     atom <- lift $ liftEff'' getAtom
     { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
-    let prefix = maybe "" id qualifier
     state <- lift $ liftEff'' $ readRef modulesState
-    info <- lift $ getTypeInfo port word state.main prefix (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
+    info <- lift $ getTypeInfo port word state.main qualifier (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
     case info of
       Just (TypeInfo { definedAt : Just (TypePosition { start, end, name }) }) -> lift $ liftEff'' $
         open atom.workspace name
