@@ -36,7 +36,7 @@ import Data.Array (length)
 import Data.Either (Either(Left, Right), either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Function.Eff (mkEffFn2, mkEffFn1)
-import Data.Maybe (isJust, Maybe(Just, Nothing), maybe)
+import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (Pattern(Pattern), contains)
@@ -55,7 +55,7 @@ import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
 import IdePurescript.Atom.Tooltips (getToken, registerTooltips, showTooltipAtCursor)
-import IdePurescript.Modules (State, getQualModule, initialModulesState, getModulesForFile, getMainModule, getUnqualActiveModules)
+import IdePurescript.Modules (State, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
 import IdePurescript.PscIde (getLoadedModules)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -68,9 +68,9 @@ getSuggestions :: forall eff. Int -> State -> { editor :: TextEditor, bufferPosi
   -> Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Promise (Array C.AtomSuggestion))
 getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
-  line <- liftEff'' $ getTextInRange editor range
-  atom <- liftEff'' getAtom
-  configRaw <- liftEff'' $ getConfig atom.config "ide-purescript.autocomplete.allModules"
+  line <- liftEff $ getTextInRange editor range
+  atom <- liftEff getAtom
+  configRaw <- liftEff $ getConfig atom.config "ide-purescript.autocomplete.allModules"
   let autoCompleteAllModules = either (const false) id $ runExcept $ readBoolean configRaw
   modules <- if activatedManually || autoCompleteAllModules then getLoadedModules port else pure $ getUnqualActiveModules state Nothing
   let getQualifiedModule = (flip getQualModule) state
@@ -80,21 +80,15 @@ getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promis
   raiseError' x e = do
     liftEff $ raiseError e
     pure x
-  liftEff'' :: forall a. Eff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) a
-  liftEff'' = liftEff
 
 useEditor :: forall eff. Int -> (Ref State) -> TextEditor
   -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
 useEditor port modulesStateRef editor = do
   path <- getPath editor
   text <- getText editor
-  let mainModule = getMainModule text
-  case path, mainModule of
-    Just path', Just m -> void $ runAff logError ignoreError $ do
-      state <- getModulesForFile port path' text
-      liftEff $ writeRef modulesStateRef state
-      pure unit
-    _, _ -> pure unit
+  maybe (pure unit) (\path' -> void $ runAff logError ignoreError $ do
+    state <- getModulesForFile port path' text
+    liftEff $ writeRef modulesStateRef state) path
 
 useEditor' :: forall eff. (Ref State) -> Maybe Int -> Maybe TextEditor
   -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
