@@ -263,17 +263,14 @@ main = do
 
       installDependencies
 
-      observeTextEditors atom.workspace (\editor -> do
-        path <- getPath editor
-        case path of
-          Just path' | contains (Pattern ".purs") path' -> do
-            onDidSave editor (\_ -> do
+      observeTextEditors atom.workspace \editor -> do
+        onDidSave editor $ const do
+          getPath editor >>= case _ of
+            Just path | contains (Pattern ".purs") path -> do
               buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
               let buildOnSaveEnabled = either (const false) id $ runExcept $ readBoolean buildOnSave
-              when buildOnSaveEnabled (doLint path)
-            )
-          _ -> pure unit
-      )
+              when buildOnSaveEnabled (doLint $ Just path)
+            _ -> pure unit
 
       onDidChangeActivePaneItem atom.workspace (\item -> void $ runMaybeT do
         editor <- MaybeT $ pure $ toEditor item
