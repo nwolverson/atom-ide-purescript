@@ -47,7 +47,7 @@ showQuickFixes port modulesState editor linterMain messages = do
   messages <- getMessages editorLinter
   messages' <- filterM (inRange editorLinter pos) messages
   fixes <- catMaybes <$> traverse (getFix editorLinter) messages'
-  selectListViewStaticInline view applyFix Nothing fixes
+  selectListViewStaticInline view applyFix (Just "title") fixes
   pure unit
 
   where

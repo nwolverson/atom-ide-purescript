@@ -70,7 +70,7 @@ addIdentImport' port modulesState moduleName ident editor = do
           buf <- getBuffer editor
           void $ setTextViaDiff buf out
         AmbiguousImport opts -> do
-          selectListViewStatic view addImp Nothing (runCompletion <$> opts)
+          selectListViewStatic view addImp (Just "identifier") (runCompletion <$> opts)
         _ -> pure unit
     _ -> pure unit
   where
