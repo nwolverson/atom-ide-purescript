@@ -52,9 +52,11 @@ exports.selectListViewStaticImpl = function(viewForItem, confirmed, filterKey, i
   PurescriptSelectListView.prototype.confirmed = function(item) {
     confirmed(item);
     this.panel && this.panel.destroy();
+    this.restoreFocus();
   };
   PurescriptSelectListView.prototype.cancelled = function() {
     this.panel && this.panel.destroy();
+    this.restoreFocus();
   };
   PurescriptSelectListView.prototype.getFilterKey = function() {
     return filterKey;
