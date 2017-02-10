@@ -17,6 +17,7 @@
 
 # ctrl-i instead of ctrl-o on windows, due to file dialog on ctrl-o
 '.platform-win32 atom-workspace atom-text-editor:not([mini])':
+    'alt-enter':'ide-purescript:show-quick-fixes'
     'ctrl-i b':'ide-purescript:build'
     'ctrl-i i':'ide-purescript:add-explicit-import'
     'ctrl-i I':'ide-purescript:add-module-import'
