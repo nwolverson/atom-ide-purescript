@@ -85,10 +85,11 @@ useEditor :: forall eff. Int -> (Ref State) -> TextEditor
   -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
 useEditor port modulesStateRef editor = do
   path <- getPath editor
-  text <- getText editor
-  maybe (pure unit) (\path' -> void $ runAff logError ignoreError $ do
-    state <- getModulesForFile port path' text
-    liftEff $ writeRef modulesStateRef state) path
+  when (maybe false isPursFile path) do
+    text <- getText editor
+    maybe (pure unit) (\path' -> void $ runAff logError ignoreError $ do
+      state <- getModulesForFile port path' text
+      liftEff $ writeRef modulesStateRef state) path
 
 useEditor' :: forall eff. (Ref State) -> Maybe Int -> Maybe TextEditor
   -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
@@ -96,6 +97,9 @@ useEditor' modulesStateRef port editor = do
   case port, editor of
     Just port', Just editor' -> useEditor port' modulesStateRef editor'
     _, _ -> pure unit
+
+isPursFile :: String -> Boolean
+isPursFile path = contains (Pattern ".purs") path
 
 type MainEff =
   ( command :: COMMAND
@@ -130,7 +134,6 @@ main = do
   linterInternalRef <- newRef (Nothing :: Maybe LinterInternal)
   buildStatusRef <- newRef (Nothing :: Maybe Element)
 
-  startedRef <- newRef (false :: Boolean)
   serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
   startingV <- newRef (Nothing :: Maybe (AVar Unit))
 
@@ -191,7 +194,7 @@ main = do
         pure
 
     startPscIdeServer' :: String -> Aff MainEff Unit
-    startPscIdeServer' path = do
+    startPscIdeServer' path = when (isPursFile path) do
       var <- getVar
       takeVar var
       root' <- liftEff $ getRoot path
@@ -266,7 +269,7 @@ main = do
       observeTextEditors atom.workspace \editor -> do
         onDidSave editor $ const do
           getPath editor >>= case _ of
-            Just path | contains (Pattern ".purs") path -> do
+            Just path | isPursFile path -> do
               buildOnSave <- getConfig atom.config "ide-purescript.buildOnSave"
               let buildOnSaveEnabled = either (const false) id $ runExcept $ readBoolean buildOnSave
               when buildOnSaveEnabled (doLint $ Just path)
@@ -285,7 +288,6 @@ main = do
 
       startPscIdeServer
       Psci.activate
-      writeRef startedRef true
 
     deactivate :: Eff MainEff Unit
     deactivate = do
