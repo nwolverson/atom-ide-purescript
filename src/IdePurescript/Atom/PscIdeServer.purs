@@ -10,7 +10,7 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, error, info, log, warn)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Except (runExcept)
@@ -39,11 +39,18 @@ type ServerEff e = ( project :: PROJECT
                    , buffer :: BUFFER | e )
 
 notify :: forall eff. NotificationManager -> P.Notify (note :: NOTIFY | eff)
-notify notifications level = case level of
-  P.Success -> addSuccess notifications
-  P.Info -> addInfo notifications
-  P.Warning -> addWarning notifications
-  P.Error -> addError notifications
+notify = flip case _ of
+  P.Success -> addSuccess
+  P.Info -> addInfo
+  P.Warning -> addWarning
+  P.Error -> addError
+
+logMsg :: forall eff. P.Notify (console :: CONSOLE | eff)
+logMsg = case _ of
+  P.Success -> log
+  P.Info -> info
+  P.Warning -> warn
+  P.Error -> error
 
 -- | Start a psc-ide server instance, or find one already running on the right path.
 -- | Returns an Eff that can be evaluated to close the server later.
@@ -58,4 +65,4 @@ startServer path = do
   let server = either (const "psc-ide-server") id $ runExcept serverRaw
   let addNpmPath' = either (const false) id $ runExcept addNpmPath
 
-  P.startServer' path server addNpmPath' glob (notify atom.notifications)
+  P.startServer' path server addNpmPath' glob (notify atom.notifications) logMsg
