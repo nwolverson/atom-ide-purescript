@@ -6,6 +6,11 @@ import Atom.Point (Point, mkPoint, getRow, getColumn)
 import Atom.Range (Range, mkRange)
 import Control.Monad.Eff (Eff)
 
+foreign import _addPurescriptClass :: forall eff. String -> TextEditor -> Eff (editor :: EDITOR | eff) Unit
+
+addPurescriptClass :: forall eff. TextEditor -> Eff (editor :: EDITOR | eff) Unit
+addPurescriptClass = _addPurescriptClass "ide-purescript-editor"
+
 getLinePosition :: forall eff. TextEditor -> Eff (editor :: EDITOR | eff) { line :: String, col :: Int, pos :: Point, range :: Range }
 getLinePosition ed = do
   pos <- getCursorBufferPosition ed
