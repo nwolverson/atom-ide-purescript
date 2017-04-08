@@ -42,6 +42,7 @@ type Solution eff =
 type AtomLintMessage eff =
   { severity :: String -- error | warning | info
   , excerpt :: String
+  , description :: String
   , location ::
     { file :: String
     , position:: Range
@@ -78,6 +79,9 @@ linterBuild { command, args, directory } = do
     , useNpmDir: either (const false) id $ runExcept addNpmPath
     }
 
+markdownify :: String -> String
+markdownify s = "```\n" <> s <> "```\n"
+
 toLintResult :: forall eff eff'. (PscError -> Boolean) -> Maybe TextEditor -> Ref State -> Maybe Int -> BuildResult -> Eff (editor :: EDITOR | eff') (LintResult (TypoEff eff))
 toLintResult resultFilter editor modulesStateRef port res = do
   warnings <- traverse (result "warning") (filter resultFilter res.errors.warnings)
@@ -98,10 +102,12 @@ toLintResult resultFilter editor modulesStateRef port res = do
     let editor' = if correctEditor then editor else Nothing
     rep <- replace editor' suggestion
     let solutions = rep <> fixes port
+        excerpt = Str.takeWhile ((/=) '\n') message
     pure
       {
         severity: errorType
-      , excerpt: message
+      , excerpt
+      , description: markdownify $ Str.dropWhile ((==) '\n') $ Str.drop (Str.length excerpt) message
       , location:
         { file: fromMaybe "" filename
         , position: range $ fixPosition <$> position
