@@ -7,7 +7,7 @@ import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Psci as Psci
 import PscIde as P
 import Atom.Atom (getAtom)
-import Atom.CommandRegistry (COMMAND, addCommand)
+import Atom.CommandRegistry (COMMAND, addCommand, dispatchRoot)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
 import Atom.Grammar (GRAMMAR)
@@ -32,27 +32,24 @@ import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Control.Promise (Promise)
 import DOM (DOM)
 import DOM.Node.Types (Element)
-import Data.Array (length)
 import Data.Either (Either(Left, Right), either)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import Data.Function.Eff (mkEffFn2, mkEffFn1)
+import Data.Function.Eff (mkEffFn1, mkEffFn2, runEffFn1)
 import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (Pattern(Pattern), contains)
 import Data.Traversable (sequence)
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
-import IdePurescript.Atom.Build (AtomLintMessage)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
-import IdePurescript.Atom.Hooks.Linter (LinterInternal, LinterIndie, LINTER, register)
+import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie, RegisterIndie)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addSuggestionImport, addExplicitImportCmd, addModuleImportCmd)
 import IdePurescript.Atom.LinterBuild (lint)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
-import IdePurescript.Atom.QuickFixes (showQuickFixes)
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
 import IdePurescript.Atom.Tooltips (getToken, registerTooltips, showTooltipAtCursor)
 import IdePurescript.Modules (State, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
@@ -130,8 +127,6 @@ main = do
   atom <- getAtom
   linterIndieRef <- newRef (Nothing :: Maybe LinterIndie)
   modulesState <- newRef (initialModulesState)
-  messagesRef <- newRef ([] :: Array AtomLintMessage)
-  linterInternalRef <- newRef (Nothing :: Maybe LinterInternal)
   buildStatusRef <- newRef (Nothing :: Maybe Element)
 
   serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
@@ -155,20 +150,15 @@ main = do
         Nothing -> runMaybeT $ getPathActiveEditor >>= getRoot >>> MaybeT
       case root', linterIndie, statusElt of
         Just root, Just linterIndie', Just statusElt' -> void $ runAff raiseError ignoreError $ do
-          messages <- lint (_.port <$> portRes) file atom.config root linterIndie' statusElt'
-          liftEff $ maybe (pure unit) (writeRef messagesRef) messages
+          initialEditor <- liftEff $ getActiveTextEditor atom.workspace
+          lint (_.port <$> portRes) modulesState file initialEditor atom.config root linterIndie' statusElt'
           editor <- liftEff $ getActiveTextEditor atom.workspace
           liftEff $ useEditor' modulesState (_.port <$> portRes) editor
         _, _, _ -> pure unit
 
     quickFix :: Eff MainEff Unit
     quickFix = do
-      messages <- readRef messagesRef
-      editor <- getActiveTextEditor atom.workspace
-      linter <- readRef linterInternalRef
-      case { editor, linter, n: length messages } of
-        { editor: Just e, linter: Just l, n } | n > 0 -> withPort \port -> showQuickFixes port modulesState e l messages
-        _ -> pure unit
+      dispatchRoot atom.commands "intentions:show"
 
     restartPscIdeServer :: Eff MainEff Unit
     restartPscIdeServer = do
@@ -299,11 +289,9 @@ main = do
     { config
     , activate: mkEffFn1 \_ -> activate
     , deactivate: mkEffFn1 \_ -> deactivate
-    , consumeLinterIndie: mkEffFn1 \registry -> do
-        linterIndie <- register registry {name: "PureScript"}
+    , consumeLinterIndie: mkEffFn1 \(register:: RegisterIndie) -> do
+        linterIndie <- runEffFn1 register { name: "PureScript" }
         writeRef linterIndieRef $ Just linterIndie
-    , consumeLinterInternal: mkEffFn1 \linter ->
-        writeRef linterInternalRef $ Just linter
     , consumeStatusBar: mkEffFn1 \statusBar -> do
         item <- getBuildStatus
         writeRef buildStatusRef $ Just item
