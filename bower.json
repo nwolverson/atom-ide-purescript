@@ -11,7 +11,7 @@
   ],
   "dependencies": {
     "purescript-console": "^2.0.0",
-    "purescript-psc-ide": "^7.0.0",
+    "purescript-psc-ide": "https://github.com/kRITZCREEK/purescript-psc-ide.git#ab6065bb862dde718461a8c7ecf9fe8fc50ccabf",
     "purescript-atom-api": "https://github.com/nwolverson/purescript-atom-api.git#ide-purescript",
     "purescript-aff": "~2.0.0",
     "purescript-nullable": "~2.0.0",
@@ -19,7 +19,7 @@
     "purescript-node-process": "~3.0.0",
     "purescript-node-child-process": "~3.0.0",
     "purescript-aff-promise": "^0.3.0",
-    "purescript-ide-purescript-core": "^0.9.1",
+    "purescript-ide-purescript-core": "https://github.com/nwolverson/purescript-ide-purescript-core.git#d08f4567d9b731c8180a708a1cbc9aa228ca556d",
     "purescript-node-fs-aff": "^3.0.0",
     "purescript-dom": "^3.0.0",
     "purescript-psa-utils": "^2.0.0",
