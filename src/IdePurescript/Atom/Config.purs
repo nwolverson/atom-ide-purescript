@@ -50,9 +50,21 @@ config = toForeign
     , type: "string"
     , default: "psc-ide-server"
     }
+  , pursExe:
+    { title: "purs location"
+    , description: "The location of the combined `purs` executable. May be on the PATH. (Requires restart/server restart command)"
+    , type: "string"
+    , default: "purs"
+    }
+  , useCombinedExe:
+    { title: "Use combined executable"
+    , description: "Whether to use the new combined purs executable. This will default to true in the future then go away."
+    , type: "boolean"
+    , default: false
+    }
   , addNpmPath:
     { title: "Use npm bin directory"
-    , description: "Whether to add the local npm bin directory to the PATH (e.g. to use locally installed psc-ide-server if available). (Requires restart/server restart command)"
+    , description: "Whether to add the local npm bin directory to the PATH (e.g. to use locally installed purs/psc-ide-server if available). (Requires restart/server restart command)"
     , type: "boolean"
     , default: false
     }

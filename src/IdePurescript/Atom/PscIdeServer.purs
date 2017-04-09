@@ -58,11 +58,18 @@ startServer :: forall eff eff'. String -> Aff (ServerEff eff) { quit :: P.QuitCa
 startServer path = do
   atom <- liftEff (getAtom :: Eff (ServerEff eff) Atom)
   serverRaw <- liftEff $ readString <$> getConfig atom.config "ide-purescript.pscIdeServerExe"
+  pursRaw <- liftEff $ readString <$> getConfig atom.config "ide-purescript.pursExe"
   srcGlob <- liftEff $ readArray <$> getConfig atom.config "ide-purescript.pscSourceGlob"
+  usePurs <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.useCombinedExe"
   addNpmPath <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.addNpmPath"
   let srcGlob' = rmap (mapMaybe $ (either (const Nothing) Just) <<< runExcept <<< readString) $ runExcept srcGlob
   let glob = either (const ["src/**/*.purs", "bower_components/**/*.purs"]) id srcGlob'
-  let server = either (const "psc-ide-server") id $ runExcept serverRaw
+  let usePurs' = either (const false) id $ runExcept usePurs
   let addNpmPath' = either (const false) id $ runExcept addNpmPath
 
-  P.startServer' path server addNpmPath' glob (notify atom.notifications) logMsg
+  let server = if usePurs' then
+                  either (const "purs") id $ runExcept pursRaw
+                else
+                  either (const "psc-ide-server") id $ runExcept serverRaw
+
+  P.startServer' path server addNpmPath' usePurs' glob (notify atom.notifications) logMsg
