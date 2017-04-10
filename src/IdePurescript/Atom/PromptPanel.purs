@@ -1,15 +1,17 @@
 module IdePurescript.Atom.PromptPanel where
 
+import Prelude
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand')
 import Atom.Editor (setText, EDITOR, TextEditor, getText)
 import Atom.Workspace (WORKSPACE, destroyPanel, addModalPanel)
 import Control.Monad.Aff (Aff, makeAff)
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import DOM (DOM)
 import DOM.Event.EventTarget (eventListener, addEventListener)
-import DOM.HTML.Event.EventTypes (blur)
 import DOM.HTML (window)
+import DOM.HTML.Event.EventTypes (blur)
 import DOM.HTML.Types (htmlDocumentToDocument)
 import DOM.HTML.Window (document)
 import DOM.Node.Document (createTextNode, createElement)
@@ -18,8 +20,6 @@ import DOM.Node.Node (appendChild)
 import DOM.Node.Types (Element, elementToNode, textToNode, elementToEventTarget)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.Nullable (toMaybe, Nullable)
-import Prelude
-
 
 foreign import getEditorModel :: forall eff. Element -> Eff (dom :: DOM | eff) TextEditor
 
@@ -36,10 +36,10 @@ addPromptPanel promptText initialText = makeAff $ \err succ ->
   doc <- htmlDocumentToDocument <$> (window >>= document)
   div <- createElement "div" doc
   text <- createTextNode promptText doc
-  appendChild (textToNode text) (elementToNode div)
+  _ <- appendChild (textToNode text) (elementToNode div)
   editor <- createElement "atom-text-editor" doc
   setAttribute "mini" "mini" editor
-  appendChild (elementToNode editor) (elementToNode div)
+  _ <- appendChild (elementToNode editor) (elementToNode div)
   panel <- addModalPanel w div true 100
 
   model <- getEditorModel editor
@@ -59,4 +59,8 @@ addPromptPanel promptText initialText = makeAff $ \err succ ->
   addCommand' cr editor "core:confirm" (close true)
   addCommand' cr editor "core:cancel" (close false)
 
-  addEventListener blur (eventListener $ close false) true (elementToEventTarget editor)
+  collapseDom $ addEventListener blur (eventListener $ close false) true (elementToEventTarget editor)
+
+  where
+    collapseDom :: forall eff a. Eff (dom :: DOM, dom :: DOM | eff) a -> Eff (dom :: DOM | eff) a
+    collapseDom = unsafeCoerceEff

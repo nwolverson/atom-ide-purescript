@@ -1,17 +1,17 @@
 module IdePurescript.Atom.Hooks.Linter where
 
-import Control.Monad.Eff (Eff)
-import Data.Function.Eff (EffFn1)
+import Control.Monad.Eff (Eff, kind Effect)
+import Control.Monad.Eff.Uncurried (EffFn1)
 import IdePurescript.Atom.Build (AtomLintMessage)
 import Prelude (Unit)
 
-foreign import data LinterRegistry :: *
+foreign import data LinterRegistry :: Type
 
 -- | Referred to in linter documentation as IndieDelegate
-foreign import data LinterIndie :: *
+foreign import data LinterIndie :: Type
 
-foreign import data EditorLinter :: *
-foreign import data LINTER :: !
+foreign import data EditorLinter :: Type
+foreign import data LINTER :: Effect
 
 -- | Argument type of the consumeIndie entry-point function
 type RegisterIndie = forall eff. EffFn1 (linter:: LINTER | eff) { name :: String } LinterIndie

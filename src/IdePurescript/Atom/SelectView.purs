@@ -4,7 +4,7 @@ import Prelude
 import Control.Monad.Eff (Eff)
 
 import Control.Monad.Aff (Aff)
-import Data.Function.Eff (EffFn1, EffFn4, EffFn6, mkEffFn1, runEffFn4, runEffFn6)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn4, EffFn6, mkEffFn1, runEffFn4, runEffFn6)
 import DOM (DOM)
 import Data.Nullable (Nullable, toNullable)
 import Data.Maybe (Maybe)

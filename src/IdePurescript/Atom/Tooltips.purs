@@ -15,7 +15,7 @@ import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Ref (REF, Ref, readRef)
 import Control.Promise (Promise, fromAff)
 import DOM (DOM)
-import Data.Function.Eff (EffFn1, EffFn2, mkEffFn1, runEffFn1, runEffFn2)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, mkEffFn1, runEffFn1, runEffFn2)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (length, take)
 import Data.String.Regex (regex)
@@ -26,7 +26,7 @@ import IdePurescript.PscIde (getType)
 import IdePurescript.Regex (match')
 import PscIde (NET)
 
-foreign import data TooltipProvider :: *
+foreign import data TooltipProvider :: Type
 
 foreign import mkTooltipProvider :: forall eff a. EffFn1 eff (EffFn1 eff {line :: Int, column :: Int} (Promise a)) TooltipProvider
 

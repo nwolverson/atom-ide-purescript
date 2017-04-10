@@ -17,7 +17,7 @@ import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
 import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Monad.Aff (attempt, Aff, runAff, later')
+import Control.Monad.Aff (attempt, Aff, runAff, delay)
 import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
 import Control.Monad.Aff.Internal (AVar)
 import Control.Monad.Eff (Eff)
@@ -26,6 +26,7 @@ import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
+import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1)
 import Control.Monad.Error.Class (catchError)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
@@ -33,12 +34,13 @@ import Control.Promise (Promise)
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Either (Either(Left, Right), either)
+import Data.Foldable (sequence_)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import Data.Function.Eff (mkEffFn1, mkEffFn2, runEffFn1)
 import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
 import Data.String (Pattern(Pattern), contains)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (sequence)
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
@@ -115,7 +117,7 @@ type MainEff =
   , workspace :: WORKSPACE
   , pane :: PANE
   , avar :: AVAR
-  , err :: EXCEPTION
+  , exception :: EXCEPTION
   , dom :: DOM
   , grammar :: GRAMMAR
   , random :: RANDOM
@@ -215,7 +217,8 @@ main = do
             Right r -> pure r
             Left err -> do
               liftEff $ log $ "Retrying starting server after 500ms: " <> show err
-              later' 500 a
+              delay (Milliseconds 500.0)
+              a
 
     getPathActiveEditor :: MaybeT (Eff MainEff) String
     getPathActiveEditor = do
@@ -282,7 +285,7 @@ main = do
     deactivate :: Eff MainEff Unit
     deactivate = do
       servers <- readRef serversRef
-      sequence $ _.quit <$> StrMap.values servers
+      sequence_ $ _.quit <$> StrMap.values servers
       writeRef serversRef empty
 
   pure $ toForeign

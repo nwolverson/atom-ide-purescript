@@ -28,7 +28,7 @@ getBuildStatus = do
   span <- createElement "span" doc
   setClassName (statusIcon Success) span
   text <- createTextNode "PureScript" doc
-  appendChild (textToNode text) (elementToNode span)
+  _ <- appendChild (textToNode text) (elementToNode span)
 
   pure span
 

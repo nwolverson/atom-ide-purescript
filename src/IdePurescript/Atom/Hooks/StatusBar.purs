@@ -1,12 +1,12 @@
 module IdePurescript.Atom.Hooks.StatusBar (StatusBar, STATUS, addLeftTile, addRightTile) where
 
 import Prelude
-import Control.Monad.Eff (Eff)
-import Data.Function.Eff (EffFn2, runEffFn2)
+import Control.Monad.Eff (Eff, kind Effect)
+import Control.Monad.Eff.Uncurried (EffFn2, runEffFn2)
 import DOM.Node.Types (Element)
 
-foreign import data StatusBar :: *
-foreign import data STATUS :: !
+foreign import data StatusBar :: Type
+foreign import data STATUS :: Effect
 
 foreign import addLeftTileImpl :: forall eff. EffFn2 (status :: STATUS | eff) StatusBar { item :: Element, priority :: Int } Unit
 

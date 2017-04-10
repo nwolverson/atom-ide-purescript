@@ -29,7 +29,7 @@ type ServerEff e = ( project :: PROJECT
                    , note :: NOTIFY
                    , net :: NET
                    , fs :: FS
-                   , err :: EXCEPTION
+                   , exception :: EXCEPTION
                    , random :: RANDOM
                    , config :: CONFIG
                    , process :: PROCESS

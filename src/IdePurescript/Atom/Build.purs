@@ -27,6 +27,7 @@ import IdePurescript.Modules (State)
 import IdePurescript.PscErrors (Position, PscError(PscError), PscSuggestion)
 import IdePurescript.QuickFix (getTitle, isUnknownToken)
 import IdePurescript.Regex (replace', test')
+import Node.Path (FilePath, normalize, resolve)
 
 type Solution eff =
   { title :: String
@@ -82,8 +83,8 @@ linterBuild { command, args, directory } = do
 markdownify :: String -> String
 markdownify s = "```\n" <> s <> "```\n"
 
-toLintResult :: forall eff eff'. (PscError -> Boolean) -> Maybe TextEditor -> Ref State -> Maybe Int -> BuildResult -> Eff (editor :: EDITOR | eff') (LintResult (TypoEff eff))
-toLintResult resultFilter editor modulesStateRef port res = do
+toLintResult :: forall eff eff'. (PscError -> Boolean) -> Maybe TextEditor -> Ref State -> Maybe Int -> BuildResult -> FilePath -> Eff (editor :: EDITOR | eff') (LintResult (TypoEff eff))
+toLintResult resultFilter editor modulesStateRef port res projdir = do
   warnings <- traverse (result "warning") (filter resultFilter res.errors.warnings)
   errors <- traverse (result "error") (filter resultFilter res.errors.errors)
   pure {
@@ -96,9 +97,13 @@ toLintResult resultFilter editor modulesStateRef port res = do
   range (Just {startLine, startColumn, endLine, endColumn}) =
     mkRange (mkPoint (startLine-1) (startColumn-1)) (mkPoint (endLine-1) (endColumn-1))
 
+
   result :: forall eff1. String -> PscError -> Eff ( editor :: EDITOR | eff1) (AtomLintMessage (TypoEff eff))
   result errorType (PscError {message,filename,position,errorLink,errorCode,suggestion}) = do
-    correctEditor <- maybe (pure false) (\e -> (==) filename <$> getPath e) editor
+    -- with 0.10 filename seems to be absolute and with 0.11 relative
+    let absolutePath = resolve [ projdir ] <$> filename
+        correctPath p = normalize <$> absolutePath == normalize <$> p
+    correctEditor <- maybe (pure false) (\e -> correctPath <$> getPath e) editor
     let editor' = if correctEditor then editor else Nothing
     rep <- replace editor' suggestion
     let solutions = rep <> fixes port
@@ -109,7 +114,7 @@ toLintResult resultFilter editor modulesStateRef port res = do
       , excerpt
       , description: markdownify $ Str.dropWhile ((==) '\n') $ Str.drop (Str.length excerpt) message
       , location:
-        { file: fromMaybe "" filename
+        { file: fromMaybe "" absolutePath
         , position: range $ fixPosition <$> position
         }
       , url: errorLink

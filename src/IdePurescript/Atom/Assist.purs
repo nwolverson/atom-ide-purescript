@@ -98,7 +98,7 @@ fixTypo modulesState port = do
       runCompletion (TypeInfo obj) = obj
       replaceTypo port ed wordRange { identifier, "module'": mod } =
         launchAffAndRaise $ do
-         liftEff $ setTextInBufferRange ed wordRange identifier
+         _ <- liftEff $ setTextInBufferRange ed wordRange identifier
          addIdentImport port modulesState (Just mod) identifier
       view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
       getIdentFromCompletion (TypeInfo c) = c.identifier

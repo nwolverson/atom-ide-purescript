@@ -28,7 +28,7 @@ import DOM.HTML.Window (document)
 import DOM.Node.Document (createElement)
 import DOM.Node.Element (setClassName, setAttribute)
 import DOM.Node.Node (setTextContent, firstChild, removeChild, hasChildNodes, appendChild)
-import DOM.Node.ParentNode (querySelector)
+import DOM.Node.ParentNode (QuerySelector(..), querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
 import DOM.Util (setTimeout, setScrollTop, getScrollHeight)
 import Data.Array (catMaybes, cons, drop, uncons, (!!))
@@ -83,15 +83,15 @@ opener s =
       setAttribute "tabindex" "0" div
       topDiv <- createElement' "div"
       setClassName "psci-lines" topDiv
-      appendChild (elementToNode topDiv) (elementToNode div)
+      _ <- appendChild (elementToNode topDiv) (elementToNode div)
       bottomDiv <- createElement' "div"
       setClassName "psci-input padded inset-panel" bottomDiv
 
       editorElt <- createElement' "atom-text-editor"
       setAttribute "mini" "true" editorElt
-      appendChild (elementToNode editorElt) (elementToNode bottomDiv)
+      _ <- appendChild (elementToNode editorElt) (elementToNode bottomDiv)
 
-      appendChild (elementToNode bottomDiv) (elementToNode div)
+      _ <- appendChild (elementToNode bottomDiv) (elementToNode div)
 
       setTimeout 10 $ focus editorElt
 
@@ -101,7 +101,7 @@ opener s =
 openPsci :: forall eff. Aff (ref :: REF, console :: CONSOLE, workspace :: WORKSPACE, note :: NOTIFY, dom :: DOM | eff) TextEditor
 openPsci = makeAff \err cb -> do
   atom <- getAtom
-  addOpener atom.workspace (unsafeCoerce opener)
+  _ <- addOpener atom.workspace (unsafeCoerce opener)
   open atom.workspace paneUri (defaultOpenOptions { split = "right", activatePane = false }) cb (err $ error "Can't Open PSCI")
 
 type PsciEff eff =
@@ -203,9 +203,9 @@ appendText {element} text = do
   div <- createElement' "div"
   setClassName "psci-line" div
   replaceAnsiColor text >>= traverse_ \node -> appendChild (elementToNode node) (elementToNode div)
-  lines <- toMaybe <$> querySelector ".psci-lines" (elementToParentNode element)
+  lines <- querySelector (QuerySelector ".psci-lines") (elementToParentNode element)
   maybe (log "appendText failed") (\lines' -> do
-    appendChild (elementToNode div) (elementToNode lines')
+    _ <- appendChild (elementToNode div) (elementToNode lines')
     height <- getScrollHeight lines'
     setScrollTop lines' height) lines
 
@@ -213,7 +213,7 @@ clearText :: forall eff. PscPane -> Eff (PsciEff eff) Unit
 clearText {element} = do
   let node = elementToNode element
   whileE (hasChildNodes node) do
-    child <- toMaybe <$> firstChild node
+    child <- firstChild node
     maybe (pure unit) (void <<< flip removeChild node) child
 
 sendText :: forall eff. PscPane -> ChildProcess -> String -> Eff (PsciEff eff) Unit
@@ -284,14 +284,14 @@ startRepl paneRef psciRef = do
         Normally 0 -> log "psci exited successfully"
         _ -> notifyErr "PSCI exited abnormally"
       )
-    editorElt <- toMaybe <$> querySelector ".psci-input atom-text-editor" (elementToParentNode pane.element)
+    editorElt <- querySelector (QuerySelector ".psci-input atom-text-editor") (elementToParentNode pane.element)
     case editorElt of
       Just editorElt' -> (do
         editor <- toMaybe <$> getModel editorElt'
         maybe (pure unit) (\ed -> do
           addCommand' atom.commands editorElt' "core:confirm" (\_ -> do
             text <- getText ed
-            setText ed ""
+            _ <- setText ed ""
             sendText pane proc text
           )
         ) editor

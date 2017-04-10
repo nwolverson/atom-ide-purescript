@@ -70,7 +70,7 @@ lint port state file editor config projdir linter statusElt = do
         let codes = either (const []) id $ runExcept $ readArray censorCodes >>= traverse readString
         buildRes <- buildCmd
         liftEff $ do
-          { result, messages } <- toLintResult (filter codes) editor state port buildRes
+          { result, messages } <- toLintResult (filter codes) editor state port buildRes projdir
           setAllMessages linter messages
           status (if result == "success" then Success else Errors) Nothing
       `catchError` \(e :: Error) ->
