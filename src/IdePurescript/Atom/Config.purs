@@ -60,7 +60,7 @@ config = toForeign
     { title: "Use combined executable"
     , description: "Whether to use the new combined purs executable. This will default to true in the future then go away."
     , type: "boolean"
-    , default: false
+    , default: true
     }
   , addNpmPath:
     { title: "Use npm bin directory"
