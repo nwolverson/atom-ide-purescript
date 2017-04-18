@@ -7,7 +7,6 @@ import Atom.Editor (setText, EDITOR, TextEditor, getText)
 import Atom.Workspace (WORKSPACE, destroyPanel, addModalPanel)
 import Control.Monad.Aff (Aff, makeAff)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import DOM (DOM)
 import DOM.Event.EventTarget (eventListener, addEventListener)
 import DOM.HTML (window)
@@ -59,8 +58,4 @@ addPromptPanel promptText initialText = makeAff $ \err succ ->
   addCommand' cr editor "core:confirm" (close true)
   addCommand' cr editor "core:cancel" (close false)
 
-  collapseDom $ addEventListener blur (eventListener $ close false) true (elementToEventTarget editor)
-
-  where
-    collapseDom :: forall eff a. Eff (dom :: DOM, dom :: DOM | eff) a -> Eff (dom :: DOM | eff) a
-    collapseDom = unsafeCoerceEff
+  addEventListener blur (eventListener $ close false) true (elementToEventTarget editor)
