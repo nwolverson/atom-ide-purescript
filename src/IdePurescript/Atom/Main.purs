@@ -45,6 +45,7 @@ import Data.Traversable (sequence)
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Config (config)
+import IdePurescript.Atom.Editor (addPurescriptClass)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie, RegisterIndie)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
@@ -83,6 +84,7 @@ getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promis
 useEditor :: forall eff. Int -> (Ref State) -> TextEditor
   -> Eff (editor ::EDITOR, net :: NET, ref :: REF, console :: CONSOLE, config :: CONFIG | eff) Unit
 useEditor port modulesStateRef editor = do
+  addPurescriptClass editor
   path <- getPath editor
   when (maybe false isPursFile path) do
     text <- getText editor
