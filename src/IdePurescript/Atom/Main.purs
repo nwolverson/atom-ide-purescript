@@ -24,6 +24,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
+import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1)
@@ -34,7 +35,7 @@ import Control.Promise (Promise)
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Either (Either(Left, Right), either)
-import Data.Foldable (sequence_)
+import Data.Foldable (sequence_, traverse_)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
@@ -199,7 +200,12 @@ main = do
             { port, quit } <- startServer root
             liftEff $ log $ "Loading modules: " <> path
             retry do
-              maybe (pure unit) (\p -> void $ P.load p [] []) port
+              traverse_ (\p -> do
+                r <- P.load p [] []
+                case r of
+                  Left err -> liftEff $ raiseError $ Exception.error err
+                  Right _  -> pure unit
+              ) port
               liftEff $ do
                 editor <- getActiveTextEditor atom.workspace
                 useEditor' modulesState port editor
