@@ -28,7 +28,10 @@ type AddImport =
 
 getSuggestions :: forall eff. Int -> {
     line :: String,
-    moduleInfo :: ModuleInfo
+    moduleInfo :: ModuleInfo,
+    groupCompletions :: Boolean,
+    maxResults :: Maybe Int,
+    preferredModules :: Array String
   } -> Aff (net :: P.NET | eff) (Array AtomSuggestion)
 getSuggestions port info = do
   res <- C.getSuggestions port info
@@ -46,19 +49,19 @@ getSuggestions port info = do
       , className: "purescript-suggestion"
       , addImport: Nothing
       }
-    convert (IdentSuggestion { mod, identifier, qualifier, suggestType, prefix, valueType }) =
+    convert (IdentSuggestion { origMod, exportMod, identifier, qualifier, suggestType, prefix, valueType }) =
     -- include both text and snippet as suggestions must be unique by text+snippet
     -- we want duplicates to disambiguate modules, but only insert the ident while
     -- triggering an import for the module
-      { text: mod <> "." <> identifier
+      { text: exportMod <> "." <> identifier
       , snippet: identifier
       , displayText: identifier
       , "type": suggestionTypeAtomValue suggestType
       , description: valueType
       , replacementPrefix: prefix
-      , rightLabel: mod
+      , rightLabel: exportMod
       , className: "purescript-suggestion"
-      , addImport: Just { mod, identifier, qualifier }
+      , addImport: Just { mod: exportMod, identifier, qualifier }
       }
 
     suggestionTypeAtomValue s = case s of

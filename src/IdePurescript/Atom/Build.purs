@@ -1,7 +1,7 @@
 module IdePurescript.Atom.Build where
 
 import Prelude
-import Data.String as Str
+
 import Atom.Atom (Atom, getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Atom.Editor (TextEditor, getPath, getTextInRange)
@@ -11,6 +11,7 @@ import Atom.Types (EDITOR)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Ref (Ref)
 import Control.Monad.Except (runExcept)
 import Data.Array (filter, null)
@@ -18,10 +19,12 @@ import Data.Either (either)
 import Data.Foreign (readBoolean)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe, maybe)
 import Data.Nullable (Nullable, toNullable)
+import Data.String as Str
 import Data.String.Regex (regex) as Regex
 import Data.String.Regex.Flags (global, noFlags) as Regex
 import Data.Traversable (traverse)
 import IdePurescript.Atom.Assist (TypoEff, fixTypo)
+import IdePurescript.Atom.Util (logMsg)
 import IdePurescript.Build (BuildEff, BuildResult, Command(..), build)
 import IdePurescript.Modules (State)
 import IdePurescript.PscErrors (Position, PscError(PscError), PscSuggestion)
@@ -70,11 +73,11 @@ type LintResult eff =
   }
 
 linterBuild :: forall eff. { command :: String, args :: Array String, directory :: String } ->
-  Aff (BuildEff (config :: CONFIG | eff)) BuildResult
+  Aff (BuildEff (config :: CONFIG, console :: CONSOLE | eff)) BuildResult
 linterBuild { command, args, directory } = do
-  atom <- liftEff (getAtom :: Eff (BuildEff (config :: CONFIG | eff)) Atom)
+  atom <- liftEff (getAtom :: Eff (BuildEff (config :: CONFIG, console :: CONSOLE | eff)) Atom)
   addNpmPath <- liftEff $ readBoolean <$> getConfig atom.config "ide-purescript.addNpmPath"
-  build
+  build logMsg
     { command: Command command args
     , directory
     , useNpmDir: either (const false) id $ runExcept addNpmPath
