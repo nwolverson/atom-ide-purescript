@@ -1,7 +1,7 @@
-module IdePurescript.Atom.Config (config, getSrcGlob, getFastRebuild) where
+module IdePurescript.Atom.Config where
 
 import Prelude
-import Node.Process as P
+
 import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Control.Monad.Eff (Eff)
@@ -10,12 +10,20 @@ import Control.Monad.Except (runExcept)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
 import Data.Either (either)
-import Data.Foreign (readString, readArray, readBoolean, Foreign, toForeign)
-import Data.Maybe (Maybe(..))
+import Data.Foreign (F, Foreign, readArray, readBoolean, readInt, readString, toForeign)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Traversable (traverse)
 import Node.Platform (Platform(Win32))
+import Node.Process as P
 
 defaultSrcGlob :: Array String
 defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs"]
+
+getConfigOption :: forall eff a. (Foreign -> F a) -> String -> Eff (config :: CONFIG | eff ) (Maybe a)
+getConfigOption readF key = do
+  atom <- getAtom
+  rawValue <- getConfig atom.config ("ide-purescript." <> key)
+  pure $ either (const Nothing) Just $ runExcept $ readF rawValue
 
 getSrcGlob :: forall eff. Eff (config :: CONFIG | eff) (Array String)
 getSrcGlob = do
@@ -25,10 +33,41 @@ getSrcGlob = do
   pure $ either (const defaultSrcGlob) id $ srcGlob'
 
 getFastRebuild :: forall eff. Eff (config :: CONFIG | eff) Boolean
-getFastRebuild = do
-  atom <- getAtom
-  fastRebuild <- readBoolean <$> getConfig atom.config "ide-purescript.fastRebuild"
-  pure $ either (const true) id $ runExcept fastRebuild
+getFastRebuild = fromMaybe true <$> getConfigOption readBoolean "fastRebuild"
+
+usePursDefault :: Boolean
+usePursDefault = true
+
+usePurs :: forall eff. Eff (config :: CONFIG | eff) Boolean
+usePurs = fromMaybe usePursDefault <$> getConfigOption readBoolean "useCombinedExe"
+
+pscIdeServerExe :: forall eff. Eff (config :: CONFIG | eff) String
+pscIdeServerExe = fromMaybe "psc-ide-server" <$> getConfigOption readString "pscIdeServerExe"
+
+pursExe :: forall eff. Eff (config :: CONFIG | eff) String
+pursExe = fromMaybe "purs" <$> getConfigOption readString "pursExe"
+
+-- | Combined effect of useCombinedExe + (pscIdeServerExe | pursExe)
+effectiveServerExe :: forall eff. Eff (config :: CONFIG | eff) String
+effectiveServerExe =
+  usePurs >>= if _ then pursExe else pscIdeServerExe
+
+addNpmPath :: forall eff. Eff (config :: CONFIG | eff) Boolean
+addNpmPath = fromMaybe false <$> getConfigOption readBoolean "addNpmPath"
+
+
+autoCompleteAllModules :: forall eff. Eff (config :: CONFIG | eff) Boolean
+autoCompleteAllModules = fromMaybe false <$> getConfigOption readBoolean "autocomplete.allModules"
+
+autoCompleteGrouped :: forall eff. Eff (config :: CONFIG | eff) Boolean
+autoCompleteGrouped = fromMaybe false <$> getConfigOption readBoolean "autocomplete.grouped"
+
+autoCompleteLimit :: forall eff. Eff (config :: CONFIG | eff) (Maybe Int)
+autoCompleteLimit =  getConfigOption readInt "autocomplete.limit"
+
+autoCompletePreferredModules :: forall eff. Eff (config :: CONFIG | eff) (Array String)
+autoCompletePreferredModules = fromMaybe [] <$> getConfigOption readA "autocomplete.preferredModules"
+  where readA = readArray >=> traverse readString
 
 pulpCmd :: String
 pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
@@ -60,7 +99,7 @@ config = toForeign
     { title: "Use combined executable"
     , description: "Whether to use the new combined purs executable. This will default to true in the future then go away."
     , type: "boolean"
-    , default: true
+    , default: usePursDefault
     }
   , addNpmPath:
     { title: "Use npm bin directory"
@@ -120,6 +159,26 @@ config = toForeign
         , description: "Whether to always autocomplete from all built modules, or just those imported in the file. Suggestions from all modules always available by explicitly triggering autocomplete."
         , type: "boolean"
         , default: true
+        }
+      , limit:
+        { title: "Result limit"
+        , description: "Maximum number of results to fetch for an autocompletion request. May improve performance on large projects."
+        , type: "integer"
+        , default: 1000
+        }
+      , grouped:
+        { title: "Group results"
+        , type: "boolean"
+        , default: true
+        , description: "Whether to group completions in autocomplete results. Requires compiler 0.11.6"
+        }
+      , preferredModules:
+        { type: "array"
+        , default: ["Prelude"]
+        , description: "Module to prefer to insert when adding imports which have been re-exported. In order of preference, most preferred first."
+        , items:
+          { type: "string"
+          }
         }
       , excludeLowerPriority:
         { title: "Exclude other lower-priority providers"

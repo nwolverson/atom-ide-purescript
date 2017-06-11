@@ -1,11 +1,7 @@
 module IdePurescript.Atom.Main where
 
 import Prelude
-import Control.Promise as Promise
-import Data.StrMap as StrMap
-import IdePurescript.Atom.Completion as C
-import IdePurescript.Atom.Psci as Psci
-import PscIde as P
+
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND, addCommand, dispatchRoot)
 import Atom.Config (CONFIG, getConfig)
@@ -29,8 +25,9 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1)
 import Control.Monad.Error.Class (catchError)
 import Control.Monad.Except (runExcept)
-import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
+import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Control.Promise (Promise)
+import Control.Promise as Promise
 import DOM (DOM)
 import DOM.Node.Types (Element)
 import Data.Either (Either(Left, Right), either)
@@ -39,28 +36,32 @@ import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
 import Data.StrMap (lookup, empty)
+import Data.StrMap as StrMap
 import Data.String (Pattern(Pattern), contains)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Traversable (sequence)
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
-import IdePurescript.Atom.Config (config)
+import IdePurescript.Atom.Completion as C
+import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie, RegisterIndie)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
-import IdePurescript.Atom.Imports (addSuggestionImport, addExplicitImportCmd, addModuleImportCmd)
+import IdePurescript.Atom.Imports (addExplicitImportCmd, addModuleImportCmd, addSuggestionImport)
 import IdePurescript.Atom.LinterBuild (lint)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
+import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
 import IdePurescript.Atom.Tooltips (getToken, registerTooltips, showTooltipAtCursor)
-import IdePurescript.Modules (State, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
+import IdePurescript.Atom.Util (launchAffAndRaise)
+import IdePurescript.Modules (State, getAllActiveModules, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
 import IdePurescript.PscIde (getLoadedModules)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import Node.Process (PROCESS)
 import PscIde (NET)
+import PscIde as P
 import PscIde.Project (getRoot)
 
 getSuggestions :: forall eff. Int -> State -> { editor :: TextEditor, bufferPosition :: Point, activatedManually :: Boolean }
@@ -68,12 +69,19 @@ getSuggestions :: forall eff. Int -> State -> { editor :: TextEditor, bufferPosi
 getSuggestions port state ({editor, bufferPosition, activatedManually}) = Promise.fromAff $ flip catchError (raiseError' []) $ do
   let range = mkRange (mkPoint (getRow bufferPosition) 0) bufferPosition
   line <- liftEff $ getTextInRange editor range
-  atom <- liftEff getAtom
-  configRaw <- liftEff $ getConfig atom.config "ide-purescript.autocomplete.allModules"
-  let autoCompleteAllModules = either (const false) id $ runExcept $ readBoolean configRaw
+  groupCompletions <- liftEff autoCompleteGrouped
+  autoCompleteAllModules <- liftEff autoCompleteAllModules
+  preferredModules <- liftEff autoCompletePreferredModules
+  maxResults <- liftEff autoCompleteLimit
   modules <- if activatedManually || autoCompleteAllModules then getLoadedModules port else pure $ getUnqualActiveModules state Nothing
   let getQualifiedModule = (flip getQualModule) state
-  C.getSuggestions port { line, moduleInfo: { modules, getQualifiedModule, mainModule: state.main }}
+  C.getSuggestions port
+    { line
+    , moduleInfo: { modules, getQualifiedModule, mainModule: state.main, importedModules: getAllActiveModules state }
+    , groupCompletions
+    , maxResults
+    , preferredModules
+  }
   where
   raiseError' :: (Array C.AtomSuggestion) -> Error -> Aff (editor :: EDITOR, net :: NET, note :: NOTIFY, config :: CONFIG | eff) (Array C.AtomSuggestion)
   raiseError' x e = do
@@ -131,7 +139,7 @@ main = do
   modulesState <- newRef (initialModulesState)
   buildStatusRef <- newRef (Nothing :: Maybe Element)
 
-  serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Eff MainEff Unit })
+  serversRef <- newRef (empty :: StrMap.StrMap { port :: Int, quit :: Aff MainEff Unit })
   startingV <- newRef (Nothing :: Maybe (AVar Unit))
 
   let
@@ -163,18 +171,18 @@ main = do
       dispatchRoot atom.commands "intentions:show"
 
     restartPscIdeServer :: Eff MainEff Unit
-    restartPscIdeServer = do
+    restartPscIdeServer = void $ runAff logError ignoreError do
       deactivate
-      startPscIdeServer
+      startPscIdeServerCurrentPath
+
+    startPscIdeServerCurrentPath :: Aff MainEff Unit
+    startPscIdeServerCurrentPath = void $ do
+      path <- liftEff $ runMaybeT getPathActiveEditor
+      maybe (pure unit) startPscIdeServer' path
 
     startPscIdeServer :: Eff MainEff Unit
-    startPscIdeServer = void $ runMaybeT do
-      path <- getPathActiveEditor
-      liftEff $ log $ "Starting psc-ide-server for path: " <> path
-      liftEff $ void $ runAff
-                (\e -> log $ "Error starting server: " <> show e)
-                ignoreError
-                (startPscIdeServer' path)
+    startPscIdeServer =
+      void $ runAff logError ignoreError startPscIdeServerCurrentPath
 
     getVar :: Aff MainEff (AVar Unit)
     getVar = liftEff (readRef startingV) >>=
@@ -282,16 +290,16 @@ main = do
       startPscIdeServer
       Psci.activate
 
-    deactivate :: Eff MainEff Unit
+    deactivate :: Aff MainEff Unit
     deactivate = do
-      servers <- readRef serversRef
+      servers <- liftEff $ readRef serversRef
       sequence_ $ _.quit <$> StrMap.values servers
-      writeRef serversRef empty
+      liftEff $ writeRef serversRef empty
 
   pure $ toForeign
     { config
     , activate: mkEffFn1 \_ -> activate
-    , deactivate: mkEffFn1 \_ -> deactivate
+    , deactivate: mkEffFn1 \_ -> launchAffAndRaise deactivate
     , consumeLinterIndie: mkEffFn1 \(register:: RegisterIndie) -> do
         linterIndie <- runEffFn1 register { name: "PureScript" }
         writeRef linterIndieRef $ Just linterIndie

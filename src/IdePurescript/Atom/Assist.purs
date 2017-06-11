@@ -92,11 +92,11 @@ fixTypo modulesState port = do
     { pos } <- lift $ liftEff'' $ getLinePosition ed
     { word, range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
     state <- lift $ liftEff'' $ readRef modulesState
-    corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main)
-    liftEff $ selectListViewStatic view (replaceTypo port ed wordRange) (Just "identifier") (runCompletion <$> corrections)
+    corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main P.defaultCompletionOptions)
+    liftEff $ selectListViewStatic view (replaceTypo ed wordRange) (Just "identifier") (runCompletion <$> corrections)
     where
       runCompletion (TypeInfo obj) = obj
-      replaceTypo port ed wordRange { identifier, "module'": mod } =
+      replaceTypo ed wordRange { identifier, "module'": mod } =
         launchAffAndRaise $ do
          _ <- liftEff $ setTextInBufferRange ed wordRange identifier
          addIdentImport port modulesState (Just mod) identifier

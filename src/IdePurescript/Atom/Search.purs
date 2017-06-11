@@ -1,6 +1,7 @@
 module IdePurescript.Atom.Search where
 
 import Prelude
+import PscIde as P
 import PscIde.Command as C
 import Atom.Editor (EDITOR)
 import Atom.NotificationManager (NOTIFY)
@@ -60,7 +61,7 @@ localSearch port modulesState = selectListViewDynamic view (\(C.TypeInfo { ident
     state <- liftEff $ readRef modulesState
     modules <- getLoadedModules port
     let getQualifiedModule = (flip getQualModule) state
-    getCompletion' (Just $ C.Flex text) [] port state.main Nothing modules getQualifiedModule
+    getCompletion' (Just $ C.Flex text) [] port state.main Nothing modules getQualifiedModule P.defaultCompletionOptions
 
   view (C.TypeInfo {identifier, type', module'}) =
      "<li class='two-lines'>"
