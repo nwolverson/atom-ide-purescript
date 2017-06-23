@@ -1,6 +1,7 @@
 module IdePurescript.Atom.Psci where
 
 import Prelude
+
 import Ansi.Codes (Color(..))
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (addCommand', COMMAND, addCommand)
@@ -26,11 +27,11 @@ import DOM.HTML (window)
 import DOM.HTML.Types (htmlDocumentToDocument)
 import DOM.HTML.Window (document)
 import DOM.Node.Document (createElement)
-import DOM.Node.Element (setClassName, setAttribute)
+import DOM.Node.Element (scrollHeight, setAttribute, setClassName, setScrollTop)
 import DOM.Node.Node (setTextContent, firstChild, removeChild, hasChildNodes, appendChild)
 import DOM.Node.ParentNode (QuerySelector(..), querySelector)
 import DOM.Node.Types (elementToParentNode, elementToNode, Element)
-import DOM.Util (setTimeout, setScrollTop, getScrollHeight)
+import DOM.Util (setTimeout)
 import Data.Array (catMaybes, cons, drop, uncons, (!!))
 import Data.Either (either, Either(..))
 import Data.Foldable (traverse_)
@@ -206,8 +207,8 @@ appendText {element} text = do
   lines <- querySelector (QuerySelector ".psci-lines") (elementToParentNode element)
   maybe (log "appendText failed") (\lines' -> do
     _ <- appendChild (elementToNode div) (elementToNode lines')
-    height <- getScrollHeight lines'
-    setScrollTop lines' height) lines
+    height <- scrollHeight lines'
+    setScrollTop height lines') lines
 
 clearText :: forall eff. PscPane -> Eff (PsciEff eff) Unit
 clearText {element} = do
