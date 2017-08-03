@@ -13,16 +13,16 @@
     "purescript-console": "^3.0.0",
     "purescript-psc-ide": "^9.0.0",
     "purescript-atom-api": "https://github.com/nwolverson/purescript-atom-api.git#ide-purescript",
-    "purescript-aff": "~3.0.0",
+    "purescript-aff": "~3.1.0",
     "purescript-nullable": "~3.0.0",
     "purescript-refs": "~3.0.0",
     "purescript-node-process": "~4.0.0",
     "purescript-node-child-process": "~4.0.0",
-    "purescript-aff-promise": "^0.5.0",
+    "purescript-aff-promise": "^0.6.0",
     "purescript-ide-purescript-core": "^0.12.0",
     "purescript-node-fs-aff": "^4.0.0",
     "purescript-dom": "^4.1.1",
     "purescript-psa-utils": "~3.0.0",
-    "purescript-prelude": "3.0.0"
+    "purescript-prelude": "3.1.0"
   }
 }
