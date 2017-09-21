@@ -42,10 +42,12 @@
     "bundle": "pulp build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
+    "atom-languageclient": "^0.6.4",
     "atom-package-deps": "^4.5.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
     "hover-tooltips": "^0.5.0",
+    "purescript-language-server": "^0.3.0",
     "which": "^1.2.4"
   },
   "package-deps": [
@@ -58,16 +60,46 @@
         "2.0.0": "provideAutocomplete"
       }
     },
-    "hyperclick.provider": {
+    "code-format.range": {
       "versions": {
-        "0.0.0": "provideHyperclick"
+        "0.1.0": "provideCodeFormat"
+      }
+    },
+    "code-highlight": {
+      "versions": {
+        "0.1.0": "provideCodeHighlight"
+      }
+    },
+    "definitions": {
+      "versions": {
+        "0.1.0": "provideDefinitions"
+      }
+    },
+    "find-references": {
+      "versions": {
+        "0.1.0": "provideFindReferences"
+      }
+    },
+    "outline-view": {
+      "versions": {
+        "0.1.0": "provideOutlines"
+      }
+    },
+    "code-actions": {
+      "versions": {
+        "0.1.0": "provideCodeActions"
       }
     }
   },
   "consumedServices": {
     "linter-indie": {
       "versions": {
-        "2.0.0": "consumeLinterIndie"
+        "2.0.0": "consumeLinterV2"
+      }
+    },
+    "datatip": {
+      "versions": {
+        "0.1.0": "consumeDatatip"
       }
     },
     "status-bar": {

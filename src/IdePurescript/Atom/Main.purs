@@ -36,27 +36,30 @@ import Data.Foldable (sequence_, traverse_)
 import Data.Foreign (Foreign, readBoolean, toForeign)
 import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
 import Data.Nullable (toNullable)
+
 import Data.StrMap (lookup, empty)
 import Data.StrMap as StrMap
 import Data.String (Pattern(Pattern), contains)
 import Data.Time.Duration (Milliseconds(..))
+
 import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
 import IdePurescript.Atom.BuildStatus (getBuildStatus)
 import IdePurescript.Atom.Completion as C
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
-import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie, RegisterIndie)
+import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
-import IdePurescript.Atom.Imports (addExplicitImportCmd, addModuleImportCmd, addSuggestionImport)
+import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient)
+import IdePurescript.Atom.Imports (addExplicitImportCmd, addModuleImportCmd)
 import IdePurescript.Atom.LinterBuild (lint)
 import IdePurescript.Atom.PscIdeServer (startServer)
 import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
-import IdePurescript.Atom.Tooltips (getToken, registerTooltips, showTooltipAtCursor)
-import IdePurescript.Atom.Util (launchAffAndRaise)
+import IdePurescript.Atom.Tooltips (registerTooltips, showTooltipAtCursor)
 import IdePurescript.Modules (State, getAllActiveModules, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
 import IdePurescript.PscIde (getLoadedModules)
+
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
@@ -302,43 +305,47 @@ main = do
       sequence_ $ _.quit <$> StrMap.values servers
       liftEff $ writeRef serversRef empty
 
-  pure $ toForeign
-    { config
-    , activate: mkEffFn1 \_ -> activate
-    , deactivate: mkEffFn1 \_ -> launchAffAndRaise deactivate
-    , consumeLinterIndie: mkEffFn1 \(register:: RegisterIndie) -> do
-        linterIndie <- runEffFn1 register { name: "PureScript" }
-        writeRef linterIndieRef $ Just linterIndie
-    , consumeStatusBar: mkEffFn1 \statusBar -> do
-        item <- getBuildStatus
-        writeRef buildStatusRef $ Just item
-        addLeftTile statusBar { item, priority: -50 }
-    , provideAutocomplete: mkEffFn1 \_ -> do
-        excludeLowerPriority <- either (const true) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.excludeLowerPriority"
-        pure {
-          selector: ".source.purescript"
-        , disableForSelector: ".source.purescript .comment, .source.purescript .string"
-        , inclusionPriority: 1
-        , excludeLowerPriority
-        , getSuggestions: mkEffFn1 $ \x -> do
-            state <- readRef modulesState
-            withPortDef (Promise.fromAff $ pure []) (\p -> getSuggestions p state x)
-        , onDidInsertSuggestion: mkEffFn1 \x -> do
-            shouldAddImport <- either (const false) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.addImport"
-            withPort \port ->
-              when shouldAddImport (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
-        }
-    , provideHyperclick: \_ ->
-      {
-        getSuggestion: mkEffFn2 \editor pos -> do
-          rangeM <- getToken editor pos
-          pure $ toNullable $ (_ <$> rangeM) \{range} ->
-            {
-              range,
-              callback: withPort \port -> gotoDefHyper modulesState port editor pos
-            }
-      }
-    }
+  languageClient <- makeLanguageClient
+
+  pure $ toForeign $ languageClient
+
+  -- pure $ toForeign
+  --   { config
+  --   , activate: mkEffFn1 \_ -> activate
+  --   , deactivate: mkEffFn1 \_ -> launchAffAndRaise deactivate
+  --   , consumeLinterIndie: mkEffFn1 \(register:: RegisterIndie) -> do
+  --       linterIndie <- runEffFn1 register { name: "PureScript" }
+  --       writeRef linterIndieRef $ Just linterIndie
+  --   , consumeStatusBar: mkEffFn1 \statusBar -> do
+  --       item <- getBuildStatus
+  --       writeRef buildStatusRef $ Just item
+  --       addLeftTile statusBar { item, priority: -50 }
+  --   , provideAutocomplete: mkEffFn1 \_ -> do
+  --       excludeLowerPriority <- either (const true) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.excludeLowerPriority"
+  --       pure {
+  --         selector: ".source.purescript"
+  --       , disableForSelector: ".source.purescript .comment, .source.purescript .string"
+  --       , inclusionPriority: 1
+  --       , excludeLowerPriority
+  --       , getSuggestions: mkEffFn1 $ \x -> do
+  --           state <- readRef modulesState
+  --           withPortDef (Promise.fromAff $ pure []) (\p -> getSuggestions p state x)
+  --       , onDidInsertSuggestion: mkEffFn1 \x -> do
+  --           shouldAddImport <- either (const false) id <$> runExcept <$> readBoolean <$> getConfig atom.config "ide-purescript.autocomplete.addImport"
+  --           withPort \port ->
+  --             when shouldAddImport (void $ runAff raiseError ignoreError $ addSuggestionImport port modulesState x)
+  --       }
+  --   , provideHyperclick: \_ ->
+  --     {
+  --       getSuggestion: mkEffFn2 \editor pos -> do
+  --         rangeM <- getToken editor pos
+  --         pure $ toNullable $ (_ <$> rangeM) \{range} ->
+  --           {
+  --             range,
+  --             callback: withPort \port -> gotoDefHyper modulesState port editor pos
+  --           }
+  --     }
+  --   }
 
 raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
 raiseError e = do
