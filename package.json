@@ -1,7 +1,7 @@
 {
   "name": "ide-purescript",
   "main": "./lib/main",
-  "version": "0.18.2",
+  "version": "0.19.0-lsp1",
   "description": "PureScript support for completion, build and maybe more",
   "keywords": [],
   "activationHooks": [
