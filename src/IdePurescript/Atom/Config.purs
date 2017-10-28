@@ -17,7 +17,7 @@ import Node.Platform (Platform(Win32))
 import Node.Process as P
 
 defaultSrcGlob :: Array String
-defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs"]
+defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs", ".psc-package/**/*.purs"]
 
 getConfigOption :: forall eff a. (Foreign -> F a) -> String -> Eff (config :: CONFIG | eff ) (Maybe a)
 getConfigOption readF key = do
