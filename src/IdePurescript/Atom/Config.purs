@@ -6,18 +6,55 @@ import Atom.Atom (getAtom)
 import Atom.Config (CONFIG, getConfig)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Unsafe (unsafePerformEff)
 import Control.Monad.Except (runExcept)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
-import Data.Either (either)
-import Data.Foreign (F, Foreign, readArray, readBoolean, readInt, readString, toForeign)
+import Data.Either (Either(Right, Left), either)
+import Data.Foreign (F, Foreign, MultipleErrors, readArray, readBoolean, readInt, readString, toForeign)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Traversable (traverse)
+import Node.Encoding (Encoding(..))
+import Node.FS.Sync (exists, readTextFile)
 import Node.Platform (Platform(Win32))
 import Node.Process as P
+import Simple.JSON (readJSON)
+
+data PackageManage = PSC | BOWER | UNKNOWN
+
+instance showPM :: Show PackageManage where
+  show PSC = " --psc-package" -- tell pulp to use psc-package
+  show BOWER = ""
+  show UNKNOWN = ""
+
+type PSCConfig = { set :: String }
+
+pmType :: PackageManage
+pmType = unsafePerformEff $ do
+  psc <- exists ".psc-package"
+  bower <- exists "bower_components"
+  computeResult psc bower
+
+  where
+    computeResult true _ = pure PSC
+    computeResult false true = pure BOWER
+    computeResult _ _ = pure UNKNOWN
 
 defaultSrcGlob :: Array String
-defaultSrcGlob = ["src/**/*.purs", "bower_components/**/*.purs", ".psc-package/**/*.purs"]
+defaultSrcGlob = getPrjectSrcGlob pmType
+
+
+getPrjectSrcGlob :: PackageManage -> Array String
+getPrjectSrcGlob UNKNOWN = ["src/**/*.purs"]
+getPrjectSrcGlob BOWER = ["src/**/*.purs", "bower_components/purescript-*/src/**/*.purs"]
+getPrjectSrcGlob PSC = unsafePerformEff $ do
+  (pconf :: Either MultipleErrors PSCConfig) <- readJSON <$> readTextFile UTF8 "psc-package.json"
+  pure ["src/**/*.purs", ".psc-package/" <> getName pconf <> "/*/*/src/**/*.purs"]
+
+  where
+    getName (Left _) = "*"  -- glob every set
+    getName (Right x) = x.set
+
 
 getConfigOption :: forall eff a. (Foreign -> F a) -> String -> Eff (config :: CONFIG | eff ) (Maybe a)
 getConfigOption readF key = do
@@ -70,7 +107,9 @@ autoCompletePreferredModules = fromMaybe [] <$> getConfigOption readA "autocompl
   where readA = readArray >=> traverse readString
 
 pulpCmd :: String
-pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
+pulpCmd = if P.platform == Win32
+ then "pulp.cmd" <> show pmType
+ else "pulp" <> show pmType
 
 config :: Foreign
 config = toForeign
