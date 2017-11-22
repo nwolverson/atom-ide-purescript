@@ -48,7 +48,7 @@
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
     "hover-tooltips": "^0.5.0",
-    "purescript-language-server": "^0.3.0",
+    "purescript-language-server": "^0.4.2",
     "which": "^1.2.4"
   },
   "package-deps": [

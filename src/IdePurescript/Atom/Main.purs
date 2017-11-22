@@ -102,7 +102,7 @@ main = do
         installDependencies
         Psci.activate
 
-  languageClient <- runEffFn1 makeLanguageClient $ mkEffFn1 $ \conn -> do
+  languageClient <- runEffFn2 makeLanguageClient config $ mkEffFn1 $ \conn -> do
     let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
                         (const $ runEffFn2 executeCommand conn { command: "purescript."<>name', arguments: [] })
         fwdCmd' name = fwdCmd name name

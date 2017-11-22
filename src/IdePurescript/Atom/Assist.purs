@@ -1,7 +1,7 @@
 module IdePurescript.Atom.Assist (caseSplit, addClause, fixTypo, CaseEff, TypoEff, gotoDef, gotoDefHyper) where
 
 import Prelude
-import PscIde as P
+
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND)
 import Atom.Config (CONFIG)
@@ -29,6 +29,7 @@ import IdePurescript.Modules (getQualModule, getUnqualActiveModules, State)
 import IdePurescript.PscIde (getTypeInfo, eitherToErr)
 import Node.FS (FS)
 import PscIde (NET)
+import PscIde as P
 import PscIde.Command (TypePosition(TypePosition), TypeInfo(..))
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
@@ -63,6 +64,7 @@ caseSplit port = do
     ty <- MaybeT $ addPromptPanel "Parameter type" ""
     lines <- lift $ eitherToErr $ P.caseSplit port line (getColumn $ getStart wordRange) (getColumn $ getEnd wordRange) false ty
     lift $ void $ liftEff'' $ setTextInBufferRange ed range $ intercalate "\n" lines
+
 
 addClause :: forall eff. Int -> Eff (CaseEff eff) Unit
 addClause port = do

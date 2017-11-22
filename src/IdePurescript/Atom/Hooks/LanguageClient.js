@@ -1,10 +1,24 @@
 var AutoLanguageClient = require('atom-languageclient').AutoLanguageClient;
 
-exports.makeLanguageClient = function (onConnection) {
+exports.makeLanguageClient = function (config, onConnection) {
   var client = new AutoLanguageClient();
+  var connection;
   atom.config.set('core.debugLSP', true)
   return Object.assign(client, {
-    preInitialization: function(conn) { onConnection(conn); },
+    config: config,
+    preInitialization: function(conn) {
+      connection = conn;
+      onConnection(conn);
+    },
+    postInitialization: function(){
+      this._disposable.add(
+        atom.config.observe("ide-purescript", function (params) {
+          connection.didChangeConfiguration({
+            settings: { purescript: params }
+          });
+        })
+      );
+    },
     getGrammarScopes: function() { return [ 'source.purescript']; },
     getLanguageName: function() { return 'PureScript'; },
     getServerName: function() { return 'purescript-language-server' },
@@ -14,6 +28,10 @@ exports.makeLanguageClient = function (onConnection) {
         {
           cwd: projectPath
         })
+    },
+    onDidInsertSuggestion: function (arg, item) {
+      console.log(item);
+      connection.executeCommand(item.command);
     }
   })
 }

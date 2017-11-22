@@ -8,7 +8,7 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 foreign import data LanguageClient :: Type
 foreign import data LanguageClientConnection :: Type
 
-foreign import makeLanguageClient :: forall eff. EffFn1 (exception :: EXCEPTION | eff) (EffFn1 (exception :: EXCEPTION | eff) LanguageClientConnection Unit) LanguageClient
+foreign import makeLanguageClient :: forall eff. EffFn2 (exception :: EXCEPTION | eff) Foreign (EffFn1 (exception :: EXCEPTION | eff) LanguageClientConnection Unit) LanguageClient
 
 type ExecuteCommandParams = { command :: String, arguments :: Array Foreign }
 
