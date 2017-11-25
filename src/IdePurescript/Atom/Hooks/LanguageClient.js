@@ -1,11 +1,9 @@
 var AutoLanguageClient = require('atom-languageclient').AutoLanguageClient;
 
-exports.makeLanguageClient = function (config, translateConfig, onConnection) {
+exports.makeLanguageClient = function (clientMixin, translateSettings, onConnection) {
   var client = new AutoLanguageClient();
   var connection;
-  atom.config.set('core.debugLSP', true)
-  return Object.assign(client, {
-    config: config,
+  return Object.assign(client, clientMixin, {
     preInitialization: function(conn) {
       connection = conn;
       onConnection(conn);
@@ -14,7 +12,7 @@ exports.makeLanguageClient = function (config, translateConfig, onConnection) {
       this._disposable.add(
         atom.config.observe("ide-purescript", function (params) {
           connection.didChangeConfiguration({
-            settings: { purescript: translateConfig(params) }
+            settings: { purescript: translateSettings(params) }
           });
         })
       );
@@ -38,4 +36,8 @@ exports.makeLanguageClient = function (config, translateConfig, onConnection) {
 
 exports.executeCommand = function (connection, params) {
   connection.executeCommand(params);
+};
+
+exports.onCustom = function (connection, method, callback) {
+  connection.onCustom(method, callback);
 };

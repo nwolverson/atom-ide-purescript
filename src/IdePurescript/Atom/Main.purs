@@ -19,13 +19,13 @@ import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
 import DOM (DOM)
-import DOM.Node.Types (Element)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import Data.Maybe (Maybe(..))
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
-import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand)
+import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
+import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
+import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Psci as Psci
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -67,11 +67,17 @@ main = do
         installDependencies
         Psci.activate
 
-  languageClient <- runEffFn3 makeLanguageClient config translateConfig $ mkEffFn1 $ \conn -> do
+  buildStatusElt <- getBuildStatus
+
+  languageClient <- runEffFn3 makeLanguageClient {
+        config
+      , consumeStatusBar: mkEffFn1 \statusBar -> addLeftTile statusBar { item: buildStatusElt, priority: -50 }
+      } translateConfig $ mkEffFn1 $ \conn -> do
     activate
     let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
                         (const $ runEffFn2 executeCommand conn { command: "purescript."<>name', arguments: [] })
         fwdCmd' name = fwdCmd name name
+
 
               -- "ide-purescript:add-module-import",
               -- "ide-purescript:add-explicit-import",
@@ -85,12 +91,16 @@ main = do
               -- "ide-purescript:psci-open",
               -- "ide-purescript:psci-send-line",
               -- "ide-purescript:psci-send-selection"
+
     fwdCmd' "build"
     fwdCmd "restart-psc-ide" "restartPscIde"
     fwdCmd "start-psc-ide" "startPscIde"
     fwdCmd "stop-psc-ide" "stopPscIde"
 
-  buildStatusRef <- newRef (Nothing :: Maybe Element)
+
+    runEffFn3 onCustom conn "textDocument/diagnosticsBegin" $ mkEffFn1 \_ -> updateBuildStatus buildStatusElt Building
+    runEffFn3 onCustom conn "textDocument/diagnosticsEnd" $ mkEffFn1 \_ -> updateBuildStatus buildStatusElt NotBuilding
+
 
   pure $ toForeign $ languageClient
 

@@ -1,9 +1,11 @@
 module IdePurescript.Atom.Hooks.Linter where
 
+import Prelude (Unit)
+
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Uncurried (EffFn1)
-import IdePurescript.Atom.Build (AtomLintMessage)
-import Prelude (Unit)
+import Atom.Range (Range, getEnd, mkRange)
+import Data.Nullable (Nullable, toNullable)
 
 foreign import data LinterRegistry :: Type
 
@@ -12,6 +14,30 @@ foreign import data LinterIndie :: Type
 
 foreign import data EditorLinter :: Type
 foreign import data LINTER :: Effect
+
+type AtomLintMessage eff =
+  { severity :: String -- error | warning | info
+  , excerpt :: String
+  , description :: String
+  , location ::
+    { file :: String
+    , position:: Range
+    }
+  , url :: String
+  , icon :: Nullable String
+  , solutions :: Array (Solution eff)
+  }
+
+type Solution eff =
+  { title :: String
+  , position :: Range
+  , priority :: Int
+
+  -- Either apply or replaceWith required
+  , apply :: Nullable (Eff eff Unit)
+  , currentText :: Nullable String
+  , replaceWith :: Nullable String
+  }
 
 -- | Argument type of the consumeIndie entry-point function
 type RegisterIndie = forall eff. EffFn1 (linter:: LINTER | eff) { name :: String } LinterIndie

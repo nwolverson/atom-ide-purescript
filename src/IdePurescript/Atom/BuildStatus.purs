@@ -11,33 +11,27 @@ import DOM.HTML.Window (document)
 import DOM.HTML (window)
 import DOM.HTML.Types (htmlDocumentToDocument)
 
-data BuildStatus = Building | Success | Errors | Failure
+data BuildStatus = Building | NotBuilding
 
 instance showBuildStatus :: Show BuildStatus where
   show Building = "Building"
-  show Success = "Success"
-  show Errors = "Errors"
-  show Failure = "Failure"
+  show NotBuilding = "NotBuilding"
 
 derive instance eqBuildStatus :: Eq BuildStatus
 
 getBuildStatus :: forall eff. Eff (dom :: DOM | eff) Element
 getBuildStatus = do
   doc <-  htmlDocumentToDocument <$> (window >>= document)
-  -- docElt <- documentElement doc
   span <- createElement "span" doc
-  setClassName (statusIcon Success) span
-  text <- createTextNode "PureScript" doc
+  setClassName (statusIcon NotBuilding) span
+  text <- createTextNode "PS" doc
   _ <- appendChild (textToNode text) (elementToNode span)
 
   pure span
 
 statusIcon :: BuildStatus -> String
-statusIcon status = "purescript-build-status icon icon-" <> case status of
-  Success -> "check"
-  Errors -> "alert"
-  Failure -> "bug"
-  Building -> "hourglass"
+statusIcon Building = "purescript-build-status icon icon-hourglass"
+statusIcon NotBuilding = ""
 
 updateBuildStatus :: forall eff. Element -> BuildStatus -> Eff (dom :: DOM | eff) Unit
 updateBuildStatus elt status = do
