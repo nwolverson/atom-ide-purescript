@@ -1,85 +1,79 @@
 module IdePurescript.Atom.Assist where
+
+import Prelude
+
+import Atom.Atom (getAtom)
+import Atom.CommandRegistry (COMMAND)
+import Atom.Config (CONFIG)
+import Atom.Editor (EDITOR, TextEditor, getPath, setTextInBufferRange)
+import Atom.NotificationManager (NOTIFY, addError)
+import Atom.Point (Point, getColumn, getRow)
+import Atom.Workspace (defaultOpenOptions, open, WORKSPACE, getActiveTextEditor)
+import Control.Monad.Aff (runAff, Aff)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Exception (EXCEPTION, Error)
+import Control.Monad.Eff.Uncurried (runEffFn2)
+import DOM (DOM)
+import Data.Foreign (toForeign)
+import Data.Maybe (Maybe(..), maybe)
+import IdePurescript.Atom.Editor (getLinePosition)
+import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand)
+import IdePurescript.Atom.PromptPanel (addPromptPanel)
+import LanguageServer.IdePurescript.Commands (addClauseCmd, caseSplitCmd, cmdName)
+import LanguageServer.Types (DocumentUri)
+import LanguageServer.Uri (filenameToUri)
+import PscIde (NET)
+
+launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
+launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
+  where
+  raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
+  raiseError e = do
+    atom <- getAtom
+    addError atom.notifications (show e)
 --
--- import Prelude
---
--- import Atom.Atom (getAtom)
--- import Atom.CommandRegistry (COMMAND)
--- import Atom.Config (CONFIG)
--- import Atom.Editor (EDITOR, TextEditor, setTextInBufferRange)
--- import Atom.NotificationManager (NOTIFY, addError)
--- import Atom.Point (Point, getColumn)
--- import Atom.Range (getEnd, getStart)
--- import Atom.Workspace (defaultOpenOptions, open, WORKSPACE, getActiveTextEditor)
--- import Control.Monad.Aff (runAff, Aff)
--- import Control.Monad.Eff (Eff)
--- import Control.Monad.Eff.Class (liftEff)
--- import Control.Monad.Eff.Console (CONSOLE)
--- import Control.Monad.Eff.Exception (Error)
--- import Control.Monad.Eff.Ref (REF, Ref, readRef)
--- import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT, lift)
--- import DOM (DOM)
--- import Data.Foldable (intercalate)
--- import Data.Maybe (Maybe(..))
--- import IdePurescript.Atom.Editor (getLinePosition)
--- import IdePurescript.Atom.Imports (addIdentImport)
--- import IdePurescript.Atom.PromptPanel (addPromptPanel)
--- import IdePurescript.Atom.SelectView (selectListViewStatic)
--- import IdePurescript.Atom.Tooltips (getToken)
--- import IdePurescript.Modules (getQualModule, getUnqualActiveModules, State)
--- import IdePurescript.PscIde (getTypeInfo, eitherToErr)
--- import Node.FS (FS)
--- import PscIde (NET)
--- import PscIde as P
--- import PscIde.Command (TypePosition(TypePosition), TypeInfo(..))
---
--- launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
--- launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
---   where
---   raiseError :: forall eff. Error -> Eff (note :: NOTIFY | eff) Unit
---   raiseError e = do
---     atom <- getAtom
---     addError atom.notifications (show e)
---
--- type CaseEff eff =
---               (dom :: DOM
---               , command :: COMMAND
---               , workspace :: WORKSPACE
---               , editor :: EDITOR
---               , net :: NET
---               , note :: NOTIFY
---               , config :: CONFIG
---               , console :: CONSOLE
---               | eff)
---
--- caseSplit :: forall eff. Int -> Eff (CaseEff eff) Unit
--- caseSplit port = do
---   launchAffAndRaise $ runMaybeT body
---   where
---   body :: MaybeT (Aff (CaseEff eff)) Unit
---   body = do
---     atom <- lift $ liftEff'' getAtom
---     ed :: TextEditor <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
---     { line, col, pos, range } <- lift $ liftEff'' $ getLinePosition ed
---     { range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
---     ty <- MaybeT $ addPromptPanel "Parameter type" ""
---     lines <- lift $ eitherToErr $ P.caseSplit port line (getColumn $ getStart wordRange) (getColumn $ getEnd wordRange) false ty
---     lift $ void $ liftEff'' $ setTextInBufferRange ed range $ intercalate "\n" lines
---
--- addClause :: forall eff. Int -> Eff (CaseEff eff) Unit
--- addClause port = do
---   atom <- getAtom
---   editor <- getActiveTextEditor atom.workspace
---   case editor of
---     Just ed ->
---       launchAffAndRaise $ do
---         { line, col, range } <- liftEff $ getLinePosition ed
---         lines <- eitherToErr $ P.addClause port line false
---         liftEff $ setTextInBufferRange ed range $ intercalate "\n" lines
---     _ -> pure unit
---
--- liftEff'' :: forall e a. Eff e a -> Aff e a
--- liftEff'' = liftEff
---
+type CaseEff eff =
+              (dom :: DOM
+              , command :: COMMAND
+              , workspace :: WORKSPACE
+              , editor :: EDITOR
+              , net :: NET
+              , note :: NOTIFY
+              , config :: CONFIG
+              , console :: CONSOLE
+              , exception :: EXCEPTION
+              | eff)
+
+getActivePosInfo :: forall eff. Eff (CaseEff eff)
+  (Maybe { line :: String, pos :: Point, ed :: TextEditor, uri :: DocumentUri })
+getActivePosInfo = do
+  atom <- getAtom
+  getActiveTextEditor atom.workspace >>= maybe (pure Nothing) \ed -> do
+    {line,col,pos,range} <- getLinePosition ed
+    getPath ed >>= maybe (pure Nothing) \path -> do
+      uri <- filenameToUri path
+      pure $ Just { line, pos, ed, uri }
+
+caseSplit :: forall eff. LanguageClientConnection -> Eff (CaseEff eff) Unit
+caseSplit conn =
+  getActivePosInfo >>= maybe (pure unit) \{ pos, uri } -> launchAffAndRaise do
+    addPromptPanel "Parameter type" "" >>= maybe (pure unit) \typ ->
+      liftEff $ runEffFn2 executeCommand conn
+        { command: cmdName caseSplitCmd
+        , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos, toForeign typ ]
+        }
+
+addClause :: forall eff. LanguageClientConnection -> Eff (CaseEff eff) Unit
+addClause conn = do
+  getActivePosInfo >>= maybe (pure unit) \{ pos, uri } ->
+    runEffFn2 executeCommand conn
+      { command: cmdName addClauseCmd
+      , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos ]
+      }
+
+-- TODO: Add to LS
 -- type TypoEff e = (net :: NET, note :: NOTIFY, editor :: EDITOR, workspace :: WORKSPACE, dom :: DOM, fs :: FS, ref :: REF, config :: CONFIG, console :: CONSOLE | e)
 --
 -- fixTypo :: forall eff. Ref State -> Int -> Eff (TypoEff eff) Unit

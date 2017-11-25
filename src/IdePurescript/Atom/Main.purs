@@ -20,12 +20,13 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
 import DOM (DOM)
 import Data.Foreign (Foreign, readBoolean, toForeign)
+import IdePurescript.Atom.Assist (addClause, caseSplit)
+import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
-import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
 import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
+import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
-import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Psci as Psci
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -78,19 +79,20 @@ main = do
                         (const $ runEffFn2 executeCommand conn { command: "purescript."<>name', arguments: [] })
         fwdCmd' name = fwdCmd name name
 
+        cmd name action = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name) (\_ -> action conn)
+
 
               -- "ide-purescript:add-module-import",
               -- "ide-purescript:add-explicit-import",
-              -- "ide-purescript:case-split",
-              -- "ide-purescript:add-clause",
+
+    cmd "case-split" caseSplit
+    cmd "add-clause" addClause
+
               -- "ide-purescript:fix-typo",
 
               -- "ide-purescript:search",
               -- "ide-purescript:pursuit-search",
               -- "ide-purescript:pursuit-search-modules",
-              -- "ide-purescript:psci-open",
-              -- "ide-purescript:psci-send-line",
-              -- "ide-purescript:psci-send-selection"
 
     fwdCmd' "build"
     fwdCmd "restart-psc-ide" "restartPscIde"
