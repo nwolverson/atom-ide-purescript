@@ -9,10 +9,13 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Except (runExcept)
 import Data.Array (mapMaybe)
 import Data.Bifunctor (rmap)
-import Data.Either (either)
+import Data.Either (either, hush)
 import Data.Foreign (F, Foreign, readArray, readBoolean, readInt, readString, toForeign)
+import Data.Foreign.Index ((!))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Traversable (traverse)
+import Data.StrMap (fromFoldable)
+import Data.Traversable (for, for_, sequence, traverse, traverse_)
+import Data.Tuple (Tuple(..))
 import Node.Platform (Platform(Win32))
 import Node.Process as P
 
@@ -70,7 +73,32 @@ autoCompletePreferredModules = fromMaybe [] <$> getConfigOption readA "autocompl
   where readA = readArray >=> traverse readString
 
 pulpCmd :: String
-pulpCmd = if P.platform == Win32 then "pulp.cmd" else "pulp"
+pulpCmd = if P.platform == Just Win32 then "pulp.cmd" else "pulp"
+
+-- | Convert a atom-ide-purescript config object to one suitable for sending to language server
+translateConfig :: Foreign -> Foreign
+translateConfig config = either (const $ toForeign {}) id $ runExcept do
+  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings" ]
+  unchangedOpts <- for unchanged (\p -> Tuple p <$> config ! p)
+  autocomplete <- config ! "autocomplete"
+  autocompleteOpts <- sequence
+    [ Tuple "autocompleteAddImport" <$> autocomplete ! "addImport"
+    , Tuple "autocompleteAllModules" <$> autocomplete ! "allModules"
+    , Tuple "autocompleteLimit" <$> autocomplete ! "limit"
+    , Tuple "autocompleteGrouped" <$> autocomplete ! "grouped"
+    , Tuple "importsPreferredModules" <$> autocomplete ! "preferredModules"
+    ]
+  -- Unused:
+  -- pscSourceGlob (~ packagePath / sourcePath )
+  -- autocomplete.excludeLowerPriority (atom-specific)
+  -- psciCommand (~atom-specific)
+  -- buildOnSave
+  --
+  -- Missing:
+  -- pscIdePort
+  -- autoStartPscIde
+  -- pscIdelogLevel
+  pure $ toForeign $ fromFoldable $ unchangedOpts <> autocompleteOpts
 
 config :: Foreign
 config = toForeign

@@ -26,7 +26,8 @@ import Data.String (trim)
 import Data.String.Regex (regex, split)
 import Data.String.Regex.Flags (noFlags)
 import Data.Traversable (traverse)
-import IdePurescript.Atom.Build (linterBuild, toLintResult)
+import IdePurescript.Atom.Build
+  
 import IdePurescript.Atom.BuildStatus (BuildStatus(Failure, Errors, Success, Building), updateBuildStatus)
 import IdePurescript.Atom.Config (getFastRebuild)
 import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie, setAllMessages)
@@ -39,50 +40,50 @@ import Node.Process (PROCESS)
 import PscIde (NET)
 
 type LintEff e = (buffer :: BUFFER, editor :: EDITOR, fs :: FS.FS, process :: PROCESS, cp :: CHILD_PROCESS, console :: CONSOLE, ref :: REF, config :: CONFIG, note :: NOTIFY, linter :: LINTER, dom :: DOM, net :: NET, workspace :: WORKSPACE | e)
-
-lint :: forall eff. Maybe Int -> Ref State -> Maybe String -> Maybe TextEditor -> Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) Unit
-lint port state file editor config projdir linter statusElt = do
-  atom <- liftEff getAtom
-  fullBuildPath <- liftEff $ getConfig config "ide-purescript.buildCommand"
-  let pathStr = either
-  let buildCommand = case regex "\\s+" noFlags, runExcept $ readString fullBuildPath of
-                      Right r, Right s -> split r $ trim $ s
-                      _, _ -> []
-
-  isFastBuild <- liftEff getFastRebuild
-  let fastBuild :: Maybe (Aff (LintEff eff) BuildResult)
-      fastBuild = case isFastBuild, file, port of
-        true, Just fileName, Just p -> Just $ rebuild p fileName
-        _, _, _ -> Nothing
-
-  case fastBuild, uncons buildCommand of
-    Just cmd, _ -> doBuild cmd
-    _, Just { head: command, tail: args } -> doBuild $ linterBuild { command, args, directory: projdir }
-    _, Nothing -> liftEff $ failure "Error parsing PureScript build command"
-  where
-    filter codes = flip notElem codes <<< _.errorCode <<< unwrap
-
-    doBuild :: (Aff (LintEff eff) BuildResult) -> Aff (LintEff eff) Unit
-    doBuild buildCmd =
-      do
-        liftEff $ status Building Nothing
-        censorCodes <- liftEff $ getConfig config "ide-purescript.censorWarnings"
-        let codes = either (const []) id $ runExcept $ readArray censorCodes >>= traverse readString
-        buildRes <- buildCmd
-        liftEff $ do
-          { result, messages } <- toLintResult (filter codes) editor state port buildRes projdir
-          setAllMessages linter messages
-          status (if result == "success" then Success else Errors) Nothing
-      `catchError` \(e :: Error) ->
-        liftEff $ failure $ "Error running PureScript build command: " <> show e
-
-    failure :: String -> Eff (LintEff eff) Unit
-    failure s = do
-      atom <- getAtom
-      status Failure $ Just s
-      addError atom.notifications s
-
-    status :: BuildStatus -> (Maybe String) -> Eff (LintEff eff) Unit
-    status s msg = do
-      updateBuildStatus statusElt s
-      (if s == Failure then error else log) $ "PureScript build status: " <> show s <> (maybe "" (": " <> _)  msg)
+--
+-- lint :: forall eff. Maybe Int -> Ref State -> Maybe String -> Maybe TextEditor -> Config -> String -> LinterIndie -> Element -> Aff (LintEff eff) Unit
+-- lint port state file editor config projdir linter statusElt = do
+--   atom <- liftEff getAtom
+--   fullBuildPath <- liftEff $ getConfig config "ide-purescript.buildCommand"
+--   let pathStr = either
+--   let buildCommand = case regex "\\s+" noFlags, runExcept $ readString fullBuildPath of
+--                       Right r, Right s -> split r $ trim $ s
+--                       _, _ -> []
+--
+--   isFastBuild <- liftEff getFastRebuild
+--   let fastBuild :: Maybe (Aff (LintEff eff) BuildResult)
+--       fastBuild = case isFastBuild, file, port of
+--         true, Just fileName, Just p -> Just $ rebuild p fileName
+--         _, _, _ -> Nothing
+--
+--   case fastBuild, uncons buildCommand of
+--     Just cmd, _ -> doBuild cmd
+--     _, Just { head: command, tail: args } -> doBuild $ linterBuild { command, args, directory: projdir }
+--     _, Nothing -> liftEff $ failure "Error parsing PureScript build command"
+--   where
+--     filter codes = flip notElem codes <<< _.errorCode <<< unwrap
+--
+--     doBuild :: (Aff (LintEff eff) BuildResult) -> Aff (LintEff eff) Unit
+--     doBuild buildCmd =
+--       do
+--         liftEff $ status Building Nothing
+--         censorCodes <- liftEff $ getConfig config "ide-purescript.censorWarnings"
+--         let codes = either (const []) id $ runExcept $ readArray censorCodes >>= traverse readString
+--         buildRes <- buildCmd
+--         liftEff $ do
+--           { result, messages } <- toLintResult (filter codes) editor state port buildRes projdir
+--           setAllMessages linter messages
+--           status (if result == "success" then Success else Errors) Nothing
+--       `catchError` \(e :: Error) ->
+--         liftEff $ failure $ "Error running PureScript build command: " <> show e
+--
+--     failure :: String -> Eff (LintEff eff) Unit
+--     failure s = do
+--       atom <- getAtom
+--       status Failure $ Just s
+--       addError atom.notifications s
+--
+--     status :: BuildStatus -> (Maybe String) -> Eff (LintEff eff) Unit
+--     status s msg = do
+--       updateBuildStatus statusElt s
+--       (if s == Failure then error else log) $ "PureScript build status: " <> show s <> (maybe "" (": " <> _)  msg)

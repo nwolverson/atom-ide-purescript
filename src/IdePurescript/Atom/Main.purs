@@ -9,64 +9,29 @@ import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, g
 import Atom.Grammar (GRAMMAR)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Pane (PANE)
-import Atom.Point (Point, getRow, mkPoint)
 import Atom.Project (PROJECT)
-import Atom.Range (mkRange)
 import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Monad.Aff (attempt, Aff, runAff, delay)
 import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
-import Control.Monad.Aff.Internal (AVar)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
-import Control.Monad.Eff.Exception as Exception
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
-import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn2)
-import Control.Monad.Error.Class (catchError)
-import Control.Monad.Except (runExcept)
-import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
-import Control.Promise (Promise)
-import Control.Promise as Promise
+import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
 import DOM (DOM)
 import DOM.Node.Types (Element)
-import Data.Either (Either(Left, Right), either)
-import Data.Foldable (sequence_, traverse_)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import Data.Maybe (Maybe(Just, Nothing), isJust, maybe)
-import Data.Nullable (toNullable)
-
-import Data.StrMap (lookup, empty)
-import Data.StrMap as StrMap
-import Data.String (Pattern(Pattern), contains)
-import Data.Time.Duration (Milliseconds(..))
-
-import IdePurescript.Atom.Assist (gotoDefHyper, fixTypo, addClause, caseSplit, gotoDef)
-import IdePurescript.Atom.BuildStatus (getBuildStatus)
-import IdePurescript.Atom.Completion as C
-import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config)
+import Data.Maybe (Maybe(..))
+import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
-import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand)
-import IdePurescript.Atom.Imports (addExplicitImportCmd, addModuleImportCmd)
-import IdePurescript.Atom.LinterBuild (lint)
-import IdePurescript.Atom.PscIdeServer (startServer)
-import IdePurescript.Atom.Psci (registerCommands)
 import IdePurescript.Atom.Psci as Psci
-import IdePurescript.Atom.Search (localSearch, pursuitSearchModule, pursuitSearch)
-import IdePurescript.Atom.Tooltips (registerTooltips, showTooltipAtCursor)
-import IdePurescript.Modules (State, getAllActiveModules, getModulesForFile, getQualModule, getUnqualActiveModules, initialModulesState)
-import IdePurescript.PscIde (getLoadedModules)
-
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import Node.Process (PROCESS)
 import PscIde (NET)
-import PscIde as P
-import PscIde.Project (getRoot)
 
 type MainEff =
   ( command :: COMMAND
@@ -98,16 +63,15 @@ main = do
 
   let activate :: Eff MainEff Unit
       activate = do
-        registerCommands
+        Psci.registerCommands
         installDependencies
         Psci.activate
 
-  languageClient <- runEffFn2 makeLanguageClient config $ mkEffFn1 $ \conn -> do
+  languageClient <- runEffFn3 makeLanguageClient config translateConfig $ mkEffFn1 $ \conn -> do
+    activate
     let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
                         (const $ runEffFn2 executeCommand conn { command: "purescript."<>name', arguments: [] })
         fwdCmd' name = fwdCmd name name
-
-              -- "ide-purescript:build",
 
               -- "ide-purescript:add-module-import",
               -- "ide-purescript:add-explicit-import",

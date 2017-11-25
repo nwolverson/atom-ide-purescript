@@ -1,9 +1,9 @@
 {
   "name": "ide-purescript",
   "main": "./lib/main",
-  "version": "0.19.0-lsp1",
-  "description": "PureScript support for completion, build and maybe more",
-  "keywords": [],
+  "version": "0.19.0-lsp2",
+  "description": "PureScript support for completion, build and assistance with Atom IDE",
+  "keywords": ["ide", "atom-ide", "purescript", "language-server-protocol"],
   "activationHooks": [
     "language-purescript:grammar-used"
   ],
@@ -35,12 +35,12 @@
   },
   "license": "MIT",
   "engines": {
-    "atom": ">=1.21.0 <2.0.0"
+    "atom": ">=1.22.0-beta1 <1.22.0"
   },
   "scripts": {
-    "prepublish": "bower install && npm run bundle",
+    "prepublish": "psc-package update && npm run bundle",
     "build": "pulp build",
-    "bundle": "pulp build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
+    "bundle": "pulp --psc-package build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
     "atom-languageclient": "^0.6.4",
