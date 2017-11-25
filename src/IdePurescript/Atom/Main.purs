@@ -25,7 +25,7 @@ import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildS
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
-import IdePurescript.Atom.Hooks.Linter (LINTER, LinterIndie)
+import IdePurescript.Atom.Hooks.Linter (LINTER)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Psci as Psci
 import Node.Buffer (BUFFER)
