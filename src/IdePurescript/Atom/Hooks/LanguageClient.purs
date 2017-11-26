@@ -1,9 +1,13 @@
-module IdePurescript.Atom.Hooks.LanguageClient where
+module IdePurescript.Atom.Hooks.LanguageClient (LanguageClient, LanguageClientConnection, ExecuteCommandParams, makeLanguageClient, executeCommand, onCustom) where
 
 import Prelude
-import Data.Foreign (Foreign)
-import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, EffFn3)
+
+import Control.Monad.Aff (Aff)
+import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, EffFn3, mkEffFn1, runEffFn2, runEffFn3)
+import Control.Promise (Promise, toAff, toAffE)
+import Data.Foreign (Foreign)
 
 foreign import data LanguageClient :: Type
 foreign import data LanguageClientConnection :: Type
@@ -12,6 +16,12 @@ foreign import makeLanguageClient :: forall eff r. EffFn3 (exception :: EXCEPTIO
 
 type ExecuteCommandParams = { command :: String, arguments :: Array Foreign }
 
-foreign import executeCommand :: forall eff. EffFn2 (exception :: EXCEPTION | eff) LanguageClientConnection ExecuteCommandParams Unit
+foreign import executeCommandImpl :: forall eff. EffFn2 (exception :: EXCEPTION | eff) LanguageClientConnection ExecuteCommandParams (Promise Foreign)
 
-foreign import onCustom :: forall eff. EffFn3 (exception :: EXCEPTION | eff) LanguageClientConnection String (EffFn1 (exception :: EXCEPTION | eff) Foreign Unit) Unit
+executeCommand :: forall eff. LanguageClientConnection -> ExecuteCommandParams -> Aff (exception :: EXCEPTION | eff) Foreign
+executeCommand conn params = toAffE $ runEffFn2 executeCommandImpl conn params
+
+foreign import onCustomImpl :: forall eff. EffFn3 (exception :: EXCEPTION | eff) LanguageClientConnection String (EffFn1 (exception :: EXCEPTION | eff) Foreign Unit) Unit
+
+onCustom :: forall eff. LanguageClientConnection -> String -> (Foreign -> Eff (exception :: EXCEPTION | eff) Unit) -> Eff (exception :: EXCEPTION | eff) Unit
+onCustom conn name cb = runEffFn3 onCustomImpl conn name (mkEffFn1 cb)

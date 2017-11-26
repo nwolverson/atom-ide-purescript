@@ -34,10 +34,10 @@ exports.makeLanguageClient = function (clientMixin, translateSettings, onConnect
   })
 }
 
-exports.executeCommand = function (connection, params) {
-  connection.executeCommand(params);
+exports.executeCommandImpl = function (connection, params) {
+  return connection.executeCommand(params);
 };
 
-exports.onCustom = function (connection, method, callback) {
+exports.onCustomImpl = function (connection, method, callback) {
   connection.onCustom(method, callback);
 };

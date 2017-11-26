@@ -1,6 +1,6 @@
 {
     "name": "vscode-ide-purescript",
-    "set": "ide-0.12-dev-2",
+    "set": "ide-0.12-dev-4",
     "source": "https://github.com/nwolverson/package-sets.git",
     "depends": [
         "atom-api",

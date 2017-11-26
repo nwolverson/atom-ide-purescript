@@ -20,13 +20,14 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
 import DOM (DOM)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import IdePurescript.Atom.Assist (addClause, caseSplit)
+import IdePurescript.Atom.Assist (addClause, caseSplit, launchAffAndRaise)
 import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
 import IdePurescript.Atom.Hooks.Linter (LINTER)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
+import IdePurescript.Atom.Imports (addExplicitImport, addModuleImport)
 import IdePurescript.Atom.Psci as Psci
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -76,15 +77,13 @@ main = do
       } translateConfig $ mkEffFn1 $ \conn -> do
     activate
     let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
-                        (const $ runEffFn2 executeCommand conn { command: "purescript."<>name', arguments: [] })
+                        (const $ launchAffAndRaise $ executeCommand conn { command: "purescript."<>name', arguments: [] })
         fwdCmd' name = fwdCmd name name
 
         cmd name action = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name) (\_ -> action conn)
 
-
-              -- "ide-purescript:add-module-import",
-              -- "ide-purescript:add-explicit-import",
-
+    cmd "add-module-import" addModuleImport
+    cmd "add-explicit-import" addExplicitImport
     cmd "case-split" caseSplit
     cmd "add-clause" addClause
 
@@ -99,10 +98,8 @@ main = do
     fwdCmd "start-psc-ide" "startPscIde"
     fwdCmd "stop-psc-ide" "stopPscIde"
 
-
-    runEffFn3 onCustom conn "textDocument/diagnosticsBegin" $ mkEffFn1 \_ -> updateBuildStatus buildStatusElt Building
-    runEffFn3 onCustom conn "textDocument/diagnosticsEnd" $ mkEffFn1 \_ -> updateBuildStatus buildStatusElt NotBuilding
-
+    onCustom conn "textDocument/diagnosticsBegin" $ \_ -> updateBuildStatus buildStatusElt Building
+    onCustom conn "textDocument/diagnosticsEnd" $ \_ -> updateBuildStatus buildStatusElt NotBuilding
 
   pure $ toForeign $ languageClient
 

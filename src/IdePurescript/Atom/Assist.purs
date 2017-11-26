@@ -18,12 +18,10 @@ import Control.Monad.Eff.Uncurried (runEffFn2)
 import DOM (DOM)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), maybe)
-import IdePurescript.Atom.Editor (getLinePosition)
+import IdePurescript.Atom.Editor (getActivePosInfo, getLinePosition)
 import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
 import LanguageServer.IdePurescript.Commands (addClauseCmd, caseSplitCmd, cmdName)
-import LanguageServer.Types (DocumentUri)
-import LanguageServer.Uri (filenameToUri)
 import PscIde (NET)
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
@@ -33,7 +31,7 @@ launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
   raiseError e = do
     atom <- getAtom
     addError atom.notifications (show e)
---
+
 type CaseEff eff =
               (dom :: DOM
               , command :: COMMAND
@@ -46,29 +44,19 @@ type CaseEff eff =
               , exception :: EXCEPTION
               | eff)
 
-getActivePosInfo :: forall eff. Eff (CaseEff eff)
-  (Maybe { line :: String, pos :: Point, ed :: TextEditor, uri :: DocumentUri })
-getActivePosInfo = do
-  atom <- getAtom
-  getActiveTextEditor atom.workspace >>= maybe (pure Nothing) \ed -> do
-    {line,col,pos,range} <- getLinePosition ed
-    getPath ed >>= maybe (pure Nothing) \path -> do
-      uri <- filenameToUri path
-      pure $ Just { line, pos, ed, uri }
-
 caseSplit :: forall eff. LanguageClientConnection -> Eff (CaseEff eff) Unit
 caseSplit conn =
   getActivePosInfo >>= maybe (pure unit) \{ pos, uri } -> launchAffAndRaise do
     addPromptPanel "Parameter type" "" >>= maybe (pure unit) \typ ->
-      liftEff $ runEffFn2 executeCommand conn
+      unit <$ executeCommand conn
         { command: cmdName caseSplitCmd
         , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos, toForeign typ ]
         }
 
 addClause :: forall eff. LanguageClientConnection -> Eff (CaseEff eff) Unit
 addClause conn = do
-  getActivePosInfo >>= maybe (pure unit) \{ pos, uri } ->
-    runEffFn2 executeCommand conn
+  getActivePosInfo >>= maybe (pure unit) \{ pos, uri } -> launchAffAndRaise $
+    unit <$ executeCommand conn
       { command: cmdName addClauseCmd
       , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos ]
       }
