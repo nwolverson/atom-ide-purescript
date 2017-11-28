@@ -1,6 +1,6 @@
 module IdePurescript.Atom.Assist where
 
-import Prelude
+import Prelude hiding (div)
 
 import Atom.Atom (getAtom)
 import Atom.CommandRegistry (COMMAND)
@@ -14,15 +14,24 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, Error)
-import Control.Monad.Eff.Uncurried (runEffFn2)
+import Control.Monad.Except (runExcept)
 import DOM (DOM)
-import Data.Foreign (toForeign)
+import Data.Array (fromFoldable, length)
+import Data.Either (Either(..))
+import Data.Foreign (readArray, readString, toForeign)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Traversable (traverse)
 import IdePurescript.Atom.Editor (getActivePosInfo, getLinePosition)
 import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
-import LanguageServer.IdePurescript.Commands (addClauseCmd, caseSplitCmd, cmdName)
+import IdePurescript.Atom.SelectView (selectListViewStatic)
+import LanguageServer.IdePurescript.Assist (TypoResult(..), decodeTypoResult)
+import LanguageServer.IdePurescript.Commands (addClauseCmd, caseSplitCmd, cmdName, fixTypoCmd)
 import PscIde (NET)
+import Text.Smolder.HTML (div, li)
+import Text.Smolder.HTML.Attributes (className)
+import Text.Smolder.Markup (text, (!))
+import Text.Smolder.Renderer.String (render)
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY | e) a -> Eff (note :: NOTIFY | e) Unit
 launchAffAndRaise = void <<< (runAff raiseError (const $ pure unit))
@@ -61,50 +70,23 @@ addClause conn = do
       , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos ]
       }
 
--- TODO: Add to LS
--- type TypoEff e = (net :: NET, note :: NOTIFY, editor :: EDITOR, workspace :: WORKSPACE, dom :: DOM, fs :: FS, ref :: REF, config :: CONFIG, console :: CONSOLE | e)
---
--- fixTypo :: forall eff. Ref State -> Int -> Eff (TypoEff eff) Unit
--- fixTypo modulesState port = do
---   launchAffAndRaise $ runMaybeT body
---   where
---   body :: MaybeT (Aff (TypoEff eff)) Unit
---   body = do
---     atom <- lift $ liftEff'' getAtom
---     ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
---     { pos } <- lift $ liftEff'' $ getLinePosition ed
---     { word, range: wordRange } <- MaybeT $ liftEff'' $ getToken ed pos
---     state <- lift $ liftEff'' $ readRef modulesState
---     corrections <- lift $ eitherToErr (P.suggestTypos port word 2 state.main P.defaultCompletionOptions)
---     liftEff $ selectListViewStatic view (replaceTypo ed wordRange) (Just "identifier") (runCompletion <$> corrections)
---     where
---       runCompletion (TypeInfo obj) = obj
---       replaceTypo ed wordRange { identifier, "module'": mod } =
---         launchAffAndRaise $ do
---          _ <- liftEff $ setTextInBufferRange ed wordRange identifier
---          addIdentImport port modulesState (Just mod) identifier
---       view {identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
---       getIdentFromCompletion (TypeInfo c) = c.identifier
---
--- type GotoEff e = TypoEff e
---
--- -- TODO: Remove, or rewrite (external package?) in terms of definitions api?
--- gotoDef ::  forall eff. Ref State -> Int -> Eff (GotoEff eff) Unit
--- gotoDef modulesState port = do
---   launchAffAndRaise $ runMaybeT body
---   where
---   body :: MaybeT (Aff (GotoEff eff)) Unit
---   body = do
---     atom <- lift $ liftEff'' getAtom
---     ed <- MaybeT $ liftEff'' $ getActiveTextEditor atom.workspace
---     { pos } <- lift $ liftEff'' $ getLinePosition ed
---     { word, range, qualifier } <- MaybeT $ liftEff'' $ getToken ed pos
---     state <- lift $ liftEff'' $ readRef modulesState
---     info <- lift $ getTypeInfo port word state.main qualifier (getUnqualActiveModules state $ Just word) (flip getQualModule $ state)
---     case info of
---       Just (TypeInfo { definedAt : Just (TypePosition { start, end, name }) }) -> lift $ liftEff'' $
---         open atom.workspace name
---           (defaultOpenOptions { initialLine = start.line - 1, initialColumn = start.column - 1 })
---           (const $ pure unit) (pure unit)
---
---       _ -> pure unit
+fixTypo :: forall eff. LanguageClientConnection -> Eff (CaseEff eff) Unit
+fixTypo conn = do
+  getActivePosInfo >>= maybe (pure unit) \{ pos, uri } -> launchAffAndRaise $ go pos uri Nothing
+
+  where
+    go pos uri choice = do
+      res <- executeCommand conn
+        { command: cmdName fixTypoCmd
+        , arguments: [ toForeign uri, toForeign $ getRow pos, toForeign $ getColumn pos ] <> fromFoldable choice
+        }
+      case runExcept $ readArray res >>= traverse decodeTypoResult of
+        Right arr | length arr > 0 ->
+          liftEff $ selectListViewStatic view (launchAffAndRaise <<< go pos uri <<< Just <<< toForeign) (Just "identifier") arr
+        _ -> pure unit
+
+    view :: TypoResult -> String
+    view (TypoResult { identifier, mod }) = render $
+      li ! className "two-lines" $ do
+        div ! className "primary-line" $ text identifier
+        div ! className "secondary-line" $ text mod

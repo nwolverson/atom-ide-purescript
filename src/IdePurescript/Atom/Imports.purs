@@ -29,6 +29,9 @@ import LanguageServer.Types (Command(..), DocumentUri(..))
 import LanguageServer.Uri (filenameToUri)
 import Node.FS (FS)
 import PscIde (NET)
+import Text.Smolder.HTML (li)
+import Text.Smolder.Markup (text)
+import Text.Smolder.Renderer.String (render)
 
 type AddModuleEff eff = ImportEff (dom :: DOM, exception :: EXCEPTION | eff)
 type ImportEff eff = (workspace :: WORKSPACE, ref :: REF,  note :: NOTIFY, net :: NET, editor :: EDITOR, fs :: FS, console :: CONSOLE, command :: COMMAND | eff)
@@ -54,7 +57,26 @@ addExplicitImport conn = launchAffAndRaise $
         _ -> pure unit
       where
       addImp { identifier, "module'": m } = launchAffAndRaise $ addIdentImport ident uri (Just m)
-      view { identifier, "module'": m} = "<li>" <> m <> "." <> identifier <> "</li>"
+      view { identifier, "module'": m} = render $
+        li $ text $ m <> "." <> identifier
+
+addModuleImport' :: forall eff.
+  LanguageClientConnection
+  -> TextEditor
+     -> String
+        -> Eff
+             ( editor :: EDITOR
+             , console :: CONSOLE
+             , exception :: EXCEPTION
+             , note :: NOTIFY
+             | eff
+             )
+             Unit
+addModuleImport' conn editor mod =
+  getPath editor >>= maybe (pure unit) \path -> do
+    uri <- filenameToUri path
+    launchAffAndRaise $ executeCommand conn { command: "purescript.addModuleImport",
+      arguments: [ toForeign mod, toForeign $ toNullable Nothing, toForeign uri ]}
 
 addModuleImport :: forall eff. LanguageClientConnection -> Eff (AddModuleEff eff) Unit
 addModuleImport conn = launchAffAndRaise do
@@ -64,12 +86,8 @@ addModuleImport conn = launchAffAndRaise do
   case ed, runExcept $ readArray modules of
     Just editor, Right forArr
       | Right arr <- runExcept $ traverse readString forArr
-      -> liftEff $ selectListViewStatic view (addImport editor) Nothing arr
+      -> liftEff $ selectListViewStatic view (addModuleImport' conn editor) Nothing arr
     _, _ -> pure unit
   where
-    view x = "<li>" <> x <> "</li>"
-    addImport editor mod =
-      getPath editor >>= maybe (pure unit) \path -> do
-        uri <- filenameToUri path
-        launchAffAndRaise $ executeCommand conn { command: "purescript.addModuleImport",
-          arguments: [ toForeign mod, toForeign $ toNullable Nothing, toForeign uri ]}
+    view x = render $
+      li $ text x

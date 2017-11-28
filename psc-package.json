@@ -1,8 +1,10 @@
 {
     "name": "vscode-ide-purescript",
-    "set": "ide-0.12-dev-4",
+    "set": "ide-0.12-dev-5",
     "source": "https://github.com/nwolverson/package-sets.git",
     "depends": [
+        "affjax",
+        "smolder",
         "atom-api",
         "psa-utils",
         "ide-purescript-core",

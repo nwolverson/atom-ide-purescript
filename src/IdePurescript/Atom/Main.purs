@@ -20,7 +20,7 @@ import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
 import DOM (DOM)
 import Data.Foreign (Foreign, readBoolean, toForeign)
-import IdePurescript.Atom.Assist (addClause, caseSplit, launchAffAndRaise)
+import IdePurescript.Atom.Assist (addClause, caseSplit, fixTypo, launchAffAndRaise)
 import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
@@ -29,6 +29,8 @@ import IdePurescript.Atom.Hooks.Linter (LINTER)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addExplicitImport, addModuleImport)
 import IdePurescript.Atom.Psci as Psci
+import IdePurescript.Atom.Search (localSearch, pursuitSearch, pursuitSearchModule)
+import Network.HTTP.Affjax (AJAX)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
@@ -56,6 +58,7 @@ type MainEff =
   , dom :: DOM
   , grammar :: GRAMMAR
   , random :: RANDOM
+  , ajax :: AJAX
   )
 
 main :: Eff MainEff Foreign
@@ -87,11 +90,10 @@ main = do
     cmd "case-split" caseSplit
     cmd "add-clause" addClause
 
-              -- "ide-purescript:fix-typo",
-
-              -- "ide-purescript:search",
-              -- "ide-purescript:pursuit-search",
-              -- "ide-purescript:pursuit-search-modules",
+    cmd "fix-typo" fixTypo
+    cmd "search" localSearch
+    cmd "pursuit-search" \_ -> pursuitSearch
+    cmd "pursuit-search-modules" pursuitSearchModule
 
     fwdCmd' "build"
     fwdCmd "restart-psc-ide" "restartPscIde"
