@@ -28,8 +28,8 @@ import LanguageServer.IdePurescript.Search (SearchResult(..), decodeSearchResult
 import Network.HTTP.Affjax (AJAX, Affjax, AffjaxResponse, affjax, defaultRequest, get)
 import Network.HTTP.RequestHeader (RequestHeader(..))
 import Text.Smolder.HTML (br, div, li, span)
-import Text.Smolder.HTML.Attributes (className)
-import Text.Smolder.Markup (text, (!))
+import Text.Smolder.HTML.Attributes (className, tabindex)
+import Text.Smolder.Markup (MarkupM, text, (!))
 import Text.Smolder.Renderer.String (render)
 
 newtype PursuitSearchInfo = PursuitSearchInfo
@@ -95,22 +95,24 @@ pursuitModuleSearchRequest text = do
     isModule (PursuitSearchResult { info: PursuitSearchInfo { typ: "module" } }) = true
     isModule _ = false
 
+twoLines :: forall a. MarkupM a Unit -> MarkupM a Unit -> MarkupM a Unit
+twoLines line1 line2 = li ! className "two-lines" $ do
+  line1
+  line2
+
 pursuitSearch :: forall eff. Eff (LocalEff eff) Unit
 pursuitSearch =
   selectListViewDynamic view (\(PursuitSearchResult { text }) -> log text) Nothing (const "") pursuitSearchRequest 1000
   where
   view (PursuitSearchResult { package, text: txt, info : PursuitSearchInfo { title: Just title, typ, mod: Just mod, typeText } }) = render $
-    li ! className "two-lines" $ do
-      div ! className "primary-line" $ do
-        text title
-        case typeText of
-          Just tt -> do
-            text " :: "
-            span ! className "text-info" $ text $ tt
-          _ -> text ""
-        br
-        text txt
-      div ! className "secondary-line" $ text $ mod <> " (" <> package <> ")"
+    twoLines
+      do text title
+         case typeText of
+            Just tt -> do
+              text " :: "
+              span ! className "text-info" $ text $ tt
+            _ -> text ""
+      do text $ mod <> " (" <> package <> ")"
   view _ = ""
 
 pursuitSearchModule :: forall eff. LanguageClientConnection -> Eff (LocalEff eff) Unit
@@ -119,9 +121,7 @@ pursuitSearchModule conn =
   where
 
   view (PursuitSearchResult { package, info: PursuitSearchInfo { mod: Just mod } }) = render $
-    li ! className "two-lines" $ do
-      div ! className "primary-line" $ text mod
-      div ! className "secondary-line" $ text package
+    twoLines (text mod) (text package)
   view _ = ""
 
   importDialog :: PursuitSearchResult -> Eff (LocalEff eff) Unit
@@ -148,9 +148,7 @@ localSearch conn =
       pure $ either (const []) id $ runExcept $ results'
 
     view (SearchResult { identifier, typ, mod }) = render do
-      li ! className "two-lines" $ do
-        div ! className "primary-line" $ do
-          text identifier
-          text ": "
-          span ! className "text-info" $ text typ
-        div ! className "secondary-line" $ text mod
+      twoLines do text identifier
+                  text ": "
+                  span ! className "text-info" $ text typ
+               do text mod

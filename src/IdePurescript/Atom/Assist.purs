@@ -24,6 +24,7 @@ import Data.Traversable (traverse)
 import IdePurescript.Atom.Editor (getActivePosInfo, getLinePosition)
 import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand)
 import IdePurescript.Atom.PromptPanel (addPromptPanel)
+import IdePurescript.Atom.Search (twoLines)
 import IdePurescript.Atom.SelectView (selectListViewStatic)
 import LanguageServer.IdePurescript.Assist (TypoResult(..), decodeTypoResult)
 import LanguageServer.IdePurescript.Commands (addClauseCmd, caseSplitCmd, cmdName, fixTypoCmd)
@@ -87,6 +88,4 @@ fixTypo conn = do
 
     view :: TypoResult -> String
     view (TypoResult { identifier, mod }) = render $
-      li ! className "two-lines" $ do
-        div ! className "primary-line" $ text identifier
-        div ! className "secondary-line" $ text mod
+      twoLines (text identifier) (text mod)
