@@ -24,7 +24,7 @@
       "ide-purescript:add-explicit-import",
       "ide-purescript:case-split",
       "ide-purescript:add-clause",
-      "ide-purescript:fix-typo",
+      "ide-purescript:fixTypo",
       "ide-purescript:goto-definition",
       "ide-purescript:psci-open",
       "ide-purescript:psci-send-line",
@@ -48,7 +48,7 @@
     "bundle": "pulp --psc-package build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
-    "@nwolverson/atom-languageclient": "0.6.8-nwolverson.1",
+    "@nwolverson/atom-languageclient": "0.7.3-nwolverson.1",
     "atom-package-deps": "^4.5.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",

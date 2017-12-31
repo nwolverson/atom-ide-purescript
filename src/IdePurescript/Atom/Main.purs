@@ -3,26 +3,26 @@ module IdePurescript.Atom.Main where
 import Prelude
 
 import Atom.Atom (getAtom)
-import Atom.CommandRegistry (COMMAND, addCommand, dispatchRoot)
+import Atom.CommandRegistry (COMMAND, addCommand)
 import Atom.Config (CONFIG)
-import Atom.Editor (EDITOR, TextEditor, toEditor, onDidSave, getPath, getText, getTextInRange)
+import Atom.Editor (EDITOR)
 import Atom.Grammar (GRAMMAR)
 import Atom.NotificationManager (NOTIFY, addError)
 import Atom.Pane (PANE)
 import Atom.Project (PROJECT)
-import Atom.Workspace (WORKSPACE, onDidChangeActivePaneItem, observeTextEditors, getActiveTextEditor)
-import Control.Monad.Aff.AVar (putVar, takeVar, makeVar', AVAR)
+import Atom.Workspace (WORKSPACE)
+import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
-import Control.Monad.Eff.Ref (REF, Ref, readRef, writeRef, modifyRef, newRef)
-import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn1, runEffFn3, runEffFn2)
+import Control.Monad.Eff.Ref (REF)
+import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn4)
 import DOM (DOM)
-import Data.Foreign (Foreign, readBoolean, toForeign)
-import IdePurescript.Atom.Assist (addClause, caseSplit, fixTypo, launchAffAndRaise)
+import Data.Foreign (Foreign, toForeign)
+import IdePurescript.Atom.Assist (addClause, caseSplit, fixTypo, fixTypoWithRange)
 import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
-import IdePurescript.Atom.Config (autoCompleteAllModules, autoCompleteGrouped, autoCompleteLimit, autoCompletePreferredModules, config, translateConfig)
+import IdePurescript.Atom.Config (config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
 import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
 import IdePurescript.Atom.Hooks.Linter (LINTER)
@@ -30,6 +30,7 @@ import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addExplicitImport, addModuleImport)
 import IdePurescript.Atom.Psci as Psci
 import IdePurescript.Atom.Search (localSearch, pursuitSearch, pursuitSearchModule)
+import IdePurescript.Atom.Util (launchAffAndRaise)
 import Network.HTTP.Affjax (AJAX)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -74,10 +75,10 @@ main = do
 
   buildStatusElt <- getBuildStatus
 
-  languageClient <- runEffFn3 makeLanguageClient {
+  languageClient <- runEffFn4 makeLanguageClient {
         config
       , consumeStatusBar: mkEffFn1 \statusBar -> addLeftTile statusBar { item: buildStatusElt, priority: -50 }
-      } translateConfig $ mkEffFn1 $ \conn -> do
+      } translateConfig (mkEffFn2 fixTypoWithRange) $ mkEffFn1 $ \conn -> do
     activate
     let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
                         (const $ launchAffAndRaise $ executeCommand conn { command: "purescript."<>name', arguments: [] })
@@ -90,7 +91,7 @@ main = do
     cmd "case-split" caseSplit
     cmd "add-clause" addClause
 
-    cmd "fix-typo" fixTypo
+    cmd "fixTypo" fixTypo
     cmd "search" localSearch
     cmd "pursuit-search" \_ -> pursuitSearch
     cmd "pursuit-search-modules" pursuitSearchModule

@@ -1,8 +1,9 @@
 var AutoLanguageClient = require('@nwolverson/atom-languageclient').AutoLanguageClient;
 
-exports.makeLanguageClient = function (clientMixin, translateSettings, onConnection) {
+exports.makeLanguageClient = function (clientMixin, translateSettings, fixTypo, onConnection) {
   var client = new AutoLanguageClient();
   var connection;
+  var baseCodeActions = client.getCodeActions;
   return Object.assign(client, clientMixin, {
     preInitialization: function(conn) {
       connection = conn;
@@ -27,11 +28,30 @@ exports.makeLanguageClient = function (clientMixin, translateSettings, onConnect
           cwd: projectPath
         })
     },
-    onDidInsertSuggestion: function (arg, item) {
-      console.log(item);
-      connection.executeCommand(item.command);
+    onDidConvertAutocomplete: function (item, suggestion, request) {
+      suggestion.command = item.command;
+    },
+    onDidInsertSuggestion: function (item) {
+      connection.executeCommand(item.suggestion.command);
+    },
+    // TODO this is the worst pile of hacks
+    getCodeActions: function (editor, range, diagnostics) {
+      return baseCodeActions.call(this, editor, range, diagnostics).then(function (results) {
+          return results && results.map(function (result) {
+              return Object.assign(result, {
+                apply: function() {
+                  return result.getTitle().then(function (title){
+                    if (title === "Fix typo/add import") {
+                      return fixTypo(connection, range);
+                    }
+                    return result.apply();
+                  });
+                }
+              });
+            });
+          });
     }
-  })
+  });
 }
 
 exports.executeCommandImpl = function (connection, params) {

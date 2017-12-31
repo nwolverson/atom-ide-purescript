@@ -2,17 +2,18 @@ module IdePurescript.Atom.Hooks.LanguageClient (LanguageClient, LanguageClientCo
 
 import Prelude
 
+import Atom.Range (Range)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, EffFn3, mkEffFn1, runEffFn2, runEffFn3)
-import Control.Promise (Promise, toAff, toAffE)
+import Control.Monad.Eff.Uncurried (EffFn1, EffFn2, EffFn3, EffFn4, mkEffFn1, runEffFn2, runEffFn3)
+import Control.Promise (Promise, toAffE)
 import Data.Foreign (Foreign)
 
 foreign import data LanguageClient :: Type
 foreign import data LanguageClientConnection :: Type
 
-foreign import makeLanguageClient :: forall eff r. EffFn3 (exception :: EXCEPTION | eff) {|r} (Foreign -> Foreign) (EffFn1 (exception :: EXCEPTION | eff) LanguageClientConnection Unit) LanguageClient
+foreign import makeLanguageClient :: forall eff r. EffFn4 (exception :: EXCEPTION | eff) {|r} (Foreign -> Foreign) (EffFn2 (exception :: EXCEPTION | eff) LanguageClientConnection Range Unit) (EffFn1 (exception :: EXCEPTION | eff) LanguageClientConnection Unit) LanguageClient
 
 type ExecuteCommandParams = { command :: String, arguments :: Array Foreign }
 

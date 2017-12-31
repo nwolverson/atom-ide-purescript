@@ -16,7 +16,7 @@ import DOM (DOM)
 import Data.Argonaut (class DecodeJson, Json, decodeJson, (.?))
 import Data.Argonaut.Decode ((.??))
 import Data.Array (filter)
-import Data.Either (Either(..), either)
+import Data.Either (either)
 import Data.Foreign (readArray, toForeign)
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
@@ -25,10 +25,10 @@ import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, execut
 import IdePurescript.Atom.Imports (addModuleImport')
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import LanguageServer.IdePurescript.Search (SearchResult(..), decodeSearchResult)
-import Network.HTTP.Affjax (AJAX, Affjax, AffjaxResponse, affjax, defaultRequest, get)
+import Network.HTTP.Affjax (AJAX, Affjax, affjax, defaultRequest)
 import Network.HTTP.RequestHeader (RequestHeader(..))
-import Text.Smolder.HTML (br, div, li, span)
-import Text.Smolder.HTML.Attributes (className, tabindex)
+import Text.Smolder.HTML (div, li, span)
+import Text.Smolder.HTML.Attributes (className)
 import Text.Smolder.Markup (MarkupM, text, (!))
 import Text.Smolder.Renderer.String (render)
 
@@ -97,8 +97,8 @@ pursuitModuleSearchRequest text = do
 
 twoLines :: forall a. MarkupM a Unit -> MarkupM a Unit -> MarkupM a Unit
 twoLines line1 line2 = li ! className "two-lines" $ do
-  line1
-  line2
+  div ! className "first-line" $ line1
+  div ! className "second-line" $ line2
 
 pursuitSearch :: forall eff. Eff (LocalEff eff) Unit
 pursuitSearch =
