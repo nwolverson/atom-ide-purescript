@@ -54,8 +54,6 @@ import Node.Stream (end, writeString, onDataString)
 import PscIde.Project (getRoot)
 import Unsafe.Coerce (unsafeCoerce)
 
-foreign import init :: forall eff. Eff eff Unit
-
 type PscPane = { getTitle :: Unit -> String, element :: Element }
 
 createElement' :: forall eff. String -> Eff (dom :: DOM | eff) Element

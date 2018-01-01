@@ -6,3 +6,4 @@ output/
 .psci_modules/
 .psa-stash
 .psc-ide-port
+.psc-package/

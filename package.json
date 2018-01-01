@@ -2,14 +2,18 @@
   "name": "ide-purescript",
   "main": "./lib/main",
   "version": "0.19.1",
-  "description": "PureScript support for completion, build and maybe more",
-  "keywords": [],
+  "description": "PureScript support for completion, build and assistance with Atom IDE",
+  "keywords": [
+    "ide",
+    "atom-ide",
+    "purescript",
+    "language-server-protocol"
+  ],
   "activationHooks": [
     "language-purescript:grammar-used"
   ],
   "activationCommands": {
     "atom-workspace": [
-      "ide-purescript:build",
       "ide-purescript:search",
       "ide-purescript:build",
       "ide-purescript:show-quick-fixes",
@@ -21,11 +25,14 @@
       "ide-purescript:search",
       "ide-purescript:case-split",
       "ide-purescript:add-clause",
-      "ide-purescript:fix-typo",
+      "ide-purescript:fixTypo",
       "ide-purescript:goto-definition",
       "ide-purescript:psci-open",
       "ide-purescript:psci-send-line",
-      "ide-purescript:psci-send-selection"
+      "ide-purescript:psci-send-selection",
+      "ide-purescript:restart-psc-ide",
+      "ide-purescript:start-psc-ide",
+      "ide-purescript:stop-psc-ide"
     ]
   },
   "repository": {
@@ -34,23 +41,24 @@
   },
   "license": "MIT",
   "engines": {
-    "atom": ">=1.0.0 <2.0.0"
+    "atom": ">=1.22.0-beta1 <1.22.0"
   },
   "scripts": {
-    "prepublish": "bower install && npm run bundle",
-    "build": "pulp build",
-    "bundle": "pulp build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
+    "prepublish": "psc-package update && npm run bundle",
+    "bundle": "pulp --psc-package build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
+    "@nwolverson/atom-languageclient": "0.7.3-nwolverson.1",
     "atom-package-deps": "^4.5.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "hover-tooltips": "^0.5.0",
+    "purescript-language-server": "^0.5.2",
     "which": "^1.2.4"
   },
   "package-deps": [
     "linter:2.0.0",
-    "language-purescript"
+    "language-purescript",
+    "atom-ide-ui"
   ],
   "providedServices": {
     "autocomplete.provider": {
@@ -58,16 +66,46 @@
         "2.0.0": "provideAutocomplete"
       }
     },
-    "hyperclick.provider": {
+    "code-format.range": {
       "versions": {
-        "0.0.0": "provideHyperclick"
+        "0.1.0": "provideCodeFormat"
+      }
+    },
+    "code-highlight": {
+      "versions": {
+        "0.1.0": "provideCodeHighlight"
+      }
+    },
+    "definitions": {
+      "versions": {
+        "0.1.0": "provideDefinitions"
+      }
+    },
+    "find-references": {
+      "versions": {
+        "0.1.0": "provideFindReferences"
+      }
+    },
+    "outline-view": {
+      "versions": {
+        "0.1.0": "provideOutlines"
+      }
+    },
+    "code-actions": {
+      "versions": {
+        "0.1.0": "provideCodeActions"
       }
     }
   },
   "consumedServices": {
     "linter-indie": {
       "versions": {
-        "2.0.0": "consumeLinterIndie"
+        "2.0.0": "consumeLinterV2"
+      }
+    },
+    "datatip": {
+      "versions": {
+        "0.1.0": "consumeDatatip"
       }
     },
     "status-bar": {

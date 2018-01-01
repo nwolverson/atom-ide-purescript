@@ -4,10 +4,9 @@ import Prelude
 import IdePurescript.PscIdeServer as P
 import Atom.Atom (getAtom)
 import Atom.NotificationManager (NotificationManager, addWarning, NOTIFY, addError, addSuccess, addInfo)
-import Control.Monad.Eff.Console (CONSOLE, error, info, log, warn)
+import Control.Monad.Eff.Console (CONSOLE, error, errorShow, info, log, warn)
 import Control.Monad.Aff (Aff, runAff)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, errorShow)
 import Control.Monad.Eff.Exception (Error)
 
 launchAffAndRaise :: forall a e. Aff (note :: NOTIFY, console :: CONSOLE | e) a -> Eff (note :: NOTIFY, console :: CONSOLE | e) Unit
