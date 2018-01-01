@@ -41,7 +41,7 @@
   },
   "license": "MIT",
   "engines": {
-    "atom": ">=1.22.0-beta1 <1.22.0"
+    "atom": ">=1.23"
   },
   "scripts": {
     "prepublish": "psc-package update && npm run bundle",
