@@ -57,7 +57,8 @@
   },
   "package-deps": [
     "linter:2.0.0",
-    "language-purescript"
+    "language-purescript",
+    "atom-ide-ui"
   ],
   "providedServices": {
     "autocomplete.provider": {
