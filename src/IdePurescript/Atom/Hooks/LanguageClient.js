@@ -23,7 +23,7 @@ exports.makeLanguageClient = function (clientMixin, translateSettings, fixTypo, 
     getServerName: function() { return 'purescript-language-server' },
     startServerProcess: function (projectPath) {
       console.log("Using project path for cwd: " + projectPath);
-      return client.spawnChildNode([ require.resolve('purescript-language-server'), '--stdio', "--config", "{}" ],
+      return client.spawnChildNode([ require.resolve('purescript-language-server'), '--stdio' ],
         {
           cwd: projectPath
         })
