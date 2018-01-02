@@ -32,7 +32,9 @@ exports.makeLanguageClient = function (clientMixin, translateSettings, fixTypo, 
       suggestion.command = item.command;
     },
     onDidInsertSuggestion: function (item) {
-      connection.executeCommand(item.suggestion.command);
+      if (item.suggestion.command) {
+        connection.executeCommand(item.suggestion.command);
+      }
     },
     // TODO this is the worst pile of hacks
     getCodeActions: function (editor, range, diagnostics) {
