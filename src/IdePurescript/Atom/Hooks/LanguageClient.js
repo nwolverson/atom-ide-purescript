@@ -40,13 +40,14 @@ exports.makeLanguageClient = function (clientMixin, translateSettings, fixTypo, 
     getCodeActions: function (editor, range, diagnostics) {
       return baseCodeActions.call(this, editor, range, diagnostics).then(function (results) {
           return results && results.map(function (result) {
+              var apply = result.apply.bind(result);
               return Object.assign(result, {
                 apply: function() {
                   return result.getTitle().then(function (title){
                     if (title === "Fix typo/add import") {
                       return fixTypo(connection, range);
                     }
-                    return result.apply();
+                    return apply();
                   });
                 }
               });
