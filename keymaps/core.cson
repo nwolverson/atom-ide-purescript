@@ -3,7 +3,6 @@
 
 # Main bindings for mac/linux
 '.platform-darwin atom-workspace atom-text-editor:not([mini]), .platform-linux atom-workspace atom-text-editor:not([mini])':
-    'alt-enter':'ide-purescript:show-quick-fixes'
     'ctrl-o b':'ide-purescript:build'
     'ctrl-o i':'ide-purescript:add-explicit-import'
     'ctrl-o I':'ide-purescript:add-module-import'
@@ -12,12 +11,9 @@
     'ctrl-o P':'ide-purescript:pursuit-search-modules'
     'ctrl-o c':'ide-purescript:add-clause'
     'ctrl-o s':'ide-purescript:case-split'
-    'ctrl-o g':'ide-purescript:goto-definition'
-    'ctrl-o t':'ide-purescript:show-tooltip'
 
 # ctrl-i instead of ctrl-o on windows, due to file dialog on ctrl-o
 '.platform-win32 atom-workspace atom-text-editor:not([mini])':
-    'alt-enter':'ide-purescript:show-quick-fixes'
     'ctrl-i b':'ide-purescript:build'
     'ctrl-i i':'ide-purescript:add-explicit-import'
     'ctrl-i I':'ide-purescript:add-module-import'
@@ -26,8 +22,6 @@
     'ctrl-i P':'ide-purescript:pursuit-search-modules'
     'ctrl-i c':'ide-purescript:add-clause'
     'ctrl-i s':'ide-purescript:case-split'
-    'ctrl-i g':'ide-purescript:goto-definition'
-    'ctrl-i t':'ide-purescript:show-tooltip'
 
 '.platform-darwin atom-workspace atom-text-editor:not([mini])':
     'ctrl-cmd-l':'ide-purescript:psci-send-line'

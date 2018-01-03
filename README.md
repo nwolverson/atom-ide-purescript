@@ -2,7 +2,8 @@
 
 [![Build Status](https://travis-ci.org/nwolverson/atom-ide-purescript.svg?branch=master)](https://travis-ci.org/nwolverson/atom-ide-purescript)
 
-This package provides editor support for PureScript projects in Atom. Dependency [language-purescript](https://atom.io/packages/language-purescript) provides syntax highlighting.
+This package provides editor support for PureScript projects in Atom, based on a [Language Server](https://github.com/nwolverson/purescript-language-server) which uses the `purs` compiler IDE server functionality,
+with UI provided via the atom-ide framework.
 
 This package provides:
   * [Autocomplete](#autocomplete)
@@ -20,40 +21,35 @@ Package should trigger on opening a `.purs` file or running any PureScript/PSCI 
 
 For best results (and default settings) install dependencies:
 
-  * `psc` 0.8.5 or >= 0.9.1 (includes `psc-ide-server` as standard)
+  * `purs` (compiler) 0.8.5 or >= 0.9.1 (includes `psc-ide-server`/ `ide server` subcommand as standard)
     * 0.9.2 required for go-to definition, 0.9.x for some compiler suggestions
   * `pulp` >= 8.0.0 (appropriate for your `psc` version). *>=10.0.0 recommended* to use default build command
 
 Required atom packages - these should be auto-installed by starting the package, eg by running any PureScript command.
   * [language-purescript](https://atom.io/packages/language-purescript)
-  * [Linter](https://github.com/atom-community/linter) are required,
-
-Optional atom packages:
-
-  * [hyperclick](https://atom.io/packages/hyperclick) - click to go to definition (this package contains a hyperclick provider)
+  * [atom-ide-ui](https://github.com/facebook-atom/atom-ide-ui/)
 
 For use with older versions of pulp, or for alternative build tools and configuration tips, [see below](#build). In brief
 the build command is configurable, but should output JSON errors.
 
-## psc-ide
+## IDE server
 
-This package runs a server process, `psc-ide-server`, to provide type information, completions,
-etc. This package will automatically start `psc-ide-server` in your project
-directory (port is configurable) and kill it when closing, if for some reason
+This package runs a langauge server process, which itself starts a compiler server process, `purs ide server`
+(previously `psc-ide-server`), to provide type information, completions,etc. This package will automatically start
+the IDE server in your project directory and kill it when closing, if for some reason
 you want a longer running server process you should be able to start that before
 starting atom.
+<!--
+Multiple PureScript projects are now supported, whether in one or multiple Atom windows, see [release notes](https://github.com/nwolverson/atom-ide-purescript/releases/tag/v0.14.0) for details. -->
 
-Multiple PureScript projects are now supported, whether in one or multiple Atom windows, see [release notes](https://github.com/nwolverson/atom-ide-purescript/releases/tag/v0.14.0) for details.
 
-Note `psc-ide-client` is not used.
-
-For all functions provided by `psc-ide` you will need to build your project first! In particular a full build,
-not a "fast-build" on save, is required first time or after upgrading psc, afterwards saving individual files
+For all functions provided by `purs ide server` you will need to build your project first! In particular a full build,
+not a "fast-build" on save, is required first time or after upgrading `purs`, afterwards saving individual files
 will update tooltips etc.
 
 ## Autocomplete
 
-Provided from `psc-ide`. Make sure your project is built first. Only for top level definitions.
+Provided from the IDE server. Make sure your project is built first. Only for top level definitions.
 
 Completions will be sourced from all available modules by default; this is configurable to just those imported in the current file, in which case explicitly (re-)triggering the completion will expand to show all modules.
 
@@ -69,12 +65,11 @@ This is really stupid, and only cares that you hover over a word regardless of c
 
 ## Go to definitions
 
-The command _Ide PureScript: Goto Definition_ is available (default binding `ctrl-o g`). This is available with psc-ide version
-0.9.2 and above, and like tooltips/autocomplete works on identifiers bound at the top level. Placing the cursor on the identifier
-and executing the command should open the appropriate file at the correct place. In case source positions are not up to date (they
-  may not be updated on rebuild, try rebuilding or restarting psc-ide server).
+Hyperclick goto-definition functionality is supported. This is available with `purs` version
+0.9.2 and above, and like tooltips/autocomplete works on identifiers bound at the top level.
+This is available as command/ctrl+click or cmd+alt/opt+enter by default, see atom-ide-ui config.
 
-If the package [hyperclick](https://atom.io/packages/hyperclick) is installed, goto definition will be availble on alt/cmd-click also.
+In case source positions are not up to date, they may not be updated on rebuild, try rebuilding or restarting psc-ide server.
 
 ## Pursuit lookup
 
@@ -104,7 +99,7 @@ Build support is provided via `pulp build` by default, configurable to any comma
 will output psc errors. This can be configured to run on save, alternatively there
 is a 'PureScript Build' command.
 
-As well as this there is "fast rebuild" via `psc-ide-server` on save (by default), this will
+As well as this there is "fast rebuild" via the IDE server on save (by default), this will
 build an individual file. The recommended approach is to run a full build initially and
 after any dependency upgrades, compiler updates, etc. or when producing build artifacts, and
 otherwise quick build for continuous error feedback.
@@ -121,7 +116,8 @@ output JSON errors as per `psc`, on stderr. This is *not* interpreted via shell,
 pulled apart as a list of string separated arguments.
 
 Some alternatives:
-  * Direct `psc` use: `psc bower_components/*/src/**/*.purs bower_components/*/src/**/*.js src/**/*.purs src/**/*.js --json-errors`
+  * Pulp with `psc-package`: `pulp --psc-package build -- --json-errors`
+  * Direct `psc` use: `psc bower_components/purescript-*/src/**/*.purs src/**/*.purs --json-errors`
   * Run a `purescript-gulp` based build: `gulp` - again need to ensure this outputs JSON errors, you probably want a specific task for this.
   * Pulp passing through `psa`: `pulp build -- --stash --json-errors`
 
@@ -165,11 +161,10 @@ Currently the type of the arguments must be provided by the user.
 ## Hacking on atom-ide-purescript
 
 After cloning, install dependencies
-  • `bower install`
+  • `psc-package update`
   • `npm install`
 
-Bundle for Atom: `npm run bundle`
-_Alternatively `npm run -s bundle` if you want cleaner output_
+Bundle for Atom: `npm run -s bundle`
 
 You can use the regular `pulp build` as part of your tooling or to see compile errors, but bundling is required for the plugin to be usable by Atom and will build the project as part of the task.
 

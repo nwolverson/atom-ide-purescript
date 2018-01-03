@@ -16,7 +16,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.StrMap (fromFoldable)
 import Data.Traversable (for, for_, sequence, traverse, traverse_)
 import Data.Tuple (Tuple(..))
-import Node.Platform (Platform(Win32))
+import Node.Platform (Platform(..))
 import Node.Process as P
 
 defaultSrcGlob :: Array String

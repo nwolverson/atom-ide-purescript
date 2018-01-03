@@ -37,14 +37,6 @@
           'label': 'Fix Typo'
           'command': 'ide-purescript:fix-typo'
         }
-        {
-          'label': 'Show Quick Fixes'
-          'command': 'ide-purescript:show-quick-fixes'
-        }
-        {
-          'label': 'Go to Definition'
-          'command': 'ide-purescript:goto-definition'
-        }
       ]
     }
   ]
@@ -92,14 +84,6 @@
           'command': 'ide-purescript:fix-typo'
         }
         {
-          'label': 'Show Quick Fixes'
-          'command': 'ide-purescript:show-quick-fixes'
-        }
-        {
-          'label': 'Go to Definition'
-          'command': 'ide-purescript:goto-definition'
-        }
-        {
           'label': 'PSCI: Open'
           'command': 'ide-purescript:psci-open'
         }
@@ -112,8 +96,16 @@
           'command': 'ide-purescript:psci-send-selection'
         }
         {
-          'label': 'Restart psc-ide-server'
+          'label': 'Restart IDE server'
           'command': 'ide-purescript:restart-psc-ide'
+        }
+        {
+          'label': 'Start IDE server'
+          'command': 'ide-purescript:start-psc-ide'
+        }
+        {
+          'label': 'Stop IDE server'
+          'command': 'ide-purescript:stop-psc-ide'
         }
       ]
     ]

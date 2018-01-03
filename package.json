@@ -16,7 +16,6 @@
     "atom-workspace": [
       "ide-purescript:search",
       "ide-purescript:build",
-      "ide-purescript:show-quick-fixes",
       "ide-purescript:show-tooltip",
       "ide-purescript:pursuit-search",
       "ide-purescript:pursuit-search-modules",
@@ -26,7 +25,6 @@
       "ide-purescript:case-split",
       "ide-purescript:add-clause",
       "ide-purescript:fixTypo",
-      "ide-purescript:goto-definition",
       "ide-purescript:psci-open",
       "ide-purescript:psci-send-line",
       "ide-purescript:psci-send-selection",
