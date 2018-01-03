@@ -18,8 +18,12 @@ import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn4)
+import Control.Monad.Except (runExcept)
 import DOM (DOM)
-import Data.Foreign (Foreign, toForeign)
+import Data.Either (Either(..), either)
+import Data.Foreign (Foreign, F, readNumber, readString, toForeign)
+import Data.Foreign.Index ((!))
+import Data.Int (floor)
 import IdePurescript.Atom.Assist (addClause, caseSplit, fixTypo, fixTypoWithRange)
 import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Config (config, translateConfig)
@@ -103,6 +107,13 @@ main = do
 
     onCustom conn "textDocument/diagnosticsBegin" $ \_ -> updateBuildStatus buildStatusElt Building
     onCustom conn "textDocument/diagnosticsEnd" $ \_ -> updateBuildStatus buildStatusElt NotBuilding
+
+    onCustom conn "window/logMessage" $ either (pure $ pure unit) id <<< runExcept <<<
+      \x -> do
+        -- TODO conditionally log based on config
+        level <- x ! "type" >>= readNumber
+        message <- x ! "message" >>= readString
+        pure $ log $ show (floor level) <> ": " <> message
 
   pure $ toForeign $ languageClient
 
