@@ -6,94 +6,25 @@ import Atom.Atom (getAtom)
 import Atom.NotificationManager (NOTIFY)
 import Atom.Types (EDITOR)
 import Atom.Workspace (WORKSPACE, getActiveTextEditor)
-import Control.Error.Util (hush)
-import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
-import Data.Argonaut (class DecodeJson, Json, decodeJson, (.?))
-import Data.Argonaut.Decode ((.??))
-import Data.Array (filter)
 import Data.Either (either)
 import Data.Foreign (readArray, toForeign)
 import Data.Maybe (Maybe(..), maybe)
-import Data.MediaType.Common (applicationJSON)
 import Data.Traversable (traverse)
 import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand)
 import IdePurescript.Atom.Imports (addModuleImport')
 import IdePurescript.Atom.SelectView (selectListViewStatic, selectListViewDynamic)
 import LanguageServer.IdePurescript.Search (SearchResult(..), decodeSearchResult)
 import Network.HTTP.Affjax (AJAX, Affjax, affjax, defaultRequest)
-import Network.HTTP.RequestHeader (RequestHeader(..))
 import Text.Smolder.HTML (div, li, span)
 import Text.Smolder.HTML.Attributes (className)
 import Text.Smolder.Markup (MarkupM, text, (!))
 import Text.Smolder.Renderer.String (render)
-
-newtype PursuitSearchInfo = PursuitSearchInfo
-  { typeOrValue :: Maybe String
-  , mod :: Maybe String
-  , typeText :: Maybe String
-  , title :: Maybe String
-  , typ :: String
-  }
-
-instance decodeJsonPursuitSearchInfo :: DecodeJson PursuitSearchInfo where
-  decodeJson json =
-    do
-      obj <- decodeJson json
-      typeOrValue <- obj .?? "typeOrValue"
-      mod <- obj .?? "module"
-      typeText <- pure $ hush $ obj .? "typeText"
-      title <- obj .?? "title"
-      typ <- obj .? "type"
-      pure $ PursuitSearchInfo { typeOrValue, mod, typeText, title, typ }
-
-newtype PursuitSearchResult = PursuitSearchResult
-  { text :: String
-  , markup :: String
-  , url :: String
-  , version :: String
-  , package :: String
-  , info :: PursuitSearchInfo
-  }
-
-instance decodeJsonPursuitSearchResult :: DecodeJson PursuitSearchResult where
-  decodeJson json =
-    do
-      obj <- decodeJson json
-      text <- obj .? "text"
-      markup <- obj .? "markup"
-      url <- obj .? "url"
-      version <- obj .? "version"
-      package <- obj .? "package"
-      info <- obj .? "info"
-      pure $ PursuitSearchResult { text, markup, url, version, package, info }
-
-pursuitRequest :: forall e a. String -> Affjax e Json
-pursuitRequest text = affjax $ defaultRequest
-  { url = "https://pursuit.purescript.org/search?q=" <> text
-  , headers = [ Accept applicationJSON ]
-  }
-
-pursuitSearchRequest :: forall eff. String -> Aff ( ajax :: AJAX | eff ) (Array PursuitSearchResult)
-pursuitSearchRequest text = do
-  res <- pursuitRequest text
-  let decoded = decodeJson res.response
-  pure $ either (pure []) id $ decoded
-
-pursuitModuleSearchRequest :: forall eff. String -> Aff ( ajax :: AJAX | eff ) (Array PursuitSearchResult)
-pursuitModuleSearchRequest text = do
-  res <- pursuitRequest text
-  let decoded = decodeJson res.response
-      results = either (pure []) id $ decoded
-  pure $ filter isModule results
-
-  where
-    isModule (PursuitSearchResult { info: PursuitSearchInfo { typ: "module" } }) = true
-    isModule _ = false
+import IdePurescript.Pursuit (PursuitSearchInfo(..), PursuitSearchResult(..), pursuitModuleSearchRequest, pursuitSearchRequest)
 
 twoLines :: forall a. MarkupM a Unit -> MarkupM a Unit -> MarkupM a Unit
 twoLines line1 line2 = li ! className "two-lines" $ do
