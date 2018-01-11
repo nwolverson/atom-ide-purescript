@@ -78,9 +78,10 @@ pulpCmd = if P.platform == Just Win32 then "pulp.cmd" else "pulp"
 -- | Convert a atom-ide-purescript config object to one suitable for sending to language server
 translateConfig :: Foreign -> Foreign
 translateConfig config = either (const $ toForeign {}) id $ runExcept do
-  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "pscIdelogLevel", "autoStartPscIde" ]
+  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources" ]
   unchangedOpts <- for unchanged (\p -> Tuple p <$> config ! p)
   autocomplete <- config ! "autocomplete"
+
   autocompleteOpts <- sequence
     [ Tuple "autocompleteAddImport" <$> autocomplete ! "addImport"
     , Tuple "autocompleteAllModules" <$> autocomplete ! "allModules"
@@ -88,17 +89,18 @@ translateConfig config = either (const $ toForeign {}) id $ runExcept do
     , Tuple "autocompleteGrouped" <$> autocomplete ! "grouped"
     , Tuple "importsPreferredModules" <$> autocomplete ! "preferredModules"
     ]
+  renamedOpts <- sequence
+    [ Tuple "sourceGlobs" <$> config ! "pscSourceGlob"
+    ]
   -- Unused:
-  -- pscSourceGlob (~ packagePath / sourcePath )
   -- autocomplete.excludeLowerPriority (atom-specific)
   -- psciCommand (~atom-specific)
   -- buildOnSave
   --
   -- Missing:
   -- pscIdePort
-  -- autoStartPscIde
 
-  pure $ toForeign $ fromFoldable $ unchangedOpts <> autocompleteOpts
+  pure $ toForeign $ fromFoldable $ unchangedOpts <> autocompleteOpts <> renamedOpts
 
 config :: Foreign
 config = toForeign
@@ -110,6 +112,12 @@ config = toForeign
     , items:
       { type: "string"
       }
+    }
+  , addPscPackageSources:
+    { title: "Add psc-package sources"
+    , description: "Whether to add psc-package sources to the globs passed to the IDE server for source locations (specifically the output of `psc-package sources`, if this is a psc-package project). Update due to adding packages/changing package set requires psc-ide server restart."
+    , type: "boolean"
+    , default: false
     }
   , pscIdeServerExe:
     { title: "psc-ide-server executable location"
