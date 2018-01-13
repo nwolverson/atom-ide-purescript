@@ -50,7 +50,7 @@
     "atom-package-deps": "^4.5.0",
     "atom-space-pen-views": "^2.1.0",
     "glob": "^5.0.14",
-    "purescript-language-server": "^0.5.2",
+    "purescript-language-server": "^0.6.0",
     "which": "^1.2.4"
   },
   "package-deps": [
