@@ -78,7 +78,7 @@ pulpCmd = if P.platform == Just Win32 then "pulp.cmd" else "pulp"
 -- | Convert a atom-ide-purescript config object to one suitable for sending to language server
 translateConfig :: Foreign -> Foreign
 translateConfig config = either (const $ toForeign {}) id $ runExcept do
-  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources" ]
+  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "polling", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources" ]
   unchangedOpts <- for unchanged (\p -> Tuple p <$> config ! p)
   autocomplete <- config ! "autocomplete"
 
@@ -146,6 +146,12 @@ config = toForeign
   , editorMode:
     { title: "Editor mode"
     , description: "Set the editor-mode flag on the IDE server"
+    , type: "boolean"
+    , default: false
+    }
+  , polling:
+    { title: "Polling mode"
+    , description: "Set the polling flag on the IDE server"
     , type: "boolean"
     , default: false
     }
