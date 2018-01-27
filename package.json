@@ -49,12 +49,9 @@
     "atom-languageclient": "0.8.2",
     "atom-package-deps": "^4.5.0",
     "atom-space-pen-views": "^2.1.0",
-    "glob": "^5.0.14",
-    "purescript-language-server": "^0.6.0",
-    "which": "^1.2.4"
+    "purescript-language-server": "^0.6.0"
   },
   "package-deps": [
-    "linter:2.0.0",
     "language-purescript",
     "atom-ide-ui"
   ],
