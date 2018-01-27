@@ -1,4 +1,4 @@
-var AutoLanguageClient = require('@nwolverson/atom-languageclient').AutoLanguageClient;
+var AutoLanguageClient = require('atom-languageclient').AutoLanguageClient;
 
 exports.makeLanguageClient = function (clientMixin, translateSettings, fixTypo, onConnection) {
   var client = new AutoLanguageClient();
