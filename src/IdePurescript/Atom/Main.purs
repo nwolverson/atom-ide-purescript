@@ -21,7 +21,6 @@ import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn4, runEffFn6, Ef
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import Data.Either (Either(..), either)
-import Data.Foldable (for_)
 import Data.Foreign (Foreign, F, readNumber, readString, toForeign)
 import Data.Foreign.Index ((!))
 import Data.Int (floor)
@@ -69,7 +68,6 @@ type MainEff =
   , random :: RANDOM
   , ajax :: AJAX
   )
-
 
 main :: Eff MainEff Foreign
 main = do

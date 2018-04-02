@@ -13,6 +13,7 @@ import Data.Either (either, hush)
 import Data.Foreign (F, Foreign, readArray, readBoolean, readInt, readString, toForeign)
 import Data.Foreign.Index ((!))
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Nullable (toNullable)
 import Data.StrMap (fromFoldable)
 import Data.Traversable (for, for_, sequence, traverse, traverse_)
 import Data.Tuple (Tuple(..))
@@ -163,6 +164,12 @@ config = toForeign
     , description: "Whether to automatically start IDE server. Otherwise the start command can be used."
     , type: "boolean"
     , default: true
+    }
+  , pscIdePort:
+    { title: "IDE server port"
+    , description: "Port to use for purs IDE server (whether an existing server or to start a new one). By default a random port is chosen (or an existing port in .psc-ide-port if present), if this is specified no attempt will be made to select an alternative port on failure."
+    , type: [ "integer", "null" ]
+    , default: toNullable Nothing
     }
   , buildCommand:
     { title: "Build command"
