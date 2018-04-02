@@ -78,7 +78,7 @@ pulpCmd = if P.platform == Just Win32 then "pulp.cmd" else "pulp"
 -- | Convert a atom-ide-purescript config object to one suitable for sending to language server
 translateConfig :: Foreign -> Foreign
 translateConfig config = either (const $ toForeign {}) id $ runExcept do
-  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "polling", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources" ]
+  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "polling", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources", "pscIdePort" ]
   unchangedOpts <- for unchanged (\p -> Tuple p <$> config ! p)
   autocomplete <- config ! "autocomplete"
 
@@ -96,9 +96,6 @@ translateConfig config = either (const $ toForeign {}) id $ runExcept do
   -- autocomplete.excludeLowerPriority (atom-specific)
   -- psciCommand (~atom-specific)
   -- buildOnSave
-  --
-  -- Missing:
-  -- pscIdePort
 
   pure $ toForeign $ fromFoldable $ unchangedOpts <> autocompleteOpts <> renamedOpts
 
@@ -176,12 +173,6 @@ config = toForeign
         <> "See [examples on the README](https://github.com/nwolverson/atom-ide-purescript/#build-configuration-hints)"
     , type: "string"
     , default: pulpCmd <> " build -- --json-errors"
-    }
-  , buildOnSave:
-    { title: "Build on save"
-    , description: "Build automatically on save. Enables in-line and collected errors. Otherwise a build command is available to be invoked manually."
-    , type: "boolean"
-    , default: true
     }
   , fastRebuild:
     { title: "Use fast rebuild"

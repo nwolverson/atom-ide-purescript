@@ -17,18 +17,21 @@ import Control.Monad.Eff.Console (CONSOLE, log, error)
 import Control.Monad.Eff.Exception (Error, EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Ref (REF)
-import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn4)
+import Control.Monad.Eff.Uncurried (mkEffFn1, mkEffFn2, runEffFn4, runEffFn6, EffFn1)
 import Control.Monad.Except (runExcept)
 import DOM (DOM)
 import Data.Either (Either(..), either)
+import Data.Foldable (for_)
 import Data.Foreign (Foreign, F, readNumber, readString, toForeign)
 import Data.Foreign.Index ((!))
 import Data.Int (floor)
+import Data.StrMap as StrMap
+import Data.Tuple (Tuple(..))
 import IdePurescript.Atom.Assist (addClause, caseSplit, fixTypo, fixTypoWithRange)
 import IdePurescript.Atom.BuildStatus (getBuildStatus, updateBuildStatus, BuildStatus(..))
 import IdePurescript.Atom.Config (config, translateConfig)
 import IdePurescript.Atom.Hooks.Dependencies (installDependencies)
-import IdePurescript.Atom.Hooks.LanguageClient (makeLanguageClient, executeCommand, onCustom)
+import IdePurescript.Atom.Hooks.LanguageClient (LanguageClientConnection, executeCommand, makeLanguageClient, onCustom)
 import IdePurescript.Atom.Hooks.Linter (LINTER)
 import IdePurescript.Atom.Hooks.StatusBar (addLeftTile)
 import IdePurescript.Atom.Imports (addExplicitImport, addModuleImport)
@@ -41,6 +44,7 @@ import Node.ChildProcess (CHILD_PROCESS)
 import Node.FS (FS)
 import Node.Process (PROCESS)
 import PscIde (NET)
+
 
 type MainEff =
   ( command :: COMMAND
@@ -66,6 +70,7 @@ type MainEff =
   , ajax :: AJAX
   )
 
+
 main :: Eff MainEff Foreign
 main = do
   log "PureScript: Starting!"
@@ -79,41 +84,45 @@ main = do
 
   buildStatusElt <- getBuildStatus
 
-  languageClient <- runEffFn4 makeLanguageClient {
+  let cmd s f = Tuple s (mkEffFn1 f)
+      fwdCmd name name' = cmd name \conn -> launchAffAndRaise $
+        executeCommand conn { command: "purescript."<>name', arguments: [] }
+
+      commands :: Array (Tuple String (EffFn1 MainEff LanguageClientConnection Unit))
+      commands =
+        [ cmd "add-module-import" addModuleImport
+        , cmd "add-explicit-import" addExplicitImport
+        , cmd "case-split" caseSplit
+        , cmd "add-clause" addClause
+
+        , cmd "fixTypo" fixTypo
+        , cmd "search" localSearch
+        , cmd "pursuit-search" \_ -> pursuitSearch
+        , cmd "pursuit-search-modules" pursuitSearchModule
+
+        , fwdCmd "build" "build"
+        , fwdCmd "restart-psc-ide" "restartPscIde"
+        , fwdCmd "start-psc-ide" "startPscIde"
+        , fwdCmd "stop-psc-ide" "stopPscIde"
+        ]
+
+  languageClient <- runEffFn6 makeLanguageClient {
         config
       , consumeStatusBar: mkEffFn1 \statusBar -> addLeftTile statusBar { item: buildStatusElt, priority: -50 }
-      } translateConfig (mkEffFn2 fixTypoWithRange) $ mkEffFn1 $ \conn -> do
-    activate
-    let fwdCmd name name' = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name)
-                        (const $ launchAffAndRaise $ executeCommand conn { command: "purescript."<>name', arguments: [] })
-        fwdCmd' name = fwdCmd name name
+      } translateConfig (mkEffFn2 fixTypoWithRange)
+      (mkEffFn1 $ \conn -> do
+        activate
+        onCustom conn "textDocument/diagnosticsBegin" $ \_ -> updateBuildStatus buildStatusElt Building
+        onCustom conn "textDocument/diagnosticsEnd" $ \_ -> updateBuildStatus buildStatusElt NotBuilding
 
-        cmd name action = addCommand atom.commands "atom-workspace" ("ide-purescript:"<>name) (\_ -> action conn)
-
-    cmd "add-module-import" addModuleImport
-    cmd "add-explicit-import" addExplicitImport
-    cmd "case-split" caseSplit
-    cmd "add-clause" addClause
-
-    cmd "fixTypo" fixTypo
-    cmd "search" localSearch
-    cmd "pursuit-search" \_ -> pursuitSearch
-    cmd "pursuit-search-modules" pursuitSearchModule
-
-    fwdCmd' "build"
-    fwdCmd "restart-psc-ide" "restartPscIde"
-    fwdCmd "start-psc-ide" "startPscIde"
-    fwdCmd "stop-psc-ide" "stopPscIde"
-
-    onCustom conn "textDocument/diagnosticsBegin" $ \_ -> updateBuildStatus buildStatusElt Building
-    onCustom conn "textDocument/diagnosticsEnd" $ \_ -> updateBuildStatus buildStatusElt NotBuilding
-
-    onCustom conn "window/logMessage" $ either (pure $ pure unit) id <<< runExcept <<<
-      \x -> do
-        -- TODO conditionally log based on config
-        level <- x ! "type" >>= readNumber
-        message <- x ! "message" >>= readString
-        pure $ log $ show (floor level) <> ": " <> message
+        onCustom conn "window/logMessage" $ either (pure $ pure unit) id <<< runExcept <<<
+          \x -> do
+            -- TODO conditionally log based on config
+            level <- x ! "type" >>= readNumber
+            message <- x ! "message" >>= readString
+            pure $ log $ show (floor level) <> ": " <> message)
+      (pure unit)
+      (StrMap.fromFoldable commands)
 
   pure $ toForeign $ languageClient
 
