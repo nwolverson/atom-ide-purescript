@@ -15,7 +15,7 @@ This package provides:
   * [Quick-Fix](#error-suggestions--quick-fix)
   * [Case-Split](#case-split--add-clause)
 
-Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette.
+Package should trigger on opening a `.purs` file or running any PureScript/PSCI command from the menu bar or command palette. For full support of atom-ide features, your PureScript project should be opened at the root folder level in Atom.
 
 ## Installation and General Use
 
@@ -36,16 +36,14 @@ the build command is configurable, but should output JSON errors.
 
 This package runs a langauge server process, which itself starts a compiler server process, `purs ide server`
 (previously `psc-ide-server`), to provide type information, completions,etc. This package will automatically start
-the IDE server in your project directory and kill it when closing, if for some reason
-you want a longer running server process you should be able to start that before
-starting atom.
-<!--
-Multiple PureScript projects are now supported, whether in one or multiple Atom windows, see [release notes](https://github.com/nwolverson/atom-ide-purescript/releases/tag/v0.14.0) for details. -->
+the IDE server in your project directory and kill it when closing.
 
+You can start/stop and restart this via provided commands, and configure the server to auto-start or not as desired; if for some reason if for some reason
+you want to manually start a `purs ide server` process you can start that before starting atom, and configure the server port to match (but beware clashes of multiple instances, and the path must match).
 
-For all functions provided by `purs ide server` you will need to build your project first! In particular a full build,
-not a "fast-build" on save, is required first time or after upgrading `purs`, afterwards saving individual files
-will update tooltips etc.
+Multiple PureScript projects are supported, by adding each project as a top level folder.
+
+For all functions provided by `purs ide server` you will need to build your project first! In particular a full build, not a "fast-build" on save, is required first time or after upgrading `purs`, afterwards saving individual files will update tooltips etc.
 
 ## Autocomplete
 
@@ -136,11 +134,12 @@ You may be able to get away without thinking about all this if your project spec
 
 ## Error Suggestions / Quick-Fix
 
-![Error suggestions](https://cloud.githubusercontent.com/assets/2770891/12066635/d6b14964-afe2-11e5-8584-44d291044614.gif)
+![Error indication](https://user-images.githubusercontent.com/2770891/38769617-a3e6ad8c-3ffd-11e8-8874-68bc567fc520.png)
 
-Error suggestions may be triggered from some underlined compiler warnings. There
-is no additional visual indication. A context menu can be triggered by 'alt-enter' (PureScript: Show Quick Fixes)
-when the cursor is on an eligible warning. Currently fixable warnings:
+![Error fix UI](https://user-images.githubusercontent.com/2770891/38769616-a3cd0364-3ffd-11e8-99f0-13f2e7ed517c.png)
+
+Error suggestions may be triggered from some underlined compiler warnings. Suggestions apply on hover, or
+a context menu can be triggered by 'alt-A' (Diagnostics: Show Actions at Position) when the cursor is on an eligible warning. Currently fixable warnings:
 
   * Unused or duplicate import (`UnusedImport`, `DuplicateImport`)
   * Extraneous identifiers in explicit import list (`UnusedExplicitImport`)
