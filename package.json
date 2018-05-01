@@ -42,14 +42,14 @@
     "atom": ">=1.23"
   },
   "scripts": {
-    "prepublish": "psc-package update && npm run bundle",
+    "prepublish": "psc-package install && npm run bundle",
     "bundle": "pulp --psc-package build --main IdePurescript.Atom.Main --to lib/main.js --skip-entry-point && echo 'module.exports = PS[\"IdePurescript.Atom.Main\"].main()' >> lib/main.js"
   },
   "dependencies": {
     "atom-languageclient": "0.9.5",
     "atom-package-deps": "^4.6.2",
     "atom-space-pen-views": "^2.2.0",
-    "purescript-language-server": "^0.10.2"
+    "purescript-language-server": "^0.11.0"
   },
   "package-deps": [
     "language-purescript",

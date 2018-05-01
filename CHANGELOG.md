@@ -1,3 +1,8 @@
+## 0.24.0
+
+* Updates from `purescript-language-server` version `0.11.0`:
+  - Add find references command (requires purs 0.12). Currently works at the value level
+
 ## 0.23.1
 
 * List `pscIdePort` config on config page
