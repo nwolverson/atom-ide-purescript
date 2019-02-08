@@ -79,7 +79,7 @@ pulpCmd = if P.platform == Just Win32 then "pulp.cmd" else "pulp"
 -- | Convert a atom-ide-purescript config object to one suitable for sending to language server
 translateConfig :: Foreign -> Foreign
 translateConfig config = either (const $ toForeign {}) id $ runExcept do
-  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "polling", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources", "pscIdePort" ]
+  let unchanged = [ "pursExe", "useCombinedExe", "pscIdeServerExe", "addNpmPath", "buildCommand", "fastRebuild", "censorWarnings", "editorMode", "polling", "pscIdelogLevel", "autoStartPscIde", "addPscPackageSources", "addSpagoSources", "pscIdePort" ]
   unchangedOpts <- for unchanged (\p -> Tuple p <$> config ! p)
   autocomplete <- config ! "autocomplete"
 
@@ -114,6 +114,12 @@ config = toForeign
   , addPscPackageSources:
     { title: "Add psc-package sources"
     , description: "Whether to add psc-package sources to the globs passed to the IDE server for source locations (specifically the output of `psc-package sources`, if this is a psc-package project). Update due to adding packages/changing package set requires psc-ide server restart."
+    , type: "boolean"
+    , default: false
+    }
+  , addSpagoSources:
+    { title: "Add spago sources"
+    , description: "Whether to add spago sources to the globs passed to the IDE server for source locations (specifically the output of `spago sources`, if this is a spago project). Update due to adding packages/changing package set requires psc-ide server restart."
     , type: "boolean"
     , default: false
     }
