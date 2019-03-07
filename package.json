@@ -49,7 +49,7 @@
     "atom-languageclient": "0.9.5",
     "atom-package-deps": "^4.6.2",
     "atom-space-pen-views": "^2.2.0",
-    "purescript-language-server": "^0.11.0"
+    "purescript-language-server": "^0.12.7"
   },
   "package-deps": [
     "language-purescript",
@@ -108,5 +108,8 @@
         "^1.0.0": "consumeStatusBar"
       }
     }
+  },
+  "devDependencies": {
+    "purescript": "^0.11.7"
   }
 }
