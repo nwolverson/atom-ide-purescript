@@ -34,7 +34,7 @@ the build command is configurable, but should output JSON errors.
 
 ## IDE server
 
-This package runs a langauge server process, which itself starts a compiler server process, `purs ide server`
+This package runs a language server process, which itself starts a compiler server process, `purs ide server`
 (previously `psc-ide-server`), to provide type information, completions,etc. This package will automatically start
 the IDE server in your project directory and kill it when closing.
 
